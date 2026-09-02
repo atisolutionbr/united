@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}KFlow360 · Conexão BD{% endblock %}
+{% block page_title %}Conexão BD{% endblock %}
+
+{% block main %}
+    <section class="kflow-page-heading">
+        <div><span class="kflow-eyebrow">Configurações ERP</span><h1>Conexão BD</h1><p>Gerencie a base do ERP e acesse a camada analítica do Metabase.</p></div>
+        <a class="btn btn-outline-primary" href="{{ path('kflow_erp_index') }}"><i class="bi bi-arrow-repeat"></i>Trocar ERP</a>
+    </section>
+
+    <section class="kflow-workspace-grid">
+        <div class="kflow-surface kflow-connection-panel">
+            <div class="kflow-section-heading"><div><span class="kflow-eyebrow">ERP selecionado</span><h2>{{ activeErp ?: 'Nenhum ERP selecionado' }}</h2></div><span class="badge {{ activeErp ? 'text-bg-success' : 'text-bg-secondary' }}">{{ activeErp ? 'Ativo' : 'Aguardando' }}</span></div>
+            {% if activeErp %}
+                <div class="kflow-connection-panel__steps"><span><i class="bi bi-check2"></i>ERP definido</span><span><i class="bi bi-arrow-right"></i></span><span><i class="bi bi-database"></i>Base de dados</span><span><i class="bi bi-arrow-right"></i></span><span><i class="bi bi-bar-chart-line"></i>Análises</span></div>
+                <div class="kflow-metabase-callout"><div><i class="bi bi-bar-chart-line"></i><div><strong>Metabase</strong><p>Acesse bancos, metadados, permissões e consultas da operação. O acesso é iniciado automaticamente pela sua sessão KFlow360.</p></div></div><a class="btn btn-primary" href="{{ path('kflow_metabase') }}">Abrir Metabase<i class="bi bi-box-arrow-up-right"></i></a></div>
+            {% else %}
+                <div class="kflow-empty-state"><i class="bi bi-hdd-network"></i><div><strong>Escolha um ERP para continuar</strong><p>A seleção determina as configurações e telas específicas da operação.</p><a href="{{ path('kflow_erp_index') }}" class="btn btn-primary">Selecionar ERP</a></div></div>
+            {% endif %}
+        </div>
+        <aside class="kflow-surface">
+            <span class="kflow-eyebrow">Catálogo ERP</span>
+            <h2>Opções disponíveis</h2>
+            <ul class="kflow-erp-list">{% for erp in erps %}<li class="{{ erp == activeErp ? 'is-active' }}"><span>{{ erp }}</span>{% if erp == activeErp %}<i class="bi bi-check-circle-fill"></i>{% endif %}</li>{% endfor %}</ul>
+        </aside>
+    </section>
+{% endblock %}

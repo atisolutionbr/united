@@ -1,0 +1,124 @@
+{% extends 'base.html.twig' %}
+{% block title %}Plataforma · Hub{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'admin/data_management/_styles.html.twig' %}
+{% endblock %}
+
+{% block body %}
+<section class="py-4 py-lg-5">
+
+  <div class="data-management-hero p-4 p-lg-5 mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <span class="badge rounded-pill text-bg-light text-primary mb-3">Arquitetura · Infra · Governanca tecnica</span>
+        <h1 class="display-6 fw-bold mb-3">Plataforma</h1>
+        <p class="lead mb-3">Arquitetura, infraestrutura, configuracoes e governanca da plataforma.</p>
+        <p class="mb-0 opacity-75">Organize a visao institucional do produto, acompanhe a evolucao tecnica e concentre os itens estruturantes de acesso, seguranca e administracao.</p>
+      </div>
+      <div class="col-lg-4">
+        <div class="data-management-panel p-4 h-100">
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Status</p>
+          <p class="text-secondary small mb-3">Este hub concentra areas institucionais e capacidades planejadas do ecossistema Plataforma360.</p>
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary btn-sm" href="{{ path('app_platform_architecture') }}">
+              <i class="bi bi-diagram-3 me-1"></i>Arquitetura
+            </a>
+            <a class="btn btn-outline-primary btn-sm" href="{{ path('app_platform_about') }}">
+              <i class="bi bi-info-circle me-1"></i>Sobre
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="h5 fw-semibold mb-3"><i class="bi bi-diagram-3 me-2 text-primary"></i>Estrutura tecnica</h2>
+  <div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_platform_architecture') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-diagram-3"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Roadmap</span>
+          </div>
+          <h3 class="h5 mb-2">Arquitetura</h3>
+          <p class="text-secondary small mb-3">Panorama das camadas, fluxos e capacidades da plataforma.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver arquitetura</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_platform_infrastructure') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-hdd-network"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Roadmap</span>
+          </div>
+          <h3 class="h5 mb-2">Infraestrutura</h3>
+          <p class="text-secondary small mb-3">Visao operacional dos componentes de sustentacao e ambientes.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver infraestrutura</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_platform_settings') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-sliders"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Roadmap</span>
+          </div>
+          <h3 class="h5 mb-2">Configuracoes</h3>
+          <p class="text-secondary small mb-3">Parametros administrativos e governanca de operacao.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Abrir configuracoes</span>
+        </article>
+      </a>
+    </div>
+  </div>
+
+  <h2 class="h5 fw-semibold mb-3"><i class="bi bi-shield-lock me-2 text-primary"></i>Acesso e seguranca</h2>
+  <div class="row g-4">
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_platform_users') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-people"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Roadmap</span>
+          </div>
+          <h3 class="h5 mb-2">Usuarios</h3>
+          <p class="text-secondary small mb-3">Gestao de perfis, acesso e responsabilidades institucionais.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver usuarios</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_platform_security') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-shield-lock"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Roadmap</span>
+          </div>
+          <h3 class="h5 mb-2">Seguranca</h3>
+          <p class="text-secondary small mb-3">Controles, politicas e postura de protecao da plataforma.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver seguranca</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_platform_about') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-info-circle"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Roadmap</span>
+          </div>
+          <h3 class="h5 mb-2">Sobre o Projeto</h3>
+          <p class="text-secondary small mb-3">Contexto institucional, objetivos e evolucao da Plataforma360.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver contexto</span>
+        </article>
+      </a>
+    </div>
+  </div>
+
+</section>
+{% endblock %}

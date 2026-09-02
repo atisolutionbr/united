@@ -1,0 +1,180 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Preview Dataset | Plataforma360{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'admin/data_providers/_styles.html.twig' %}
+{% endblock %}
+
+{% block body %}
+    <section class="py-4 py-lg-5" aria-labelledby="dataset-preview-title">
+        <div class="container">
+            {% include 'default/_flash_messages.html.twig' %}
+
+            <div class="data-management-hero p-4 p-lg-5 mb-4">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                    <div>
+                        <span class="badge rounded-pill text-bg-light text-primary mb-3">Preview Dataset</span>
+                        <h1 id="dataset-preview-title" class="display-6 fw-bold mb-3">{{ selectedRawFile ? (preview.datasetName ?? selectedRawFile.originalName) : 'Preview Dataset' }}</h1>
+                        <p class="lead mb-0">Leitura inicial do arquivo importado no RAW, com estatísticas operacionais e amostra real dos dados para acelerar validação analítica.</p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a class="btn btn-light" href="{{ path('app_admin_raw_files') }}">Arquivos RAW</a>
+                        {% if selectedRawFile %}
+                            <a class="btn btn-outline-light" href="{{ path('app_admin_raw_files_metadata', {id: selectedRawFile.id}) }}">Ver metadata</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if selectedRawFile and preview %}
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-md-6 col-xl-2">
+                        <article class="provider-summary-card h-100 p-4">
+                            <p class="text-muted text-uppercase small fw-semibold mb-2">Linhas</p>
+                            <p class="provider-summary-card__value mb-1">{{ preview.totalRows }}</p>
+                            <p class="mb-0 text-secondary small">Amostra e contagem reais.</p>
+                        </article>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-2">
+                        <article class="provider-summary-card h-100 p-4">
+                            <p class="text-muted text-uppercase small fw-semibold mb-2">Colunas</p>
+                            <p class="provider-summary-card__value mb-1">{{ preview.totalColumns }}</p>
+                            <p class="mb-0 text-secondary small">Cabeçalho detectado automaticamente.</p>
+                        </article>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-2">
+                        <article class="provider-summary-card h-100 p-4">
+                            <p class="text-muted text-uppercase small fw-semibold mb-2">Campos nulos</p>
+                            <p class="provider-summary-card__value mb-1">{{ preview.nullFields }}</p>
+                            <p class="mb-0 text-secondary small">Vazios contabilizados na leitura.</p>
+                        </article>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-2">
+                        <article class="provider-summary-card h-100 p-4">
+                            <p class="text-muted text-uppercase small fw-semibold mb-2">Encoding</p>
+                            <p class="provider-summary-card__value mb-1 fs-4">{{ preview.encoding }}</p>
+                            <p class="mb-0 text-secondary small">Detectado na abertura do arquivo.</p>
+                        </article>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-2">
+                        <article class="provider-summary-card h-100 p-4">
+                            <p class="text-muted text-uppercase small fw-semibold mb-2">Tipo</p>
+                            <p class="provider-summary-card__value mb-1 fs-4">{{ preview.detectedType }}</p>
+                            <p class="mb-0 text-secondary small">Parser compatível com o arquivo.</p>
+                        </article>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-2">
+                        <article class="provider-summary-card h-100 p-4">
+                            <p class="text-muted text-uppercase small fw-semibold mb-2">Tamanho</p>
+                            <p class="provider-summary-card__value mb-1 fs-4">{{ selectedRawFile.fileSize is not null ? selectedRawFile.fileSize|number_format(0, ',', '.') ~ ' B' : 'N/D' }}</p>
+                            <p class="mb-0 text-secondary small">Última atualização {{ selectedRawFile.downloadedAt ? selectedRawFile.downloadedAt|date('d/m/Y H:i') : 'N/D' }}.</p>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-9">
+                        <div class="data-management-table-card p-3 p-lg-4 h-100">
+                            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                                <div>
+                                    <h2 class="h4 mb-1">Primeiras 50 linhas</h2>
+                                    <p class="text-secondary mb-0">Preview operacional com rolagem horizontal e cabeçalho fixo para inspeção rápida de datasets importados.</p>
+                                </div>
+                                <span class="provider-soft-badge provider-soft-badge--info">{{ preview.rows|length }} linhas exibidas</span>
+                            </div>
+
+                            {% if preview.previewAvailable %}
+                                <div class="dataset-preview-scroll">
+                                    <table class="table table-sm align-middle mb-0 dataset-preview-table">
+                                        <thead>
+                                            <tr>
+                                                {% for header in preview.headers %}
+                                                    <th>{{ header }}</th>
+                                                {% endfor %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in preview.rows %}
+                                                <tr>
+                                                    {% for header in preview.headers %}
+                                                        <td>{{ attribute(row, header) ?? '' }}</td>
+                                                    {% endfor %}
+                                                </tr>
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="{{ preview.headers|length ?: 1 }}" class="text-center py-5 text-secondary">O arquivo foi lido, mas não retornou linhas de dados além do cabeçalho.</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning mb-0">{{ preview.previewMessage }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="data-management-panel p-4 h-100">
+                            <span class="badge rounded-pill text-bg-light text-primary mb-2">Arquivos recentes</span>
+                            <h2 class="h4 mb-3">Alternar dataset</h2>
+                            <div class="d-grid gap-2">
+                                {% for rawFile in rawFiles %}
+                                    <a class="btn {{ selectedRawFile and rawFile.id == selectedRawFile.id ? 'btn-primary' : 'btn-outline-secondary' }} text-start" href="{{ path('app_admin_dataset_preview_show', {id: rawFile.id}) }}">
+                                        <div class="fw-semibold">{{ rawFile.originalName }}</div>
+                                        <div class="small {{ selectedRawFile and rawFile.id == selectedRawFile.id ? 'text-white-50' : 'text-secondary' }}">{{ rawFile.providerPackage.displayTitle }}</div>
+                                    </a>
+                                {% else %}
+                                    <p class="text-secondary mb-0">Nenhum CSV/XLSX disponível ainda para preview.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="data-management-table-card p-3 p-lg-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                        <div>
+                            <h2 class="h4 mb-1">Schema descoberto</h2>
+                            <p class="text-secondary mb-0">Colunas, tipos inferidos e amostras persistidas para preparar a etapa de staging.</p>
+                        </div>
+                        <span class="provider-soft-badge provider-soft-badge--success">{{ schemas|length }} coluna(s)</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Coluna</th>
+                                    <th>Tipo</th>
+                                    <th>Nullable</th>
+                                    <th>Exemplo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for schema in schemas %}
+                                    <tr>
+                                        <td>{{ schema.columnName }}</td>
+                                        <td>{{ schema.detectedType }}</td>
+                                        <td>{{ schema.nullable ? 'Sim' : 'Não' }}</td>
+                                        <td>{{ schema.sampleValue ?: 'N/D' }}</td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-5 text-secondary">Nenhum schema persistido ainda para este arquivo.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <div class="data-management-panel p-4">
+                    <h2 class="h4 mb-2">Nenhum dataset pronto para preview</h2>
+                    <p class="text-secondary mb-0">Execute a pipeline ou o download de um resource CSV/XLSX na área de Pacotes CKAN para habilitar esta visão.</p>
+                </div>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

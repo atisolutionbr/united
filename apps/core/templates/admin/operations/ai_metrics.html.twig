@@ -1,0 +1,90 @@
+{% extends 'base.html.twig' %}
+{% block title %}Métricas de IA{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1"><i class="bi bi-robot text-teal me-2"></i>Métricas de IA</h1>
+      <p class="text-muted mb-0">Uso de modelos, tokens e custos estimados</p>
+    </div>
+    <a href="{{ path('app_admin_operations_overview') }}" class="btn btn-outline-secondary btn-sm">← Operações</a>
+  </div>
+
+  {# KPI row #}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+        <div class="fs-1 fw-bold text-teal">{{ totalRequests }}</div>
+        <div class="small text-muted">Requisições totais</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+        <div class="fs-2 fw-bold text-primary">{{ externalToday }}</div>
+        <div class="small text-muted">Externas hoje</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+        <div class="fs-2 fw-bold text-secondary">{{ (totalTokens.total_input + totalTokens.total_output)|number_format }}</div>
+        <div class="small text-muted">Tokens totais</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+        <div class="fs-2 fw-bold {% if estimatedCostUsd > 1 %}text-danger{% else %}text-success{% endif %}">${{ estimatedCostUsd|number_format(4) }}</div>
+        <div class="small text-muted">Custo estimado</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    {# By provider #}
+    <div class="col-md-5">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0">Uso por Provedor</h6></div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light"><tr><th>Provedor</th><th>Requisições</th></tr></thead>
+            <tbody>
+            {% for provider, count in byProvider %}
+            <tr>
+              <td><span class="badge bg-{% if provider == 'openai' %}success{% elseif provider == 'ollama' %}primary{% else %}secondary{% endif %}">{{ provider }}</span></td>
+              <td><strong>{{ count }}</strong></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="text-center text-muted py-3">Sem dados</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    {# Recent interactions #}
+    <div class="col-md-7">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0">Interações Recentes</h6></div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0 align-middle" style="font-size:.85rem">
+            <thead class="table-light"><tr><th>Usuário</th><th>Provedor/Modelo</th><th>Tokens</th><th>Status</th><th>Quando</th></tr></thead>
+            <tbody>
+            {% for i in recentInteractions|slice(0,15) %}
+            <tr>
+              <td>{{ i.userIdentifier }}</td>
+              <td><small class="text-muted">{{ i.provider }} · {{ i.modelName|slice(0,20) }}</small></td>
+              <td><small>{{ i.tokensInput + i.tokensOutput }}</small></td>
+              <td><span class="badge bg-{% if i.status == 'success' %}success{% elseif i.status == 'failed' %}danger{% else %}secondary{% endif %}">{{ i.status }}</span></td>
+              <td><small class="text-muted">{{ i.createdAt|date('d/m H:i') }}</small></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-3">Sem interações</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

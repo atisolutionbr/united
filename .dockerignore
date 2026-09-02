@@ -1,0 +1,11 @@
+.git
+.github
+.vscode
+node_modules
+storage
+data/raw
+data/processed
+data/staging
+apps/core/var
+apps/core/vendor
+apps/core/.phpunit.result.cache

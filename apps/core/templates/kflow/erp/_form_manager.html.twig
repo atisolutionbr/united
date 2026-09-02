@@ -1,0 +1,14 @@
+<div class="kflow-form-manager" data-form-manager>
+    <div><strong>Formulários criados</strong><small>Excluir um formulário também remove os campos vinculados a ele.</small></div>
+    <div class="kflow-form-manager__items">
+        {% for definition in configuredForms %}
+            {% if definition.id starts with 'form-' %}
+                <button class="kflow-form-chip" type="button" data-form-delete data-form-id="{{ definition.id }}" data-method="{{ method }}" data-token="{{ csrf_token('delete-integration-form-'~erp~'-'~method~'-'~definition.id) }}" data-url="{{ path('kflow_erp_forms_delete', {erp: erp, form: definition.id}) }}" aria-label="Excluir formulário {{ definition.label }}" title="Excluir formulário e vínculos">
+                    <span>{{ definition.label }}</span><i class="bi bi-trash3"></i>
+                </button>
+            {% endif %}
+        {% else %}
+            <span class="kflow-form-manager__empty">Nenhum formulário adicional criado.</span>
+        {% endfor %}
+    </div>
+</div>

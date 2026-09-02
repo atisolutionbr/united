@@ -1,0 +1,65 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ mode == 'new' ? 'Novo Contexto' : 'Editar Contexto' }} — IA — Plataforma360{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{{ path('app_admin_ai_contexts') }}">Contextos</a></li>
+            <li class="breadcrumb-item active">{{ mode == 'new' ? 'Novo' : 'Editar' }}</li>
+        </ol>
+    </nav>
+    <h1 class="h4 fw-bold mb-4"><i class="bi bi-layers me-2 text-teal"></i>{{ mode == 'new' ? 'Novo Contexto' : 'Editar: ' ~ context.name }}</h1>
+    <div class="row"><div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-4">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="fw-semibold small mb-1">Nome *</label>
+                            <input type="text" name="name" class="form-control rounded-3" value="{{ context.name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-semibold small mb-1">Slug *</label>
+                            <input type="text" name="slug" class="form-control rounded-3" value="{{ context.slug }}" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-semibold small mb-1">Descrição</label>
+                            <textarea name="description" class="form-control rounded-3" rows="2">{{ context.description }}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-semibold small mb-1">Fontes (uma por linha)</label>
+                            <textarea name="sources" class="form-control rounded-3 font-monospace" rows="5">{{ context.sources ? context.sources|join("\n") : '' }}</textarea>
+                            <div class="form-text">Ex: warehouse, catalog, indicators, analytics_api, documents, lineage, quality</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-semibold small mb-1">Tabelas Warehouse (uma por linha)</label>
+                            <textarea name="warehouse_tables" class="form-control rounded-3 font-monospace" rows="5">{{ context.warehouseTables ? context.warehouseTables|join("\n") : '' }}</textarea>
+                            <div class="form-text">Ex: warehouse.fact_agencias_turismo</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="fw-semibold small mb-1">Max Linhas de Contexto</label>
+                            <input type="number" name="max_rows_context" class="form-control rounded-3" value="{{ context.maxRowsContext ?? 100 }}" min="1" max="1000">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" name="allowed_for_external" value="1" id="allowedExt" {% if context.allowedForExternal %}checked{% endif %}>
+                                <label class="form-check-label small" for="allowedExt">Permitir IA Externa</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" name="is_active" value="1" {% if context.isActive %}checked{% endif %}>
+                                <label class="form-check-label small">Ativo</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>{{ mode == 'new' ? 'Criar' : 'Salvar' }}</button>
+                        <a href="{{ path('app_admin_ai_contexts') }}" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,323 @@
+{% extends 'base.html.twig' %}
+{% block title %}Dados · Hub{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'admin/data_management/_styles.html.twig' %}
+{% endblock %}
+
+{% block body %}
+<section class="py-4 py-lg-5">
+
+  {# Hero banner #}
+  <div class="data-management-hero p-4 p-lg-5 mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <span class="badge rounded-pill text-bg-light text-primary mb-3">Pipeline de Dados</span>
+        <h1 class="display-6 fw-bold mb-3">Dados</h1>
+        <p class="lead mb-3">Curadoria, ingestão pública, transformação e warehouse dos dados estratégicos da plataforma.</p>
+        <p class="mb-0 opacity-75">Gerencie entidades turísticas, ingira dados via CKAN, transforme com o pipeline e explore o warehouse analítico.</p>
+      </div>
+      <div class="col-lg-4">
+        <div class="data-management-panel p-4 h-100">
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Acesso rápido</p>
+          <p class="mb-3 text-secondary small">Inicie pela curadoria manual ou pelo painel de ingestão pública.</p>
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary btn-sm" href="{{ path('app_admin_data_management') }}">
+              <i class="bi bi-pencil-square me-1"></i>Gestão de Dados
+            </a>
+            <a class="btn btn-outline-primary btn-sm" href="{{ path('app_admin_ingestion_overview') }}">
+              <i class="bi bi-speedometer2 me-1"></i>Ingestão
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Seção 1: Curadoria e manutenção ── #}
+  <h6 class="text-muted text-uppercase fw-semibold small mb-3">
+    <i class="bi bi-pencil-square me-1"></i>Curadoria e manutenção
+  </h6>
+  <div class="row g-3 mb-4">
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_data_management') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover border-start border-teal border-3">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-pencil-square fs-4 text-teal"></i>
+              <h6 class="fw-bold mb-0">Gestão de Dados</h6>
+            </div>
+            <p class="text-muted small mb-0">Console visual para manutenção manual, revisão e higienização das bases estratégicas.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_resource_index', {resource: 'tourist-spots'}) }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-geo-alt fs-4 text-primary"></i>
+              <h6 class="fw-bold mb-0">Pontos Turísticos</h6>
+            </div>
+            <p class="text-muted small mb-0">Cadastro operacional dos atrativos e referências territoriais.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_resource_index', {resource: 'events'}) }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-calendar-event fs-4 text-success"></i>
+              <h6 class="fw-bold mb-0">Eventos</h6>
+            </div>
+            <p class="text-muted small mb-0">Programação turística e agendas com curadoria institucional.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_resource_index', {resource: 'accommodations'}) }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-building fs-4 text-info"></i>
+              <h6 class="fw-bold mb-0">Hospedagens</h6>
+            </div>
+            <p class="text-muted small mb-0">Infraestrutura receptiva e capacidade de permanência no destino.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_resource_index', {resource: 'guides'}) }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-person-badge fs-4 text-warning"></i>
+              <h6 class="fw-bold mb-0">Guias Turísticos</h6>
+            </div>
+            <p class="text-muted small mb-0">Rede de profissionais, especialidades e atuação territorial.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_resource_index', {resource: 'data-sources'}) }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-server fs-4 text-secondary"></i>
+              <h6 class="fw-bold mb-0">Fontes de Dados</h6>
+            </div>
+            <p class="text-muted small mb-0">Catálogo de bases monitoradas e insumos institucionais.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+  </div>
+
+  {# ── Seção 2: Ingestão pública ── #}
+  <h6 class="text-muted text-uppercase fw-semibold small mb-3 mt-2">
+    <i class="bi bi-cloud-arrow-down me-1"></i>Ingestão pública
+  </h6>
+  <div class="row g-3 mb-4">
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_ingestion_overview') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover border-start border-primary border-3">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-speedometer2 fs-4 text-primary"></i>
+              <h6 class="fw-bold mb-0">Visão Geral</h6>
+            </div>
+            <p class="text-muted small mb-0">Painel executivo da ingestão pública, provedores e pipeline operacional.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_data_providers') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-cloud-arrow-down fs-4 text-primary"></i>
+              <h6 class="fw-bold mb-0">Provedores CKAN</h6>
+            </div>
+            <p class="text-muted small mb-0">Cadastro de provedores e sincronização institucional de pacotes.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_ingestion_runs') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-database-fill-gear fs-4 text-success"></i>
+              <h6 class="fw-bold mb-0">Ingestão de Dados</h6>
+            </div>
+            <p class="text-muted small mb-0">Downloads, preview e preparação para orchestration.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_raw_files') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-folder-symlink fs-4 text-secondary"></i>
+              <h6 class="fw-bold mb-0">Arquivos RAW</h6>
+            </div>
+            <p class="text-muted small mb-0">Inventário de arquivos físicos já baixados no storage local.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+  </div>
+
+  {# ── Seção 3: Transformação · Fase 3 ── #}
+  <h6 class="text-muted text-uppercase fw-semibold small mb-3 mt-2">
+    <i class="bi bi-diagram-3 me-1"></i>Transformação <span class="badge bg-secondary ms-1">Fase 3</span>
+  </h6>
+  <div class="row g-3 mb-4">
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_column_mapping') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-diagram-3 fs-4 text-primary"></i>
+              <h6 class="fw-bold mb-0">Mapeamento</h6>
+            </div>
+            <p class="text-muted small mb-0">Padronização de colunas entre datasets com tipos e regras de transformação.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_data_quality') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-shield-check fs-4 text-success"></i>
+              <h6 class="fw-bold mb-0">Qualidade</h6>
+            </div>
+            <p class="text-muted small mb-0">Monitoramento de linhas válidas, inválidas, duplicidades e erros.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_data_catalog') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-collection fs-4 text-info"></i>
+              <h6 class="fw-bold mb-0">Catálogo</h6>
+            </div>
+            <p class="text-muted small mb-0">Inventário estruturado dos datasets normalizados disponíveis na plataforma.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_staging_preview') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-layers fs-4 text-warning"></i>
+              <h6 class="fw-bold mb-0">Preview Staging</h6>
+            </div>
+            <p class="text-muted small mb-0">Visualização dos dados normalizados na camada staging.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+  </div>
+
+  {# ── Seção 4: Warehouse · Fase 4 ── #}
+  <h6 class="text-muted text-uppercase fw-semibold small mb-3 mt-2">
+    <i class="bi bi-database-fill me-1"></i>Warehouse <span class="badge bg-secondary ms-1">Fase 4</span>
+  </h6>
+  <div class="row g-3">
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_warehouse_overview') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover border-start border-teal border-3">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-database-fill fs-4 text-teal"></i>
+              <h6 class="fw-bold mb-0">Data Warehouse</h6>
+            </div>
+            <p class="text-muted small mb-0">Tabelas analíticas consolidadas do pipeline de dados territoriais.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_analytic_models') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-gear-wide-connected fs-4 text-primary"></i>
+              <h6 class="fw-bold mb-0">Modelos Analíticos</h6>
+            </div>
+            <p class="text-muted small mb-0">Transformações STAGING → WAREHOUSE com dimensões e métricas.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_data_lineage') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-diagram-3 fs-4 text-success"></i>
+              <h6 class="fw-bold mb-0">Linhagem de Dados</h6>
+            </div>
+            <p class="text-muted small mb-0">Fluxo completo: CKAN → RAW → STAGING → WAREHOUSE → DASHBOARDS.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_exports_index') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-3 h-100 card-hover">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="bi bi-file-earmark-arrow-down fs-4 text-secondary"></i>
+              <h6 class="fw-bold mb-0">Exportações CSV</h6>
+            </div>
+            <p class="text-muted small mb-0">Central de exportações operacionais para reuso e intercâmbio.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+  </div>
+
+</section>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends 'base.html.twig' %}
+{% block title %}Integrações & APIs · Hub{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'admin/data_management/_styles.html.twig' %}
+{% endblock %}
+
+{% block body %}
+<section class="py-4 py-lg-5">
+
+  <div class="data-management-hero p-4 p-lg-5 mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <span class="badge rounded-pill text-bg-light text-primary mb-3">APIs · Conectores · Interoperabilidade</span>
+        <h1 class="display-6 fw-bold mb-3">Integrações & APIs</h1>
+        <p class="lead mb-3">APIs publicas, internas, conectores externos e interoperabilidade.</p>
+        <p class="mb-0 opacity-75">Centralize os endpoints da plataforma, a documentacao tecnica e os conectores para IA, BI e ecossistema externo.</p>
+      </div>
+      <div class="col-lg-4">
+        <div class="data-management-panel p-4 h-100">
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Documentacao tecnica</p>
+          <p class="text-secondary small mb-3">Acesse rapidamente a documentacao publica, interna e os endpoints de interoperabilidade.</p>
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary btn-sm" href="{{ path('app_public_api_v1_docs') }}">
+              <i class="bi bi-globe2 me-1"></i>API publica
+            </a>
+            <a class="btn btn-outline-primary btn-sm" href="{{ path('app_platform_api_docs') }}">
+              <i class="bi bi-filetype-json me-1"></i>Swagger
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="h5 fw-semibold mb-3"><i class="bi bi-braces-asterisk me-2 text-primary"></i>APIs e documentacao</h2>
+  <div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_public_api_v1_docs') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-globe2"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Publica</span>
+          </div>
+          <h3 class="h5 mb-2">API Publica</h3>
+          <p class="text-secondary small mb-3">Dados abertos para integracao publica, civica e academica.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Abrir docs</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="/api" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-braces-asterisk"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Interna</span>
+          </div>
+          <h3 class="h5 mb-2">API Interna</h3>
+          <p class="text-secondary small mb-3">Camada de integracao operacional e servicos internos.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Abrir endpoint</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_mcp_v1_docs') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-cpu"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">IA</span>
+          </div>
+          <h3 class="h5 mb-2">MCP / IA</h3>
+          <p class="text-secondary small mb-3">Gateway de contexto e ferramentas para LLMs e agentes inteligentes.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver documentacao</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_platform_api_docs') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-filetype-json"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">OpenAPI</span>
+          </div>
+          <h3 class="h5 mb-2">Swagger/OpenAPI</h3>
+          <p class="text-secondary small mb-3">Documentacao navegavel das operacoes internas e contratos da plataforma.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Abrir Swagger</span>
+        </article>
+      </a>
+    </div>
+  </div>
+
+  <h2 class="h5 fw-semibold mb-3"><i class="bi bi-plugin me-2 text-primary"></i>Conectores e BI</h2>
+  <div class="row g-4">
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_metabase_config') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-graph-up"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">BI</span>
+          </div>
+          <h3 class="h5 mb-2">Metabase</h3>
+          <p class="text-secondary small mb-3">Configuracao e integracao da instancia Metabase para analytics e dashboards.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Abrir configuracao</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="/api/analytics/indicadores" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-braces"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Warehouse</span>
+          </div>
+          <h3 class="h5 mb-2">APIs Analiticas</h3>
+          <p class="text-secondary small mb-3">Endpoints analiticos do warehouse para consumo externo, apps e IA futura.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver endpoints</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <article class="data-management-card p-4 opacity-75" style="cursor: not-allowed;">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div class="data-management-icon"><i class="bi bi-send-check"></i></div>
+          <span class="badge rounded-pill text-bg-warning">Em breve</span>
+        </div>
+        <h3 class="h5 mb-2">Webhooks</h3>
+        <p class="text-secondary small mb-3">Eventos de integracao e automacoes orientadas a disparo.</p>
+        <span class="btn btn-outline-secondary btn-sm w-100 disabled">Disponivel em breve</span>
+      </article>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <article class="data-management-card p-4 opacity-75" style="cursor: not-allowed;">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div class="data-management-icon"><i class="bi bi-plugin"></i></div>
+          <span class="badge rounded-pill text-bg-warning">Em breve</span>
+        </div>
+        <h3 class="h5 mb-2">Integracoes Externas</h3>
+        <p class="text-secondary small mb-3">Mapa de parceiros, conectores e servicos de terceiros.</p>
+        <span class="btn btn-outline-secondary btn-sm w-100 disabled">Disponivel em breve</span>
+      </article>
+    </div>
+  </div>
+
+</section>
+{% endblock %}

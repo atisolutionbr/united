@@ -1,0 +1,53 @@
+{% extends 'base.html.twig' %}
+
+{% block body_id 'login' %}
+{% block title %}Acessar KFlow360{% endblock %}
+
+{% block main %}
+    {% set release = kflow_release() %}
+    <section class="kflow-login">
+        <div class="kflow-login__intro">
+            <a class="kflow-brand kflow-brand--login" href="{{ path('homepage') }}"><span class="kflow-brand__mark"><img class="kflow-brand__logo" src="{{ asset('images/kflow360-logo.png') }}" alt=""></span><span class="kflow-brand__name">KFlow360<small>Integration Platform</small></span></a>
+            <div class="kflow-login__intro-copy">
+                <span class="kflow-eyebrow">Kadastro360</span>
+                <h1>Integrações que fazem tudo fluir.</h1>
+                <p>Conecte seus ERPs, saneie cadastros e conduza aprovações em uma plataforma única, rápida e segura.</p>
+            </div>
+            <div class="kflow-login__footer">KFlow360 · v{{ release.version }} · build {{ release.build }} · Ambiente local</div>
+        </div>
+
+        <div class="kflow-login__form-wrap">
+            <div class="kflow-login__form">
+                <div class="kflow-login__form-brand"><img src="{{ asset('images/kflow360-logo.png') }}" alt="KFlow360"></div>
+                <span class="kflow-eyebrow">Acesso seguro</span>
+                <h2>Entrar</h2>
+                <p>Use suas credenciais para continuar.</p>
+
+                {% if error %}
+                    <div class="alert alert-danger kflow-alert" role="alert">Falha no acesso. Verifique seu usuário e senha e tente novamente.</div>
+                {% endif %}
+
+                <form action="{{ path('security_login') }}" method="post" data-login-form novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="username">Usuário</label>
+                        <input class="form-control form-control-lg" id="username" name="_username" required type="text" value="{{ last_username }}" autocomplete="username" autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="password">Senha</label>
+                        <div class="input-group">
+                            <input class="form-control form-control-lg" id="password" name="_password" required type="password" autocomplete="current-password" data-password-input>
+                            <button class="btn btn-outline-secondary" type="button" data-password-toggle aria-label="Mostrar senha" title="Mostrar senha"><i class="bi bi-eye"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-check mb-4"><input class="form-check-input" id="remember_me" name="_remember_me" type="checkbox" checked><label class="form-check-label" for="remember_me">Manter conectado</label></div>
+                    <input type="hidden" name="_target_path" value="{{ app.request.query.get('redirect_to') }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+                    <button type="submit" class="btn btn-primary btn-lg w-100 kflow-login__submit" data-login-submit>
+                        <span data-login-label>Entrar<i class="bi bi-arrow-right ms-2"></i></span>
+                        <span data-login-loading hidden><span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Conectando...</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+{% endblock %}

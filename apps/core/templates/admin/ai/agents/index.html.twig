@@ -1,0 +1,57 @@
+{% extends 'base.html.twig' %}
+{% block title %}Agentes de IA — Plataforma360{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h1 class="h3 fw-bold mb-1"><i class="bi bi-person-gear text-teal me-2"></i>Agentes de IA</h1>
+            <p class="text-muted small mb-0">Agentes especializados por domínio com ferramentas e contextos configuráveis</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ path('app_admin_ai_agents_new') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus me-1"></i>Novo Agente</a>
+        </div>
+    </div>
+
+    {% for msg in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}
+
+    <div class="row g-3">
+        {% if agents is empty %}
+            <div class="col-12 text-center py-5 text-muted">
+                <i class="bi bi-person-gear fs-2 d-block mb-2"></i>Nenhum agente configurado.
+                <a href="{{ path('app_admin_ai_agents_new') }}" class="d-block mt-2">Criar primeiro agente</a>
+            </div>
+        {% else %}
+            {% for agent in agents %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-start justify-content-between mb-2">
+                            <h6 class="fw-semibold mb-0">{{ agent.name }}</h6>
+                            <span class="badge {% if agent.isActive %}bg-success{% else %}bg-secondary{% endif %}">{{ agent.isActive ? 'Ativo' : 'Inativo' }}</span>
+                        </div>
+                        <div class="badge bg-light text-dark border small mb-2">{{ agent.agentType }}</div>
+                        <p class="small text-muted mb-3">{{ agent.description ?? '—' }}</p>
+                        {% if agent.tools %}
+                        <div class="mb-2">
+                            {% for tool in agent.tools %}
+                            <span class="badge bg-light text-dark border me-1 mb-1" style="font-size:.7rem"><i class="bi bi-tools me-1"></i>{{ tool }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="d-flex gap-2 mt-3">
+                            <a href="{{ path('app_admin_ai_assistant') }}?agent={{ agent.id }}" class="btn btn-sm btn-outline-teal" style="border-color:#0f766e;color:#0f766e"><i class="bi bi-chat me-1"></i>Usar</a>
+                            <a href="{{ path('app_admin_ai_agents_edit', {id: agent.id}) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil me-1"></i>Editar</a>
+                            <form method="post" action="{{ path('app_admin_ai_agents_delete', {id: agent.id}) }}" class="d-inline" onsubmit="return confirm('Remover agente?')">
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

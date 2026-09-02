@@ -1,0 +1,65 @@
+{% extends 'base.html.twig' %}
+{% block title %}Alertas{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1"><i class="bi bi-bell text-teal me-2"></i>Alertas</h1>
+      <p class="text-muted mb-0">{{ activeTotal }} ativos · {{ activeCritical }} críticos</p>
+    </div>
+    <a href="{{ path('app_admin_operations_overview') }}" class="btn btn-outline-secondary btn-sm">← Operações</a>
+  </div>
+
+  {% for msg in app.flashes('success') %}<div class="alert alert-success alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+  {% for msg in app.flashes('warning') %}<div class="alert alert-warning alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr><th>Nível</th><th>Título</th><th>Tipo</th><th>Fonte</th><th>Status</th><th>Criado</th><th>Ações</th></tr>
+        </thead>
+        <tbody>
+        {% for alert in alerts %}
+        <tr class="{% if alert.level == 'critical' and alert.status == 'active' %}table-danger{% elseif alert.level == 'warning' and alert.status == 'active' %}table-warning{% endif %}">
+          <td>
+            <span class="badge bg-{% if alert.level == 'critical' %}danger{% elseif alert.level == 'warning' %}warning text-dark{% else %}info text-dark{% endif %}">
+              {{ alert.level }}
+            </span>
+          </td>
+          <td>
+            <div class="fw-semibold">{{ alert.title }}</div>
+            <small class="text-muted">{{ alert.message|slice(0,80) }}{% if alert.message|length > 80 %}…{% endif %}</small>
+          </td>
+          <td><small class="badge bg-secondary">{{ alert.type }}</small></td>
+          <td><small class="text-muted">{{ alert.source ?? '—' }}</small></td>
+          <td>
+            <span class="badge bg-{% if alert.status == 'active' %}danger{% elseif alert.status == 'acknowledged' %}warning text-dark{% else %}success{% endif %}">
+              {{ alert.status }}
+            </span>
+          </td>
+          <td><small class="text-muted">{{ alert.createdAt|date('d/m/Y H:i') }}</small></td>
+          <td>
+            <div class="btn-group btn-group-sm">
+              {% if alert.status == 'active' %}
+              <form method="post" action="{{ path('app_admin_operations_alerts_acknowledge', {id: alert.id}) }}">
+                <button class="btn btn-warning btn-sm" title="Reconhecer"><i class="bi bi-check"></i></button>
+              </form>
+              {% endif %}
+              {% if alert.status != 'resolved' %}
+              <form method="post" action="{{ path('app_admin_operations_alerts_resolve', {id: alert.id}) }}">
+                <button class="btn btn-success btn-sm" title="Resolver"><i class="bi bi-check-all"></i></button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center py-4 text-muted"><i class="bi bi-check-circle text-success me-2"></i>Nenhum alerta registrado.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

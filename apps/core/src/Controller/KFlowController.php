@@ -1,0 +1,606 @@
+<?php
+
+namespace App\Controller;
+
+use App\Entity\ErpConnection;
+use App\Entity\ErpConnectionLog;
+use App\Entity\User;
+use App\Service\ErpCatalog;
+use App\Service\ErpConnectionProfile;
+use App\Service\DatabaseSchemaInspector;
+use App\Service\ProductFiscalIntelligence;
+use App\Service\ProductSanitizationService;
+use App\Service\SeniorProductCatalog;
+use App\Service\SeniorWebServiceCatalog;
+use App\Service\SeniorWebServiceManager;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
+
+#[Route('/kflow')]
+#[IsGranted(User::ROLE_USER)]
+final class KFlowController extends AbstractController
+{
+    /** @var array<string, array{title: string, description: string, icon: string}> */
+    private const MODULES = [
+        'cliente' => ['title' => 'Cliente', 'description' => 'Gestão de cadastros e relacionamento com clientes.', 'icon' => 'people'],
+        'fornecedor' => ['title' => 'Fornecedor', 'description' => 'Cadastro e gestão de fornecedores.', 'icon' => 'truck'],
+        'transportador' => ['title' => 'Transportador', 'description' => 'Cadastro e gestão de transportadores.', 'icon' => 'truck-flatbed'],
+        'requisicao' => ['title' => 'Requisição', 'description' => 'Criação e acompanhamento de requisições.', 'icon' => 'clipboard2-plus'],
+        'aprovacao' => ['title' => 'Aprovação', 'description' => 'Central de aprovações dos fluxos do KFlow360.', 'icon' => 'check2-square'],
+        'aprovacao-requisicao' => ['title' => 'Aprovação Requisição', 'description' => 'Fluxo de aprovação de requisições.', 'icon' => 'check2-square'],
+        'solicitacao' => ['title' => 'Solicitação', 'description' => 'Solicitações operacionais da plataforma.', 'icon' => 'send'],
+        'aprovacao-solicitacao' => ['title' => 'Aprovação Solicitação', 'description' => 'Fluxo de aprovação de solicitações.', 'icon' => 'check2-circle'],
+        'ordem-compra' => ['title' => 'Ordem de Compra', 'description' => 'Emissão e acompanhamento de ordens de compra.', 'icon' => 'bag-check'],
+        'aprovacao-ordem-compra' => ['title' => 'Aprovação Ordem de Compra', 'description' => 'Fluxo de aprovação das ordens de compra.', 'icon' => 'patch-check'],
+        'financeiro' => ['title' => 'Financeiro', 'description' => 'Consolidação financeira e rotinas de fechamento.', 'icon' => 'cash-stack'],
+        'contas-pagar' => ['title' => 'Contas a Pagar', 'description' => 'Programação e controle dos pagamentos.', 'icon' => 'arrow-down-circle'],
+        'aprovacao-financeira-cp' => ['title' => 'Aprovação Financeira CP', 'description' => 'Aprovação de compromissos financeiros a pagar.', 'icon' => 'shield-check'],
+        'contas-receber' => ['title' => 'Contas a Receber', 'description' => 'Acompanhamento de recebíveis.', 'icon' => 'arrow-up-circle'],
+        'aprovacao-financeira-cr' => ['title' => 'Aprovação Financeira CR', 'description' => 'Aprovação de registros financeiros a receber.', 'icon' => 'shield-plus'],
+    ];
+
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly ErpCatalog $erpCatalog,
+        private readonly ErpConnectionProfile $connectionProfile,
+        private readonly DatabaseSchemaInspector $databaseSchemaInspector,
+        private readonly SeniorProductCatalog $seniorProductCatalog,
+        private readonly SeniorWebServiceCatalog $seniorWebServiceCatalog,
+        private readonly SeniorWebServiceManager $seniorWebServiceManager,
+        private readonly ProductFiscalIntelligence $fiscalIntelligence,
+        private readonly ProductSanitizationService $sanitizationService,
+        private readonly CsrfTokenManagerInterface $csrfTokenManager,
+        #[Autowire('%env(METABASE_URL)%')]
+        private readonly string $metabaseUrl,
+    ) {
+    }
+
+    #[Route('', name: 'kflow_dashboard', methods: ['GET'])]
+    public function dashboard(): Response
+    {
+        return $this->render('kflow/dashboard.html.twig', [
+            'activeErp' => $this->activeErp(),
+            'erpCount' => count($this->erpCatalog->all()),
+        ]);
+    }
+
+    #[Route('/module/{module}', name: 'kflow_module', methods: ['GET'])]
+    public function module(string $module): Response
+    {
+        if (!isset(self::MODULES[$module])) {
+            throw $this->createNotFoundException();
+        }
+
+        return $this->render('kflow/module.html.twig', self::MODULES[$module]);
+    }
+
+    #[Route('/products', name: 'kflow_products', methods: ['GET'])]
+    public function products(): Response
+    {
+        $connection = $this->activeConnection();
+        $activeErp = $connection?->getErpName();
+        $productData = [
+            'configured' => false,
+            'products' => [],
+            'error' => null,
+            'sourceTable' => 'E075PRO',
+            'recordCount' => 0,
+            'ncmUpdateAvailable' => false,
+        ];
+        $mapping = [];
+
+        if ('Senior' === $activeErp) {
+            $mapping = $this->effectiveMapping($connection);
+            $productData = $this->seniorProductCatalog->listProducts($mapping);
+        }
+
+        $products = $productData['products'];
+        $firstProduct = $products[0] ?? [];
+
+        return $this->render('kflow/products.html.twig', [
+            'activeErp' => $activeErp,
+            'productData' => $productData,
+            'fiscalReview' => $this->fiscalIntelligence->review($firstProduct['Ncm'] ?? null),
+            'sanitization' => $this->sanitizationService->analyze($products),
+            'fields' => [
+                ['key' => 'CodEmp', 'label' => 'Empresa'],
+                ['key' => 'CodPro', 'label' => 'Código do Produto (ERP)'],
+                ['key' => 'DesPro', 'label' => 'Descrição do Produto'],
+                ['key' => 'CplPro', 'label' => 'Complemento da Descrição'],
+                ['key' => 'DesNFv', 'label' => 'Descrição para Nota Fiscal'],
+                ['key' => 'CodFam', 'label' => 'Código da Família'],
+                ['key' => 'UniMed', 'label' => 'Unidade de Medida de Vendas'],
+                ['key' => 'TipPro', 'label' => 'Tipo do Produto'],
+                ['key' => 'CodOri', 'label' => 'Origem (Grupo)'],
+                ['key' => 'Ncm', 'label' => 'NCM', 'fiscal' => true],
+                ['key' => 'CstPis', 'label' => 'CST PIS', 'fiscal' => true],
+                ['key' => 'CstCofins', 'label' => 'CST COFINS', 'fiscal' => true],
+                ['key' => 'CstIcms', 'label' => 'CST ICMS', 'fiscal' => true],
+            ],
+            'mapping' => $mapping,
+            'fiscalWriteAvailable' => $connection instanceof ErpConnection && $this->seniorWebServiceManager->isProductUpdateAvailable($connection),
+        ]);
+    }
+
+    #[Route('/products/senior/fiscal', name: 'kflow_senior_product_fiscal', methods: ['POST'])]
+    public function updateSeniorProductFiscal(Request $request): Response
+    {
+        $connection = $this->activeConnection();
+        if ('Senior' !== $connection?->getErpName() || !$this->isCsrfTokenValid('senior-product-fiscal', (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $result = $this->seniorWebServiceManager->updateProductFiscal(
+            $connection,
+            [
+                'company' => trim((string) $request->request->get('company')),
+                'product_code' => trim((string) $request->request->get('product_code')),
+                'product_name' => (string) $request->request->get('product_name'),
+                'unit' => (string) $request->request->get('unit'),
+                'origin_code' => (string) $request->request->get('origin_code'),
+                'family' => (string) $request->request->get('family'),
+                'ncm' => (string) $request->request->get('ncm'),
+                'cst_pis' => (string) $request->request->get('cst_pis'),
+                'cst_cofins' => (string) $request->request->get('cst_cofins'),
+                'cst_icms' => (string) $request->request->get('cst_icms'),
+            ],
+        );
+        $this->addFlash($result['updated'] ? 'success' : 'warning', $result['message']);
+
+        return $this->redirectToRoute('kflow_products');
+    }
+
+    #[Route('/erp', name: 'kflow_erp_index', methods: ['GET'])]
+    public function erps(): Response
+    {
+        return $this->render('kflow/erp/index.html.twig', [
+            'erps' => $this->erpCatalog->all(),
+            'activeErp' => $this->activeErp(),
+        ]);
+    }
+
+    #[Route('/erp/{erp}/select', name: 'kflow_erp_select', methods: ['POST'])]
+    public function selectErp(string $erp, Request $request): Response
+    {
+        if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('select-erp-'.$erp, (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+
+        foreach ($this->entityManager->getRepository(ErpConnection::class)->findAll() as $existingConnection) {
+            $existingConnection->setIsActive(false);
+        }
+
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) {
+            $connection = new ErpConnection($erp);
+            $this->entityManager->persist($connection);
+        }
+
+        if (null === $connection->getConnectionMethod()) {
+            $connection
+                ->setConnectionMethod(ErpConnection::METHOD_DATABASE)
+                ->setSettingsForMethod(ErpConnection::METHOD_DATABASE, $this->connectionProfile->defaultSettings($erp, ErpConnection::METHOD_DATABASE))
+                ->setProductMapping($this->connectionProfile->defaultProductMapping($erp));
+        }
+
+        $connection->setIsActive(true);
+        $this->entityManager->flush();
+        $request->getSession()->set('kflow_selected_erp', $erp);
+
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp]);
+    }
+
+    #[Route('/erp/{erp}/connect', name: 'kflow_erp_connect', methods: ['GET'])]
+    public function connectErp(string $erp, Request $request): Response
+    {
+        if (!$this->erpCatalog->supports($erp)) {
+            throw $this->createNotFoundException();
+        }
+
+        $connection = $this->connectionFor($erp);
+        $method = (string) $request->query->get('method', $connection?->getConnectionMethod() ?? ErpConnection::METHOD_DATABASE);
+        if (!array_key_exists($method, $this->connectionProfile->connectionMethods())) {
+            $method = ErpConnection::METHOD_DATABASE;
+        }
+
+        $settings = $this->connectionProfile->defaultSettings($erp, $method);
+        if ($connection instanceof ErpConnection) {
+            $settings = array_replace($settings, $connection->getSettingsForMethod($method));
+        }
+        $mapping = array_replace($this->connectionProfile->defaultProductMapping($erp), $connection?->getProductMapping() ?? []);
+        $databaseStep = (string) $request->query->get('step', 'connection');
+        $databaseStep = in_array($databaseStep, ['connection', 'table', 'mapping'], true) ? $databaseStep : 'connection';
+        $integrationStep = (string) $request->query->get('step', 'connection');
+        $integrationStep = in_array($integrationStep, ['connection', 'mapping'], true) ? $integrationStep : 'connection';
+        $databaseForms = $this->connectionProfile->databaseForms();
+        $configuredForms = $this->configuredForms($settings, $databaseForms);
+        $selectedForm = (string) $request->query->get('form', $configuredForms[0]['id']);
+        $selectedFormConfig = $this->formConfig($configuredForms, $selectedForm) ?? $configuredForms[0];
+        $selectedForm = $selectedFormConfig['id'];
+        $selectedFormDefinition = $databaseForms[$selectedFormConfig['template']];
+        $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
+        $binding = is_array($bindings[$selectedForm] ?? null) ? $bindings[$selectedForm] : [];
+        $selectedTable = (string) ($binding['table'] ?? $settings['table'] ?? '');
+        $tables = ['tables' => [], 'error' => null];
+        $columns = ['columns' => [], 'error' => null];
+        if (ErpConnection::METHOD_DATABASE === $method && 'connection' !== $databaseStep) {
+            $tables = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured()
+                ? $this->seniorProductCatalog->availableTables()
+                : $this->databaseSchemaInspector->tables($settings);
+            if ('mapping' === $databaseStep && '' !== $selectedTable) {
+                $columns = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured()
+                    ? $this->seniorProductCatalog->columnsForTable($selectedTable)
+                    : $this->databaseSchemaInspector->columns($settings, $selectedTable);
+            }
+        }
+
+        return $this->render('kflow/erp/connect.html.twig', [
+            'erp' => $erp,
+            'method' => $method,
+            'methods' => $this->connectionProfile->connectionMethods(),
+            'settings' => $settings,
+            'productFields' => $this->connectionProfile->productFields(),
+            'mapping' => $mapping,
+            'availableColumns' => $this->connectionProfile->availableColumns($erp, $method),
+            'databaseStep' => $databaseStep,
+            'databaseForms' => $databaseForms,
+            'configuredForms' => $configuredForms,
+            'selectedForm' => $selectedForm,
+            'selectedFormDefinition' => $selectedFormDefinition,
+            'selectedFormLabel' => $selectedFormConfig['label'],
+            'selectedTable' => $selectedTable,
+            'bindingMapping' => is_array($binding['mapping'] ?? null) ? $binding['mapping'] : ('products' === $selectedForm ? $mapping : []),
+            'databaseTables' => $tables['tables'],
+            'databaseTablesError' => $tables['error'],
+            'databaseColumns' => $columns['columns'],
+            'databaseColumnsError' => $columns['error'],
+            'integrationStep' => $integrationStep,
+            'payloadMapping' => is_array(($settings['form_mappings'][$selectedForm] ?? null)) ? $settings['form_mappings'][$selectedForm] : [],
+            'isActive' => $connection?->isActive() ?? false,
+            'seniorDatabaseAvailable' => 'Senior' === $erp && $this->seniorProductCatalog->isConfigured(),
+            'seniorWebServices' => 'Senior' === $erp ? $this->seniorWebServiceCatalog->all() : [],
+            'webServiceLogs' => $connection instanceof ErpConnection
+                ? $this->entityManager->getRepository(ErpConnectionLog::class)->findBy(['connection' => $connection], ['createdAt' => 'DESC'], 6)
+                : [],
+        ]);
+    }
+
+    #[Route('/erp/{erp}/connect', name: 'kflow_erp_connect_save', methods: ['POST'])]
+    public function saveErpConnection(string $erp, Request $request): Response
+    {
+        if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('configure-erp-'.$erp, (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $method = (string) $request->request->get('method');
+        if (!array_key_exists($method, $this->connectionProfile->connectionMethods())) {
+            throw $this->createNotFoundException();
+        }
+
+        foreach ($this->entityManager->getRepository(ErpConnection::class)->findAll() as $existingConnection) {
+            $existingConnection->setIsActive(false);
+        }
+
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) {
+            $connection = new ErpConnection($erp);
+            $this->entityManager->persist($connection);
+        }
+
+        $settingsInput = $request->request->all('settings');
+        $existingSettings = array_replace(
+            $this->connectionProfile->defaultSettings($erp, $method),
+            $connection->getSettingsForMethod($method),
+        );
+        $settings = $this->connectionProfile->settingsFromInput(
+            $method,
+            is_array($settingsInput) ? $settingsInput : [],
+            $existingSettings,
+        );
+        $mapping = $connection->getProductMapping();
+        if (ErpConnection::METHOD_DATABASE === $method) {
+            $mappingInput = $request->request->all('mapping');
+            if (is_array($mappingInput) && [] !== $mappingInput) {
+                $mapping = $this->connectionProfile->mappingFromInput(
+                    $mappingInput,
+                    $this->connectionProfile->availableColumns($erp, $method),
+                );
+            }
+        }
+
+        $connection
+            ->setConnectionMethod($method)
+            ->setSettingsForMethod($method, $settings)
+            ->setProductMapping($mapping)
+            ->setIsActive(true)
+            ->markConfigured();
+        $this->entityManager->flush();
+        $request->getSession()->set('kflow_selected_erp', $erp);
+
+        $this->addFlash('success', sprintf('%s vinculado pelo modo %s.', $erp, $this->connectionProfile->connectionMethods()[$method]));
+
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, ...(ErpConnection::METHOD_DATABASE === $method ? ['step' => 'table'] : ['step' => 'mapping'])]);
+    }
+
+    #[Route('/erp/{erp}/database/binding', name: 'kflow_erp_database_binding', methods: ['POST'])]
+    public function saveDatabaseBinding(string $erp, Request $request): Response
+    {
+        if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('database-binding-'.$erp, (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $form = (string) $request->request->get('form');
+        $forms = $this->connectionProfile->databaseForms();
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) {
+            $this->addFlash('warning', 'Salve os dados da conexão antes de configurar o vínculo.');
+            return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_DATABASE]);
+        }
+        $configuredForm = $this->formConfig($this->configuredForms($connection->getSettingsForMethod(ErpConnection::METHOD_DATABASE), $forms), $form);
+        if (null === $configuredForm) {
+            throw $this->createNotFoundException();
+        }
+
+        $settings = $connection->getSettingsForMethod(ErpConnection::METHOD_DATABASE);
+        $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
+        $table = trim((string) $request->request->get('table'));
+        $mappingInput = $request->request->all('mapping');
+        $columns = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured()
+            ? $this->seniorProductCatalog->columnsForTable($table)['columns']
+            : $this->databaseSchemaInspector->columns($settings, $table)['columns'];
+        $mapping = $this->connectionProfile->mappingForFields(array_keys($forms[$configuredForm['template']]['fields']), is_array($mappingInput) ? $mappingInput : [], $columns);
+        $bindings[$form] = ['table' => $table, 'mapping' => $mapping];
+        $settings['bindings'] = $bindings;
+        $settings['table'] = 'products' === $form ? $table : (string) ($settings['table'] ?? '');
+        $connection->setSettingsForMethod(ErpConnection::METHOD_DATABASE, $settings);
+        if ('products' === $form) {
+            $connection->setProductMapping($mapping);
+        }
+        $this->entityManager->flush();
+        $this->addFlash('success', sprintf('Vínculo de %s salvo para a tabela %s.', $configuredForm['label'], $table));
+
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_DATABASE, 'step' => 'mapping', 'form' => $form]);
+    }
+
+    #[Route('/erp/{erp}/payload-mapping', name: 'kflow_erp_payload_mapping', methods: ['POST'])]
+    public function savePayloadMapping(string $erp, Request $request): Response
+    {
+        $method = (string) $request->request->get('method');
+        if (!$this->erpCatalog->supports($erp)
+            || !in_array($method, [ErpConnection::METHOD_API, ErpConnection::METHOD_WEBSERVICE], true)
+            || !$this->isCsrfTokenValid('payload-mapping-'.$erp.'-'.$method, (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $form = (string) $request->request->get('form');
+        $forms = $this->connectionProfile->databaseForms();
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) {
+            throw $this->createNotFoundException();
+        }
+        $configuredForm = $this->formConfig($this->configuredForms($connection->getSettingsForMethod($method), $forms), $form);
+        if (null === $configuredForm) {
+            throw $this->createNotFoundException();
+        }
+
+        $input = $request->request->all('mapping');
+        $mapping = [];
+        foreach (array_keys($forms[$configuredForm['template']]['fields']) as $field) {
+            $source = trim((string) (is_array($input) ? ($input[$field] ?? '') : ''));
+            $mapping[$field] = preg_match('/^[A-Za-z0-9_.\[\]-]{0,160}$/', $source) ? $source : '';
+        }
+
+        $settings = $connection->getSettingsForMethod($method);
+        $formMappings = is_array($settings['form_mappings'] ?? null) ? $settings['form_mappings'] : [];
+        $formMappings[$form] = $mapping;
+        $settings['form_mappings'] = $formMappings;
+        $connection->setSettingsForMethod($method, $settings);
+        $this->entityManager->flush();
+        $this->addFlash('success', sprintf('De/Para de %s salvo para %s.', $configuredForm['label'], $this->connectionProfile->connectionMethods()[$method]));
+
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'mapping', 'form' => $form]);
+    }
+
+    #[Route('/erp/{erp}/forms', name: 'kflow_erp_forms_create', methods: ['POST'])]
+    public function createIntegrationForm(string $erp, Request $request): JsonResponse
+    {
+        $method = (string) $request->request->get('method');
+        if (!$this->erpCatalog->supports($erp)
+            || !array_key_exists($method, $this->connectionProfile->connectionMethods())
+            || !$this->isCsrfTokenValid('create-integration-form-'.$erp.'-'.$method, (string) $request->request->get('_token'))) {
+            return $this->json(['ok' => false, 'message' => 'Não foi possível criar o formulário.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $template = (string) $request->request->get('template');
+        $definitions = $this->connectionProfile->databaseForms();
+        if (!isset($definitions[$template])) {
+            return $this->json(['ok' => false, 'message' => 'Modelo de formulário inválido.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) {
+            return $this->json(['ok' => false, 'message' => 'Salve a conexão antes de criar formulários.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $settings = $connection->getSettingsForMethod($method);
+        $forms = $this->configuredForms($settings, $definitions);
+        $label = trim((string) $request->request->get('label'));
+        $label = '' !== $label ? mb_substr($label, 0, 80) : $definitions[$template]['label'];
+        $form = ['id' => 'form-'.bin2hex(random_bytes(4)), 'label' => $label, 'template' => $template];
+        $forms[] = $form;
+        $settings['form_catalog'] = $forms;
+        $connection->setSettingsForMethod($method, $settings);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'ok' => true,
+            'form' => $form,
+            'delete' => [
+                'url' => $this->generateUrl('kflow_erp_forms_delete', ['erp' => $erp, 'form' => $form['id']]),
+                'token' => $this->csrfTokenManager->getToken('delete-integration-form-'.$erp.'-'.$method.'-'.$form['id'])->getValue(),
+            ],
+        ]);
+    }
+
+    #[Route('/erp/{erp}/forms/{form}', name: 'kflow_erp_forms_delete', methods: ['POST'])]
+    public function deleteIntegrationForm(string $erp, string $form, Request $request): JsonResponse
+    {
+        $method = (string) $request->request->get('method');
+        if (!$this->erpCatalog->supports($erp)
+            || !array_key_exists($method, $this->connectionProfile->connectionMethods())
+            || !str_starts_with($form, 'form-')
+            || !$this->isCsrfTokenValid('delete-integration-form-'.$erp.'-'.$method.'-'.$form, (string) $request->request->get('_token'))) {
+            return $this->json(['ok' => false, 'message' => 'Não foi possível excluir o formulário.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) {
+            return $this->json(['ok' => false, 'message' => 'Conexão do ERP não encontrada.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $settings = $connection->getSettingsForMethod($method);
+        $catalog = is_array($settings['form_catalog'] ?? null) ? $settings['form_catalog'] : [];
+        $remainingForms = array_values(array_filter($catalog, static fn (mixed $item): bool => !is_array($item) || ($item['id'] ?? null) !== $form));
+        if (count($remainingForms) === count($catalog)) {
+            return $this->json(['ok' => false, 'message' => 'Formulário não encontrado.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $settings['form_catalog'] = $remainingForms;
+        foreach (['bindings', 'form_mappings'] as $setting) {
+            if (is_array($settings[$setting] ?? null)) {
+                unset($settings[$setting][$form]);
+            }
+        }
+        $connection->setSettingsForMethod($method, $settings);
+        $this->entityManager->flush();
+
+        return $this->json(['ok' => true, 'message' => 'Formulário e seus vínculos foram excluídos.']);
+    }
+
+    #[Route('/erp/{erp}/webservice/test', name: 'kflow_erp_webservice_test', methods: ['POST'])]
+    public function testErpWebService(string $erp, Request $request): Response
+    {
+        if ('Senior' !== $erp || !$this->isCsrfTokenValid('test-erp-webservice-'.$erp, (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) {
+            $this->addFlash('warning', 'Salve a conexão WebService antes de executar o teste.');
+
+            return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_WEBSERVICE]);
+        }
+
+        $result = $this->seniorWebServiceManager->testConnection($connection);
+        $this->addFlash($result['success'] ? 'success' : 'warning', sprintf('%s Tempo: %d ms.', $result['message'], $result['responseTimeMs']));
+
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_WEBSERVICE]);
+    }
+
+    #[Route('/erp/database', name: 'kflow_erp_database', methods: ['GET'])]
+    public function database(): Response
+    {
+        $activeErp = $this->activeErp();
+
+        return null === $activeErp
+            ? $this->redirectToRoute('kflow_erp_index')
+            : $this->redirectToRoute('kflow_erp_connect', ['erp' => $activeErp, 'method' => ErpConnection::METHOD_DATABASE]);
+    }
+
+    #[Route('/metabase', name: 'kflow_metabase', methods: ['GET'])]
+    public function metabase(): Response
+    {
+        return $this->redirect($this->metabaseUrl);
+    }
+
+    #[Route('/erp/{erp}/{area}', name: 'kflow_erp_area', methods: ['GET'], requirements: ['area' => 'integration|users'])]
+    public function erpArea(string $erp, string $area): Response
+    {
+        if (!$this->erpCatalog->supports($erp)) {
+            throw $this->createNotFoundException();
+        }
+
+        $titles = ['integration' => 'Integração', 'users' => 'Usuários'];
+
+        return $this->render('kflow/module.html.twig', [
+            'title' => sprintf('%s · %s', $erp, $titles[$area]),
+            'description' => sprintf('Configurações de %s para o ERP %s.', strtolower($titles[$area]), $erp),
+            'icon' => 'gear',
+        ]);
+    }
+
+    private function activeErp(): ?string
+    {
+        return $this->activeConnection()?->getErpName();
+    }
+
+    private function activeConnection(): ?ErpConnection
+    {
+        $connection = $this->entityManager->getRepository(ErpConnection::class)->findOneBy(['isActive' => true]);
+
+        return $connection instanceof ErpConnection ? $connection : null;
+    }
+
+    private function connectionFor(string $erp): ?ErpConnection
+    {
+        $connection = $this->entityManager->getRepository(ErpConnection::class)->findOneBy(['erpName' => $erp]);
+
+        return $connection instanceof ErpConnection ? $connection : null;
+    }
+
+    /** @return array<string, string> */
+    private function effectiveMapping(?ErpConnection $connection): array
+    {
+        return array_replace(
+            $this->connectionProfile->defaultProductMapping('Senior'),
+            $connection?->getProductMapping() ?? [],
+        );
+    }
+
+    /** @param array<string, mixed> $settings
+     *  @param array<string, array{label: string, fields: array<string, array{label: string, hint: string}>}> $definitions
+     *  @return list<array{id: string, label: string, template: string}>
+     */
+    private function configuredForms(array $settings, array $definitions): array
+    {
+        $forms = $settings['form_catalog'] ?? [];
+        if (!is_array($forms) || [] === $forms) {
+            return [['id' => 'products', 'label' => $definitions['products']['label'], 'template' => 'products']];
+        }
+
+        $normalized = [];
+        foreach ($forms as $form) {
+            if (!is_array($form) || !isset($definitions[$form['template'] ?? ''])) {
+                continue;
+            }
+            $id = (string) ($form['id'] ?? '');
+            if (preg_match('/^[A-Za-z0-9-]{1,40}$/', $id) !== 1) {
+                continue;
+            }
+            $normalized[] = ['id' => $id, 'label' => (string) ($form['label'] ?? $definitions[$form['template']]['label']), 'template' => (string) $form['template']];
+        }
+
+        return [] !== $normalized ? $normalized : [['id' => 'products', 'label' => $definitions['products']['label'], 'template' => 'products']];
+    }
+
+    /** @param list<array{id: string, label: string, template: string}> $forms
+     *  @return array{id: string, label: string, template: string}|null
+     */
+    private function formConfig(array $forms, string $id): ?array
+    {
+        foreach ($forms as $form) {
+            if ($form['id'] === $id) {
+                return $form;
+            }
+        }
+
+        return null;
+    }
+}

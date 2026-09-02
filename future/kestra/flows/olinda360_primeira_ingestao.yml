@@ -1,0 +1,61 @@
+id: olinda360_primeira_ingestao
+namespace: plataforma360.turismo
+description: >-
+  Fluxo inicial de exemplo para simular a ingestao de pontos turisticos de Olinda,
+  preparando um artefato bruto e um script SQL para futura carga no schema raw.
+
+labels:
+  plataforma: Plataforma360
+  dominio: turismo
+  ambiente: local
+
+tasks:
+  # Etapa 1: registra no log qual arquivo de origem esta sendo usado nesta simulacao.
+  - id: anunciar_ingestao
+    type: io.kestra.plugin.core.log.Log
+    message: >-
+      Iniciando a ingestao simulada de /app/examples/pontos_turisticos_olinda.csv
+      para a trilha raw da Plataforma360.
+
+  # Etapa 2: copia o CSV para um diretorio de trabalho e gera um script SQL base
+  # para futura carga em PostgreSQL/PostGIS na camada raw.
+  - id: preparar_artefatos_raw
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    outputFiles:
+      - output/**
+    commands:
+      - |
+        set -e
+        mkdir -p output
+        cp /app/examples/pontos_turisticos_olinda.csv output/pontos_turisticos_olinda_raw.csv
+        REGISTROS=$(tail -n +2 /app/examples/pontos_turisticos_olinda.csv | wc -l | tr -d ' ')
+        printf '%s\n' "$REGISTROS" > output/quantidade_registros.txt
+        cat <<'SQL' > output/carga_raw_pontos_turisticos.sql
+        -- Preparacao inicial para a camada raw da Plataforma360.
+        CREATE SCHEMA IF NOT EXISTS raw;
+
+        CREATE TABLE IF NOT EXISTS raw.pontos_turisticos_olinda (
+            id_origem text,
+            nome text,
+            categoria text,
+            endereco text,
+            latitude numeric,
+            longitude numeric,
+            fonte text,
+            coletado_em timestamp without time zone default now()
+        );
+
+        -- Carga futura sugerida:
+        -- \copy raw.pontos_turisticos_olinda (id_origem, nome, categoria, endereco, latitude, longitude, fonte)
+        -- FROM 'pontos_turisticos_olinda_raw.csv'
+        -- WITH (FORMAT csv, HEADER true, DELIMITER ',');
+        SQL
+
+  # Etapa 3: finaliza a simulacao explicando o proximo passo arquitetural.
+  - id: concluir_preparacao
+    type: io.kestra.plugin.core.log.Log
+    message: >-
+      Artefatos preparados com sucesso. O proximo passo e conectar este fluxo ao
+      PostgreSQL/PostGIS da Plataforma360 para gravacao direta no schema raw.

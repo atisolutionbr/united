@@ -1,0 +1,214 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Plataforma360 | GovTech Open Source{% endblock %}
+
+{% block stylesheets %}
+<style>
+    :root {
+        --p360-ink: #122033;
+        --p360-muted: #5d6b7c;
+        --p360-blue: #2563eb;
+        --p360-green: #159a74;
+        --p360-gold: #d69e2e;
+        --p360-surface: #ffffff;
+    }
+
+    .page-shell {
+        min-height: 100vh;
+        background: linear-gradient(180deg, #f7fafc 0%, #edf4f7 48%, #ffffff 100%);
+    }
+
+    .hero {
+        padding: 3rem 0 4rem;
+    }
+
+    .hero-title {
+        color: var(--p360-ink);
+        font-weight: 800;
+        letter-spacing: 0;
+    }
+
+    .hero-subtitle {
+        color: var(--p360-green);
+        font-weight: 700;
+    }
+
+    .module-card {
+        min-height: 13rem;
+        border: 1px solid rgba(18, 32, 51, .08);
+        border-radius: .5rem;
+        background: var(--p360-surface);
+        box-shadow: 0 .75rem 2rem rgba(18, 32, 51, .06);
+    }
+
+    .module-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: .5rem;
+        color: #fff;
+        background: var(--p360-blue);
+    }
+
+    .module-card:nth-child(2n) .module-icon { background: var(--p360-green); }
+    .module-card:nth-child(3n) .module-icon { background: var(--p360-gold); }
+
+    .ops-band {
+        border-top: 1px solid rgba(18, 32, 51, .08);
+        border-bottom: 1px solid rgba(18, 32, 51, .08);
+        background: #122033;
+        color: #fff;
+    }
+
+    .page-shell .container-fluid {
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+    }
+
+    .section-heading {
+        color: var(--p360-ink);
+        font-weight: 700;
+    }
+
+    .section-kicker {
+        color: var(--p360-green);
+        font-size: .8rem;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+
+    .notice-card {
+        height: 100%;
+        border: 1px solid rgba(18, 32, 51, .08);
+        border-radius: .75rem;
+        background: rgba(255, 255, 255, .92);
+        box-shadow: 0 .75rem 2rem rgba(18, 32, 51, .06);
+    }
+
+    .notice-meta {
+        color: var(--p360-muted);
+        font-size: .875rem;
+    }
+
+    .notice-summary {
+        color: var(--p360-muted);
+        min-height: 4.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+{% set modules = [
+    { title: 'APIs Publicas', icon: 'braces', text: 'Camada REST e OpenAPI para transparencia, dados abertos e integracoes municipais.' },
+    { title: 'Analytics Territorial', icon: 'map', text: 'Base preparada para indicadores, mapas, series historicas e leitura territorial.' },
+    { title: 'Inteligencia Turistica', icon: 'compass', text: 'Organizacao de atrativos, eventos, hospedagens, guias e sinais do turismo local.' },
+    { title: 'Observabilidade', icon: 'activity', text: 'Arquitetura pronta para logs, metricas, healthchecks e monitoramento operacional.' },
+    { title: 'MCP / IA', icon: 'cpu', text: 'Fundacao para uma camada futura de contexto, agentes, IA e interoperabilidade semantica.' },
+    { title: 'Dados Abertos', icon: 'database', text: 'Estrutura para ingestao, curadoria, publicacao e reutilizacao de bases publicas.' }
+] %}
+
+<div class="page-shell">
+    <main>
+        <section class="hero">
+            <div class="container-fluid px-4">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-8">
+                        <p class="hero-subtitle text-uppercase mb-3">GovTech Open Source</p>
+                        <h1 class="hero-title display-3 mb-4">Plataforma360</h1>
+                        <p class="lead fs-3 text-secondary mb-4">Infraestrutura Publica Digital para Inteligencia Territorial, Turismo Inteligente e Interoperabilidade Municipal</p>
+                        <p class="text-secondary fs-5 mb-0">Base instalavel para prefeituras operarem localmente uma plataforma de dados, APIs publicas, analytics e evolucao futura com IA, MCP e observabilidade.</p>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="p-4 bg-white border rounded-2 shadow-sm">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <span class="badge text-bg-primary">Symfony 7</span>
+                                <span class="badge text-bg-success">PostGIS</span>
+                            </div>
+                            <h2 class="h4 mb-3">Instalavel por Git e Docker</h2>
+                            <p class="text-secondary mb-0">Arquitetura modular para VPS, laboratorios de inovacao e ambientes locais de gestao publica.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="pb-5">
+            <div class="container-fluid">
+                <div class="row g-4">
+                    {% for module in modules %}
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <article class="module-card h-100 p-4">
+                                <span class="module-icon mb-4"><i class="bi bi-{{ module.icon }}"></i></span>
+                                <h2 class="h5 mb-3">{{ module.title }}</h2>
+                                <p class="text-secondary mb-0">{{ module.text }}</p>
+                            </article>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="container-fluid mt-5">
+                <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3 mb-4">
+                    <div>
+                        <p class="section-kicker mb-2">Avisos publicos</p>
+                        <h2 class="section-heading h3 mb-2">Postagens e comunicados da plataforma</h2>
+                        <p class="text-secondary mb-0">Espaco publico para leitura dos avisos, novidades e orientacoes publicadas na Plataforma360.</p>
+                    </div>
+                    <a href="{{ path('blog_index') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-journal-text me-2"></i>Ver todas as postagens
+                    </a>
+                </div>
+
+                <div class="row g-4">
+                    {% for post in latestPosts %}
+                        <div class="col-12 col-lg-4">
+                            <article class="notice-card p-4">
+                                <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                                    <span class="badge text-bg-primary">Aviso</span>
+                                    <span class="notice-meta">
+                                        <i class="bi bi-calendar3 me-1"></i>{{ post.publishedAt|date('d/m/Y') }}
+                                    </span>
+                                </div>
+
+                                <h3 class="h4 mb-3">{{ post.title }}</h3>
+                                <p class="notice-meta mb-3">
+                                    <i class="bi bi-person-circle me-1"></i>{{ post.author.fullName }}
+                                </p>
+                                <p class="notice-summary mb-4">{{ post.summary }}</p>
+
+                                <div class="d-flex flex-wrap gap-2 mb-4">
+                                    {% for tag in post.tags|slice(0, 3) %}
+                                        <span class="badge rounded-pill text-bg-light text-primary border">{{ tag.name }}</span>
+                                    {% endfor %}
+                                </div>
+
+                                <a href="{{ path('blog_post', {slug: post.slug}) }}" class="btn btn-primary">
+                                    <i class="bi bi-arrow-right-circle me-2"></i>Ler postagem
+                                </a>
+                            </article>
+                        </div>
+                    {% else %}
+                        <div class="col-12">
+                            <div class="notice-card p-4 p-lg-5 text-center">
+                                <span class="module-icon mb-4"><i class="bi bi-megaphone"></i></span>
+                                <h3 class="h4 mb-3">Nenhuma postagem publicada no momento</h3>
+                                <p class="text-secondary mb-0">Os avisos publicos da plataforma aparecerao aqui assim que forem publicados pela equipe administradora.</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section class="ops-band py-4">
+            <div class="container-fluid d-flex flex-wrap gap-3 justify-content-between align-items-center">
+                <span>Core: Symfony, API Platform, Doctrine, Twig e Bootstrap 5</span>
+                <span>Infra: Nginx, PHP-FPM 8.3, PostgreSQL 16, PostGIS e Adminer</span>
+            </div>
+        </section>
+    </main>
+</div>
+{% endblock %}

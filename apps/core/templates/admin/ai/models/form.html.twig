@@ -1,0 +1,120 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ mode == 'new' ? 'Novo Modelo' : 'Editar Modelo' }} — IA — Plataforma360{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{{ path('app_admin_ai_models') }}">Modelos de IA</a></li>
+            <li class="breadcrumb-item active">{{ mode == 'new' ? 'Novo' : 'Editar' }}</li>
+        </ol>
+    </nav>
+    <h1 class="h4 fw-bold mb-4"><i class="bi bi-cpu me-2 text-teal"></i>{{ mode == 'new' ? 'Novo Modelo de IA' : 'Editar Modelo: ' ~ model.name }}</h1>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-4">
+                    <form method="post">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="fw-semibold small mb-1">Nome *</label>
+                                <input type="text" name="name" class="form-control rounded-3" value="{{ model.name }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="fw-semibold small mb-1">Slug *</label>
+                                <input type="text" name="slug" class="form-control rounded-3" value="{{ model.slug }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="fw-semibold small mb-1">Provider *</label>
+                                <select name="provider" class="form-select rounded-3" id="providerSelect">
+                                    <option value="local_ollama" {% if model.provider == 'local_ollama' %}selected{% endif %}>Ollama (Local)</option>
+                                    <option value="openai" {% if model.provider == 'openai' %}selected{% endif %}>OpenAI (Externo)</option>
+                                    <option value="azure_openai" {% if model.provider == 'azure_openai' %}selected{% endif %}>Azure OpenAI (Externo)</option>
+                                    <option value="other" {% if model.provider == 'other' %}selected{% endif %}>Outro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="fw-semibold small mb-1">Model Name *</label>
+                                <input type="text" name="model_name" class="form-control rounded-3" value="{{ model.modelName }}" placeholder="Ex: llama3, gpt-4o-mini" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="fw-semibold small mb-1">Endpoint URL</label>
+                                <input type="text" name="endpoint" class="form-control rounded-3" value="{{ model.endpoint }}" placeholder="Ex: http://ollama:11434">
+                                <div class="form-text">Deixe vazio para usar o padrão do provider.</div>
+                            </div>
+                            <div class="col-12" id="apiKeyField">
+                                <label class="fw-semibold small mb-1">API Key</label>
+                                <input type="password" name="api_key" class="form-control rounded-3" placeholder="{% if model.apiKeyEncrypted %}••••••• (já configurada){% else %}Cole a chave de API aqui{% endif %}">
+                                <div class="form-text text-warning"><i class="bi bi-shield-lock me-1"></i>Armazenada com criptografia. Não é exibida após salvar.</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="fw-semibold small mb-1">Temperature</label>
+                                <input type="number" name="temperature" class="form-control rounded-3" value="{{ model.temperature }}" step="0.1" min="0" max="2" placeholder="0.7">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="fw-semibold small mb-1">Max Tokens</label>
+                                <input type="number" name="max_tokens" class="form-control rounded-3" value="{{ model.maxTokens }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="fw-semibold small mb-1">Context Window</label>
+                                <input type="number" name="context_window" class="form-control rounded-3" value="{{ model.contextWindow }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="fw-semibold small mb-1">Descrição</label>
+                                <textarea name="description" class="form-control rounded-3" rows="2">{{ model.description }}</textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" name="supports_embeddings" value="1" id="supportsEmbeddings" {% if model.supportsEmbeddings %}checked{% endif %}>
+                                    <label class="form-check-label small" for="supportsEmbeddings">Suporta Embeddings</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" name="is_default" value="1" id="isDefault" {% if model.isDefault %}checked{% endif %}>
+                                    <label class="form-check-label small" for="isDefault">Modelo Padrão</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActive" {% if model.isActive %}checked{% endif %}>
+                                    <label class="form-check-label small" for="isActive">Ativo</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>{{ mode == 'new' ? 'Cadastrar' : 'Salvar Alterações' }}
+                            </button>
+                            <a href="{{ path('app_admin_ai_models') }}" class="btn btn-outline-secondary">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-3 border-warning">
+                <div class="card-body p-3">
+                    <h6 class="fw-semibold small mb-2"><i class="bi bi-shield-check text-warning me-1"></i>Segurança</h6>
+                    <ul class="small text-muted ps-3 mb-0">
+                        <li>Chaves de API são criptografadas antes de salvar</li>
+                        <li>Providers externos enviam dados fora da sua infraestrutura</li>
+                        <li>Use Ollama sempre que possível para dados sensíveis</li>
+                        <li>Configure <strong>Contextos</strong> para bloquear envio externo por tipo de dado</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+const providerSelect = document.getElementById('providerSelect');
+const apiKeyField = document.getElementById('apiKeyField');
+const toggle = () => {
+    const local = providerSelect.value === 'local_ollama';
+    apiKeyField.style.display = local ? 'none' : '';
+};
+providerSelect.addEventListener('change', toggle);
+toggle();
+</script>
+{% endblock %}

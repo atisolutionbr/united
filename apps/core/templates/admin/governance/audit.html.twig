@@ -1,0 +1,66 @@
+{% extends 'base.html.twig' %}
+{% block title %}Auditoria{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1"><i class="bi bi-shield-check text-teal me-2"></i>Auditoria</h1>
+      <p class="text-muted mb-0">Trilha de auditoria de todas as ações administrativas</p>
+    </div>
+  </div>
+
+  {# Filter bar #}
+  <form method="get" class="row g-2 mb-4 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label fw-semibold small">Ação</label>
+      <input type="text" name="action" class="form-control" placeholder="pipeline_run, config_change..." value="{{ actionFilter }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label fw-semibold small">Usuário</label>
+      <input type="text" name="user" class="form-control" placeholder="email ou identifier" value="{{ userFilter }}">
+    </div>
+    <div class="col-md-4 d-flex gap-2">
+      <button type="submit" class="btn btn-teal">Filtrar</button>
+      <a href="{{ path('app_admin_governance_audit') }}" class="btn btn-outline-secondary">Limpar</a>
+    </div>
+  </form>
+
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0 align-middle" style="font-size:.85rem">
+        <thead class="table-light">
+          <tr><th>Ação</th><th>Descrição</th><th>Entidade</th><th>Usuário</th><th>IP</th><th>Data</th></tr>
+        </thead>
+        <tbody>
+        {% for log in logs %}
+        <tr>
+          <td><span class="badge bg-secondary">{{ log.action }}</span></td>
+          <td>{{ log.description|slice(0, 80) }}{% if log.description|length > 80 %}…{% endif %}</td>
+          <td>
+            {% if log.entityType %}
+              <small class="text-muted">{{ log.entityType }}{% if log.entityId %} #{{ log.entityId }}{% endif %}</small>
+            {% else %}—{% endif %}
+          </td>
+          <td><small>{{ log.userIdentifier ?? '—' }}</small></td>
+          <td><small class="text-muted font-monospace">{{ log.ipAddress ?? '—' }}</small></td>
+          <td><small class="text-muted">{{ log.createdAt|date('d/m/Y H:i:s') }}</small></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center py-4 text-muted">Nenhum log encontrado com os filtros aplicados.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if total > limit %}
+    <div class="card-footer bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+      <small class="text-muted">{{ total }} registros · página {{ page }}</small>
+      <div class="btn-group btn-group-sm">
+        {% if page > 1 %}<a href="?page={{ page - 1 }}{% if actionFilter %}&action={{ actionFilter }}{% endif %}{% if userFilter %}&user={{ userFilter }}{% endif %}" class="btn btn-outline-secondary">← Anterior</a>{% endif %}
+        {% if (page * limit) < total %}<a href="?page={{ page + 1 }}{% if actionFilter %}&action={{ actionFilter }}{% endif %}{% if userFilter %}&user={{ userFilter }}{% endif %}" class="btn btn-outline-secondary">Próxima →</a>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

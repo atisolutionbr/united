@@ -1,0 +1,75 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ record.id ? 'Editar' : 'Novo' }} Registro de Governança{% endblock %}
+{% block body %}
+<div class="container-fluid py-4" style="max-width:800px">
+  <div class="mb-4">
+    <h1 class="h3 fw-bold mb-1"><i class="bi bi-shield-lock text-teal me-2"></i>{{ record.id ? 'Editar' : 'Novo' }} Registro de Governança</h1>
+    <p class="text-muted mb-0"><a href="{{ path('app_admin_governance_data') }}">Governança de Dados</a> &rsaquo; {{ record.id ? record.datasetName : 'Novo' }}</p>
+  </div>
+
+  <form method="post">
+    <div class="card border-0 shadow-sm rounded-3 mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label fw-semibold">Nome do Dataset <span class="text-danger">*</span></label>
+            <input type="text" name="dataset_name" class="form-control" value="{{ record.datasetName }}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Classificação</label>
+            <select name="classification" class="form-select">
+              {% for cls in classifications %}<option value="{{ cls }}" {{ record.classification == cls ? 'selected' : '' }}>{{ cls }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Nível de Sensibilidade</label>
+            <select name="sensitivity_level" class="form-select">
+              {% for lvl in sensitivityLevels %}<option value="{{ lvl }}" {{ record.sensitivityLevel == lvl ? 'selected' : '' }}>{{ lvl }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Retenção (dias)</label>
+            <input type="number" name="retention_days" class="form-control" value="{{ record.retentionDays }}" min="0">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Tenant ID</label>
+            <input type="number" name="tenant_id" class="form-control" value="{{ record.tenantId }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Responsável (Owner)</label>
+            <input type="text" name="owner" class="form-control" value="{{ record.owner }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Steward</label>
+            <input type="text" name="steward" class="form-control" value="{{ record.steward }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Descrição</label>
+            <textarea name="description" class="form-control" rows="2">{{ record.description }}</textarea>
+          </div>
+          <div class="col-md-6">
+            <div class="form-check mt-2">
+              <input type="checkbox" name="lgpd_applicable" class="form-check-input" id="lgpd" value="1" {{ record.lgpdApplicable ? 'checked' : '' }}>
+              <label class="form-check-label" for="lgpd">Aplica-se LGPD</label>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Base Legal LGPD</label>
+            <input type="text" name="lgpd_basis" class="form-control" placeholder="consentimento, legítimo_interesse..." value="{{ record.lgpdBasis }}">
+          </div>
+          <div class="col-md-6">
+            <div class="form-check mt-2">
+              <input type="checkbox" name="is_active" class="form-check-input" id="is_active" value="1" {{ record.isActive ? 'checked' : '' }}>
+              <label class="form-check-label" for="is_active">Registro ativo</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-teal"><i class="bi bi-check-circle me-1"></i>Salvar</button>
+      <a href="{{ path('app_admin_governance_data') }}" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

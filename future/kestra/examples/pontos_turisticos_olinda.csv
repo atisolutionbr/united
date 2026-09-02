@@ -1,0 +1,6 @@
+id_origem,nome,categoria,endereco,latitude,longitude,fonte
+olinda-001,Alto da Se,Mirante,Rua Bispo Coutinho - Alto da Se,-7.99659,-34.84163,Prefeitura de Olinda
+olinda-002,Mosteiro de Sao Bento,Patrimonio Historico,Rua de Sao Bento - Varadouro,-7.99863,-34.84264,Prefeitura de Olinda
+olinda-003,Mercado da Ribeira,Cultura e Artesanato,Rua Bernardo Vieira de Melo - Ribeira,-8.00810,-34.84223,Prefeitura de Olinda
+olinda-004,Quatro Cantos,Centro Historico,Rua do Amparo - Carmo,-8.00890,-34.84210,Prefeitura de Olinda
+olinda-005,Observatorio Astronomico do Alto da Se,Ciencia e Educacao,Rua Bispo Coutinho - Alto da Se,-7.99624,-34.84149,Prefeitura de Olinda

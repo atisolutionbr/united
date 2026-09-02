@@ -1,0 +1,72 @@
+{% extends 'base.html.twig' %}
+{% block title %}Execução #{{ execution.id }}{% endblock %}
+{% block body %}
+<div class="container-fluid py-4" style="max-width:1000px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1"><i class="bi bi-play-circle text-teal me-2"></i>Execução #{{ execution.id }}</h1>
+      <p class="text-muted mb-0">
+        <a href="{{ path('app_admin_operations_executions') }}">Execuções</a> &rsaquo;
+        {{ execution.pipeline ? execution.pipeline.name : 'Pipeline removido' }}
+      </p>
+    </div>
+    <span class="badge fs-6 bg-{% if execution.status == 'SUCCESS' %}success{% elseif execution.status == 'FAILED' %}danger{% elseif execution.status == 'RUNNING' %}primary{% else %}secondary{% endif %}">
+      {{ execution.status }}
+    </span>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body">
+          <table class="table table-borderless table-sm mb-0">
+            <tr><th width="40%">Pipeline</th><td>{{ execution.pipeline ? execution.pipeline.name : '—' }}</td></tr>
+            <tr><th>Trigger</th><td><span class="badge bg-secondary">{{ execution.triggerType }}</span></td></tr>
+            <tr><th>Disparado por</th><td>{{ execution.triggeredBy ?? '—' }}</td></tr>
+            <tr><th>Kestra ID</th><td><small class="font-monospace">{{ execution.kestraExecutionId ?? '—' }}</small></td></tr>
+            <tr><th>Início</th><td>{{ execution.startedAt ? execution.startedAt|date('d/m/Y H:i:s') : '—' }}</td></tr>
+            <tr><th>Fim</th><td>{{ execution.finishedAt ? execution.finishedAt|date('d/m/Y H:i:s') : '—' }}</td></tr>
+            <tr><th>Duração</th><td>{{ execution.durationMs ? (execution.durationMs / 1000)|number_format(2) ~ 's' : '—' }}</td></tr>
+            <tr><th>Retentativas</th><td>{{ execution.retryCount }}</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% if execution.errorMessage %}
+    <div class="col-md-6">
+      <div class="alert alert-danger h-100 mb-0">
+        <h6 class="fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>Erro</h6>
+        <pre class="mb-0" style="font-size:.82rem;white-space:pre-wrap">{{ execution.errorMessage }}</pre>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if execution.inputs %}
+  <div class="card border-0 shadow-sm rounded-3 mb-3">
+    <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0">Inputs</h6></div>
+    <div class="card-body p-0">
+      <pre class="m-0 p-3 bg-light rounded-bottom" style="font-size:.82rem">{{ execution.inputs|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if execution.outputs %}
+  <div class="card border-0 shadow-sm rounded-3 mb-3">
+    <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0">Outputs</h6></div>
+    <div class="card-body p-0">
+      <pre class="m-0 p-3 bg-light rounded-bottom" style="font-size:.82rem">{{ execution.outputs|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if execution.logs %}
+  <div class="card border-0 shadow-sm rounded-3 mb-3">
+    <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0"><i class="bi bi-terminal me-2"></i>Logs</h6></div>
+    <div class="card-body p-0">
+      <pre class="m-0 p-3 bg-dark text-light rounded-bottom" style="font-size:.78rem;max-height:400px;overflow-y:auto">{{ execution.logs }}</pre>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

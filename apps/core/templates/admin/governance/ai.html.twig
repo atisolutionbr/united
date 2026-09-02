@@ -1,0 +1,95 @@
+{% extends 'base.html.twig' %}
+{% block title %}Governança de IA{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1"><i class="bi bi-robot text-teal me-2"></i>Governança de IA</h1>
+      <p class="text-muted mb-0">Rastreamento de uso de IA, provedores e conformidade</p>
+    </div>
+  </div>
+
+  {# KPI #}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+        <div class="fs-1 fw-bold text-teal">{{ recentInteractions|length }}</div>
+        <div class="small text-muted">Interações registradas</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+        <div class="fs-2 fw-bold text-primary">{{ localCount }}</div>
+        <div class="small text-muted">Local (Ollama)</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+        <div class="fs-2 fw-bold {% if externalCount > 0 %}text-warning{% else %}text-success{% endif %}">{{ externalCount }}</div>
+        <div class="small text-muted">Externa (OpenAI etc.)</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+        <div class="fs-2 fw-bold text-secondary">{{ externalToday }}</div>
+        <div class="small text-muted">Externas hoje</div>
+      </div>
+    </div>
+  </div>
+
+  {# Provider table + recent #}
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0">Por Provedor</h6></div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Provedor</th><th>Reqs</th></tr></thead>
+            <tbody>
+            {% for prov, cnt in byProvider %}
+            <tr>
+              <td><span class="badge bg-{% if prov == 'openai' %}success{% elseif prov == 'ollama' %}primary{% else %}secondary{% endif %}">{{ prov }}</span></td>
+              <td>{{ cnt }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="text-muted text-center py-3">Sem dados</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-8">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0">Interações Recentes</h6></div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0 align-middle" style="font-size:.85rem">
+            <thead class="table-light"><tr><th>Usuário</th><th>Provedor</th><th>Modelo</th><th>Tokens</th><th>Status</th><th>Custo</th><th>Data</th></tr></thead>
+            <tbody>
+            {% for i in recentInteractions|slice(0,20) %}
+            <tr class="{% if i.isExternalProvider %}table-warning{% endif %}">
+              <td>{{ i.userIdentifier }}</td>
+              <td><span class="badge bg-{% if i.provider == 'openai' %}success{% elseif i.provider == 'ollama' %}primary{% else %}secondary{% endif %}">{{ i.provider }}</span></td>
+              <td><small>{{ i.modelName|slice(0, 20) }}</small></td>
+              <td><small>{{ i.tokensInput + i.tokensOutput }}</small></td>
+              <td><span class="badge bg-{% if i.status == 'success' %}success{% elseif i.status == 'failed' %}danger{% else %}secondary{% endif %}">{{ i.status }}</span></td>
+              <td><small>{% if i.estimatedCostUsd > 0 %}${{ i.estimatedCostUsd|number_format(4) }}{% else %}<span class="text-muted">grátis</span>{% endif %}</small></td>
+              <td><small class="text-muted">{{ i.createdAt|date('d/m H:i') }}</small></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-muted py-3">Sem interações</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info mt-4">
+    <i class="bi bi-info-circle me-2"></i>
+    Interações com provedores <strong>externos</strong> (OpenAI, Azure) são destacadas em amarelo. Consulte os <a href="{{ path('app_admin_governance_costs') }}">Custos</a> para rastreamento financeiro.
+  </div>
+</div>
+{% endblock %}

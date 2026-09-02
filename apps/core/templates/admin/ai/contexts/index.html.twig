@@ -1,0 +1,76 @@
+{% extends 'base.html.twig' %}
+{% block title %}Contextos de IA — Plataforma360{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h1 class="h3 fw-bold mb-1"><i class="bi bi-layers text-teal me-2"></i>Contextos de IA</h1>
+            <p class="text-muted small mb-0">Define quais fontes de dados cada consulta de IA pode acessar</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ path('app_admin_ai_contexts_new') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus me-1"></i>Novo Contexto</a>
+        </div>
+    </div>
+
+    {% for msg in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}
+
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Nome</th>
+                        <th>Fontes</th>
+                        <th>Tabelas Warehouse</th>
+                        <th>Externo?</th>
+                        <th>Max Rows</th>
+                        <th>Status</th>
+                        <th class="pe-4">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if contexts is empty %}
+                    <tr><td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-layers fs-2 d-block mb-2"></i>Nenhum contexto configurado.
+                    </td></tr>
+                {% else %}
+                    {% for ctx in contexts %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-semibold small">{{ ctx.name }}</div>
+                            <small class="text-muted">{{ ctx.slug }}</small>
+                        </td>
+                        <td>
+                            {% for s in (ctx.sources ?? []) %}
+                            <span class="badge bg-light text-dark border me-1" style="font-size:.7rem">{{ s }}</span>
+                            {% endfor %}
+                        </td>
+                        <td class="small text-muted">{{ (ctx.warehouseTables ?? [])|length }} tabela(s)</td>
+                        <td>
+                            {% if ctx.allowedForExternal %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Sim</span>
+                            {% else %}
+                                <span class="badge bg-success"><i class="bi bi-lock me-1"></i>Não</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">{{ ctx.maxRowsContext }}</td>
+                        <td><span class="badge {% if ctx.isActive %}bg-success{% else %}bg-secondary{% endif %}">{{ ctx.isActive ? 'Ativo' : 'Inativo' }}</span></td>
+                        <td class="pe-4">
+                            <div class="d-flex gap-1">
+                                <a href="{{ path('app_admin_ai_contexts_edit', {id: ctx.id}) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                                <form method="post" action="{{ path('app_admin_ai_contexts_delete', {id: ctx.id}) }}" class="d-inline" onsubmit="return confirm('Remover contexto?')">
+                                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

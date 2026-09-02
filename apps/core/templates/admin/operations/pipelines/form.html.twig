@@ -1,0 +1,79 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ pipeline.id ? 'Editar' : 'Novo' }} Pipeline{% endblock %}
+{% block body %}
+<div class="container-fluid py-4" style="max-width:860px">
+  <div class="mb-4">
+    <h1 class="h3 fw-bold mb-1"><i class="bi bi-diagram-3 text-teal me-2"></i>{{ pipeline.id ? 'Editar' : 'Novo' }} Pipeline</h1>
+    <p class="text-muted mb-0"><a href="{{ path('app_admin_operations_pipelines') }}">Pipelines</a> &rsaquo; {{ pipeline.id ? pipeline.name : 'Novo' }}</p>
+  </div>
+
+  <form method="post" novalidate>
+    <div class="card border-0 shadow-sm rounded-3 mb-3">
+      <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0">Identificação</h6></div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label fw-semibold">Nome <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" value="{{ pipeline.name }}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Tipo</label>
+            <select name="type" class="form-select">
+              {% for t in types %}<option value="{{ t }}" {{ pipeline.type == t ? 'selected' : '' }}>{{ t }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Trigger</label>
+            <select name="trigger_type" class="form-select">
+              {% for t in triggerTypes %}<option value="{{ t }}" {{ pipeline.triggerType == t ? 'selected' : '' }}>{{ t }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Cron Expression</label>
+            <input type="text" name="cron_expression" class="form-control font-monospace" placeholder="0 2 * * *" value="{{ pipeline.cronExpression }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Descrição</label>
+            <textarea name="description" class="form-control" rows="2">{{ pipeline.description }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-3 mb-3">
+      <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0"><i class="bi bi-braces text-teal me-2"></i>Configuração Kestra</h6></div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Namespace</label>
+            <input type="text" name="kestra_namespace" class="form-control font-monospace" placeholder="plataforma360" value="{{ pipeline.kestraNamespace }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Flow ID</label>
+            <input type="text" name="kestra_flow_id" class="form-control font-monospace" placeholder="ingestao-ckan" value="{{ pipeline.kestraFlowId }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Kestra YAML <small class="text-muted">(definição do flow)</small></label>
+            <textarea name="kestra_yaml" class="form-control font-monospace" rows="10" style="font-size:.82rem">{{ pipeline.kestraYaml }}</textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Dataset Vinculado (slug)</label>
+            <input type="text" name="dataset_slug" class="form-control" value="{{ pipeline.datasetSlug }}">
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <div class="form-check mb-1">
+              <input type="checkbox" name="is_active" class="form-check-input" id="is_active" value="1" {{ pipeline.isActive ? 'checked' : '' }}>
+              <label class="form-check-label" for="is_active">Pipeline ativo</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-teal"><i class="bi bi-check-circle me-1"></i>Salvar</button>
+      <a href="{{ path('app_admin_operations_pipelines') }}" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

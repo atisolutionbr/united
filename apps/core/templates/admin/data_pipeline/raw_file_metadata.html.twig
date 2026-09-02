@@ -1,0 +1,139 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Metadata RAW | Plataforma360{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'admin/data_providers/_styles.html.twig' %}
+{% endblock %}
+
+{% block body %}
+    <section class="py-4 py-lg-5" aria-labelledby="raw-file-metadata-title">
+        <div class="container">
+            {% include 'default/_flash_messages.html.twig' %}
+
+            <div class="data-management-hero p-4 p-lg-5 mb-4">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                    <div>
+                        <span class="badge rounded-pill text-bg-light text-primary mb-3">Metadata Operacional</span>
+                        <h1 id="raw-file-metadata-title" class="display-6 fw-bold mb-3">{{ rawFile.originalName }}</h1>
+                        <p class="lead mb-0">Detalhamento completo do artefato RAW, sua origem CKAN e o schema descoberto para a próxima etapa analítica.</p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a class="btn btn-light" href="{{ path('app_admin_raw_files') }}">Voltar aos RAW</a>
+                        {% if rawFile.extension in ['csv', 'xlsx'] %}
+                            <a class="btn btn-outline-light" href="{{ path('app_admin_dataset_preview_show', {id: rawFile.id}) }}">Abrir preview</a>
+                        {% endif %}
+                        <a class="btn btn-outline-light" href="{{ path('app_admin_raw_files_download', {id: rawFile.id}) }}">Download</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-lg-7">
+                    <div class="data-management-panel p-4 h-100">
+                        <span class="badge rounded-pill text-bg-light text-primary mb-2">Arquivo</span>
+                        <h2 class="h4 mb-3">Registro persistido</h2>
+                        <dl class="data-management-detail-grid mb-0">
+                            <div class="data-management-detail-item">
+                                <dt>Provider</dt>
+                                <dd>{{ rawFile.dataProvider.name }}</dd>
+                            </div>
+                            <div class="data-management-detail-item">
+                                <dt>Pacote</dt>
+                                <dd>{{ rawFile.providerPackage.displayTitle }}</dd>
+                            </div>
+                            <div class="data-management-detail-item">
+                                <dt>Resource</dt>
+                                <dd>{{ rawFile.datasetResource.resourceId }}</dd>
+                            </div>
+                            <div class="data-management-detail-item">
+                                <dt>Status</dt>
+                                <dd>{{ rawFile.downloadStatus }}</dd>
+                            </div>
+                            <div class="data-management-detail-item">
+                                <dt>Path local</dt>
+                                <dd>{{ rawFile.localPath }}</dd>
+                            </div>
+                            <div class="data-management-detail-item">
+                                <dt>SHA256</dt>
+                                <dd>{{ rawFile.fileHash ?: 'N/D' }}</dd>
+                            </div>
+                            <div class="data-management-detail-item">
+                                <dt>MIME</dt>
+                                <dd>{{ rawFile.mimeType ?: 'N/D' }}</dd>
+                            </div>
+                            <div class="data-management-detail-item">
+                                <dt>Download</dt>
+                                <dd>{{ rawFile.downloadedAt ? rawFile.downloadedAt|date('d/m/Y H:i') : 'N/D' }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="data-management-panel p-4 h-100">
+                        <span class="badge rounded-pill text-bg-light text-primary mb-2">Próxima etapa</span>
+                        <h2 class="h4 mb-3">Preparação analítica</h2>
+                        <div class="provider-inline-list">
+                            <article>
+                                <p>Preview pronto</p>
+                                <p>{{ rawFile.extension in ['csv', 'xlsx'] ? 'Sim' : 'Não' }}</p>
+                            </article>
+                            <article>
+                                <p>Schema detectado</p>
+                                <p>{{ schemas|length }}</p>
+                            </article>
+                            <article>
+                                <p>Já processado</p>
+                                <p>{{ rawFile.alreadyProcessed ? 'Sim' : 'Não' }}</p>
+                            </article>
+                            <article>
+                                <p>Versão física</p>
+                                <p>{{ rawFile.storedName }}</p>
+                            </article>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-management-table-card p-3 p-lg-4">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">Schema descoberto</h2>
+                        <p class="text-secondary mb-0">Colunas persistidas para suportar futura transformação em staging sem reexaminar manualmente o arquivo.</p>
+                    </div>
+                    <form method="post" action="{{ path('app_admin_raw_files_reprocess', {id: rawFile.id}) }}">
+                        <button type="submit" class="btn btn-outline-primary">Redetectar schema</button>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Coluna</th>
+                                <th>Tipo detectado</th>
+                                <th>Nullable</th>
+                                <th>Exemplo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for schema in schemas %}
+                                <tr>
+                                    <td>{{ schema.columnName }}</td>
+                                    <td>{{ schema.detectedType }}</td>
+                                    <td>{{ schema.nullable ? 'Sim' : 'Não' }}</td>
+                                    <td>{{ schema.sampleValue ?: 'N/D' }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-secondary">Nenhum schema foi persistido ainda para este arquivo.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ mode == 'new' ? 'Novo Agente' : 'Editar Agente' }} — IA — Plataforma360{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{{ path('app_admin_ai_agents') }}">Agentes</a></li>
+            <li class="breadcrumb-item active">{{ mode == 'new' ? 'Novo' : 'Editar' }}</li>
+        </ol>
+    </nav>
+    <h1 class="h4 fw-bold mb-4"><i class="bi bi-person-gear me-2 text-teal"></i>{{ mode == 'new' ? 'Novo Agente' : 'Editar: ' ~ agent.name }}</h1>
+    <div class="row"><div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-4">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="fw-semibold small mb-1">Nome *</label>
+                            <input type="text" name="name" class="form-control rounded-3" value="{{ agent.name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-semibold small mb-1">Slug *</label>
+                            <input type="text" name="slug" class="form-control rounded-3" value="{{ agent.slug }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-semibold small mb-1">Tipo</label>
+                            <select name="agent_type" class="form-select rounded-3">
+                                <option value="turismo" {% if agent.agentType == 'turismo' %}selected{% endif %}>Turismo</option>
+                                <option value="dados_publicos" {% if agent.agentType == 'dados_publicos' %}selected{% endif %}>Dados Públicos</option>
+                                <option value="executivo" {% if agent.agentType == 'executivo' %}selected{% endif %}>Executivo</option>
+                                <option value="tecnico" {% if agent.agentType == 'tecnico' %}selected{% endif %}>Técnico</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-semibold small mb-1">Modelo Padrão</label>
+                            <select name="default_model_id" class="form-select rounded-3">
+                                <option value="0">— Usar modelo padrão global —</option>
+                                {% for m in models %}
+                                <option value="{{ m.id }}" {% if agent.defaultModel and agent.defaultModel.id == m.id %}selected{% endif %}>{{ m.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-semibold small mb-1">Contexto</label>
+                            <select name="default_context_id" class="form-select rounded-3">
+                                <option value="0">— Sem contexto —</option>
+                                {% for c in contexts %}
+                                <option value="{{ c.id }}" {% if agent.defaultContext and agent.defaultContext.id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-semibold small mb-1">Prompt</label>
+                            <select name="prompt_id" class="form-select rounded-3">
+                                <option value="0">— Sem prompt —</option>
+                                {% for p in prompts %}
+                                <option value="{{ p.id }}" {% if agent.prompt and agent.prompt.id == p.id %}selected{% endif %}>{{ p.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-semibold small mb-1">Descrição</label>
+                            <textarea name="description" class="form-control rounded-3" rows="2">{{ agent.description }}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-semibold small mb-1">Ferramentas (uma por linha)</label>
+                            <textarea name="tools" class="form-control rounded-3 font-monospace" rows="5">{{ agent.tools ? agent.tools|join("\n") : '' }}</textarea>
+                            <div class="form-text">Disponíveis: buscar_indicadores, listar_datasets, consultar_warehouse, obter_qualidade_dataset, obter_linhagem_dataset, gerar_relatorio</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="is_active" value="1" {% if agent.isActive %}checked{% endif %}>
+                                <label class="form-check-label small">Ativo</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>{{ mode == 'new' ? 'Criar' : 'Salvar' }}</button>
+                        <a href="{{ path('app_admin_ai_agents') }}" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div></div>
+</div>
+{% endblock %}

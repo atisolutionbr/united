@@ -1,0 +1,19 @@
+{% extends 'base.html.twig' %}
+{% block title %}YAML · {{ pipeline.name }}{% endblock %}
+{% block body %}
+<div class="container-fluid py-4" style="max-width:900px">
+  <div class="mb-3 d-flex justify-content-between">
+    <h1 class="h4 fw-bold"><i class="bi bi-code-slash text-teal me-2"></i>{{ pipeline.name }} · YAML</h1>
+    <a href="{{ path('app_admin_operations_pipelines') }}" class="btn btn-outline-secondary btn-sm">← Voltar</a>
+  </div>
+  {% if pipeline.kestraYaml %}
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <pre class="m-0 p-4 bg-dark text-light rounded-3" style="font-size:.82rem;overflow-x:auto">{{ pipeline.kestraYaml }}</pre>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">Nenhum YAML cadastrado para este pipeline.</div>
+  {% endif %}
+</div>
+{% endblock %}

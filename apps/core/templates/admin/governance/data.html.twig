@@ -1,0 +1,78 @@
+{% extends 'base.html.twig' %}
+{% block title %}Governança de Dados{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1"><i class="bi bi-shield-lock text-teal me-2"></i>Governança de Dados</h1>
+      <p class="text-muted mb-0">Classificação, LGPD e política de retenção dos datasets</p>
+    </div>
+    <a href="{{ path('app_admin_governance_data_new') }}" class="btn btn-teal">
+      <i class="bi bi-plus-circle me-1"></i>Novo Registro
+    </a>
+  </div>
+
+  {% for msg in app.flashes('success') %}<div class="alert alert-success alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+
+  {# Summary badges #}
+  {% if byClassification %}
+  <div class="d-flex gap-2 flex-wrap mb-3">
+    {% for cls, count in byClassification %}
+    <span class="badge rounded-pill bg-{% if cls == 'restricted' or cls == 'sensitive' %}danger{% elseif cls == 'internal' %}warning text-dark{% else %}success{% endif %} px-3 py-2">
+      {{ cls }}: {{ count }}
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr><th>Dataset</th><th>Classificação</th><th>Sensibilidade</th><th>LGPD</th><th>Responsável</th><th>Retenção</th><th>Ações</th></tr>
+        </thead>
+        <tbody>
+        {% for rec in records %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ rec.datasetName }}</div>
+            <small class="text-muted font-monospace">{{ rec.datasetSlug }}</small>
+          </td>
+          <td>
+            <span class="badge bg-{% if rec.classification == 'restricted' or rec.classification == 'sensitive' %}danger{% elseif rec.classification == 'internal' %}warning text-dark{% else %}success{% endif %}">
+              {{ rec.classification }}
+            </span>
+          </td>
+          <td>
+            <span class="badge bg-{% if rec.sensitivityLevel == 'high' %}danger{% elseif rec.sensitivityLevel == 'medium' %}warning text-dark{% elseif rec.sensitivityLevel == 'low' %}info text-dark{% else %}secondary{% endif %}">
+              {{ rec.sensitivityLevel }}
+            </span>
+          </td>
+          <td>
+            {% if rec.lgpdApplicable %}
+              <span class="badge bg-warning text-dark"><i class="bi bi-shield me-1"></i>LGPD</span>
+              {% if rec.lgpdBasis %}<br><small class="text-muted">{{ rec.lgpdBasis }}</small>{% endif %}
+            {% else %}
+              <span class="text-muted small">N/A</span>
+            {% endif %}
+          </td>
+          <td>
+            <small>{{ rec.owner ?? '—' }}</small>
+            {% if rec.steward %}<br><small class="text-muted">{{ rec.steward }}</small>{% endif %}
+          </td>
+          <td><small>{{ rec.retentionDays ? rec.retentionDays ~ ' dias' : 'Indefinido' }}</small></td>
+          <td>
+            <a href="{{ path('app_admin_governance_data_edit', {id: rec.id}) }}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center py-4 text-muted">Nenhum registro de governança cadastrado.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

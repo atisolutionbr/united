@@ -1,0 +1,68 @@
+{% set route = app.current_route|default('') %}
+{% set pathInfo = app.request.pathInfo|default('/') %}
+{% set selectedErp = app.session.get('kflow_selected_erp') %}
+{% set release = kflow_release() %}
+
+<button class="kflow-sidebar-scrim" type="button" data-sidebar-scrim aria-label="Fechar menu"></button>
+<aside class="kflow-sidebar" aria-label="Navegação principal">
+    <a class="kflow-brand" href="{{ path('kflow_dashboard') }}" aria-label="KFlow360">
+        <span class="kflow-brand__mark"><img class="kflow-brand__logo" src="{{ asset('images/kflow360-logo.png') }}" alt=""></span>
+        <span class="kflow-brand__name">KFlow360<small>Integration Platform</small></span>
+    </a>
+    <div class="kflow-release" aria-label="Versão da plataforma">
+        <strong>v{{ release.version }}</strong><span>build {{ release.build }}</span>
+    </div>
+
+    <nav class="kflow-nav">
+        <a class="kflow-nav__link {{ route == 'kflow_dashboard' ? 'is-active' }}" href="{{ path('kflow_dashboard') }}">
+            <i class="bi bi-grid-1x2"></i><span>Visão Geral</span>
+        </a>
+
+        <div class="kflow-nav__separator"></div>
+
+        <div class="kflow-nav__group is-open">
+            <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="true">
+                <span><i class="bi bi-box-seam"></i><span>Kadastro360</span></span><i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="kflow-nav__submenu">
+                <a href="{{ path('kflow_products') }}" class="{{ route == 'kflow_products' ? 'is-active' }}">Produtos</a>
+                <a href="{{ path('kflow_module', {module: 'cliente'}) }}" class="{{ pathInfo ends with '/cliente' ? 'is-active' }}">Cliente</a>
+                <a href="{{ path('kflow_module', {module: 'fornecedor'}) }}" class="{{ pathInfo ends with '/fornecedor' ? 'is-active' }}">Fornecedor</a>
+                <a href="{{ path('kflow_module', {module: 'transportador'}) }}" class="{{ pathInfo ends with '/transportador' ? 'is-active' }}">Transportador</a>
+            </div>
+        </div>
+
+        <a class="kflow-nav__link {{ pathInfo ends with '/requisicao' ? 'is-active' }}" href="{{ path('kflow_module', {module: 'requisicao'}) }}">
+            <i class="bi bi-clipboard2-plus"></i><span>Requisição</span>
+        </a>
+        <a class="kflow-nav__link {{ pathInfo ends with '/aprovacao' ? 'is-active' }}" href="{{ path('kflow_module', {module: 'aprovacao'}) }}">
+            <i class="bi bi-check2-square"></i><span>Aprovação</span>
+        </a>
+
+        <div class="kflow-nav__separator"></div>
+
+        <div class="kflow-nav__group is-open">
+            <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="true">
+                <span><i class="bi bi-hdd-network"></i><span>Configurações de Conexão</span></span><i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="kflow-nav__submenu">
+                <a href="{{ path('kflow_erp_index') }}" class="{{ route starts with 'kflow_erp_' ? 'is-active' }}">Conectar ERP{% if selectedErp %}<small>{{ selectedErp }}</small>{% endif %}</a>
+            </div>
+        </div>
+
+        <div class="kflow-nav__group">
+            <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="false">
+                <span><i class="bi bi-sliders2"></i><span>Configurações Kflow360</span></span><i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="kflow-nav__submenu">
+                <a href="{{ path('app_admin_intelligence_hub') }}">Inteligência</a>
+                <a href="{{ path('app_admin_data_hub') }}">Dados</a>
+                <a href="{{ path('app_admin_integrations_hub') }}">Integrações</a>
+                <a href="{{ path('app_admin_ai_hub') }}">IA</a>
+                <a href="{{ path('app_admin_operations_hub') }}">Operações</a>
+                <a href="{{ path('app_admin_governance_hub') }}">Governança</a>
+                <a href="{{ path('app_admin_platform_hub') }}">Plataforma</a>
+            </div>
+        </div>
+    </nav>
+</aside>

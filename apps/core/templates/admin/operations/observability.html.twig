@@ -1,0 +1,66 @@
+{% extends 'base.html.twig' %}
+{% block title %}Observabilidade{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1"><i class="bi bi-heart-pulse text-teal me-2"></i>Observabilidade</h1>
+      <p class="text-muted mb-0">Saúde e latência de todos os serviços da plataforma</p>
+    </div>
+    <span class="badge fs-6 bg-{% if overallStatus == 'online' %}success{% elseif overallStatus == 'degraded' %}warning text-dark{% else %}danger{% endif %}">
+      <i class="bi bi-circle-fill me-1" style="font-size:.6rem"></i>{{ overallStatus|upper }}
+    </span>
+  </div>
+
+  <div class="row g-3">
+    {% for service, info in health %}
+    <div class="col-md-6 col-xl-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100
+        {% if info.status == 'online' %}border-start border-success border-3
+        {% elseif info.status == 'degraded' %}border-start border-warning border-3
+        {% else %}border-start border-danger border-3{% endif %}">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-capitalize mb-0">
+              <i class="bi bi-{% if service == 'postgres' %}database{% elseif service == 'kestra' %}braces{% elseif service == 'ollama' %}robot{% elseif service == 'qdrant' %}layers{% elseif service == 'metabase' %}bar-chart{% elseif service == 'symfony' %}code-slash{% else %}hdd{% endif %} text-teal me-2"></i>{{ service }}
+            </h6>
+            <span class="badge bg-{% if info.status == 'online' %}success{% elseif info.status == 'degraded' %}warning text-dark{% else %}danger{% endif %}">
+              {{ info.status }}
+            </span>
+          </div>
+          {% if info.latency_ms is defined %}
+          <div class="d-flex align-items-center gap-1 mb-1">
+            <i class="bi bi-stopwatch text-muted" style="font-size:.85rem"></i>
+            <small class="text-muted">Latência: <strong>{{ info.latency_ms }}ms</strong></small>
+          </div>
+          {% endif %}
+          {% if info.memory_mb is defined %}
+          <small class="text-muted d-block">Memória: <strong>{{ info.memory_mb }} MB</strong> (peak: {{ info.memory_peak_mb }} MB)</small>
+          {% endif %}
+          {% if info.tables is defined %}
+          <small class="text-muted d-block">Tabelas: <strong>{{ info.tables }}</strong></small>
+          {% endif %}
+          {% if info.models is defined %}
+          <small class="text-muted d-block">Modelos carregados: <strong>{{ info.models }}</strong></small>
+          {% endif %}
+          {% if info.version is defined %}
+          <small class="text-muted d-block" style="font-size:.7rem">{{ info.version }}</small>
+          {% endif %}
+          {% if info.error is defined %}
+          <small class="text-danger d-block">{{ info.error|slice(0, 100) }}</small>
+          {% endif %}
+          {% if info.checked_at is defined %}
+          <small class="text-muted d-block">Verificado: {{ info.checked_at }}</small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="mt-4 text-muted small">
+    <i class="bi bi-info-circle me-1"></i>Serviços como Kestra, Ollama, Qdrant e Metabase precisam estar rodando com os perfis Docker corretos para aparecerem como online.
+    <br>Perfis: <code>ai</code> para Ollama/Qdrant · <code>ops</code> para Kestra
+  </div>
+</div>
+{% endblock %}

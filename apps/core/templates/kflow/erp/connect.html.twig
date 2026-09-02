@@ -1,0 +1,144 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}KFlow360 · {{ erp }}{% endblock %}
+{% block page_title %}Conectar ERP{% endblock %}
+
+{% block main %}
+    <section class="kflow-page-heading kflow-page-heading--compact">
+        <div>
+            <span class="kflow-eyebrow">Configurações de Conexão</span>
+            <h1>{{ erp }}</h1>
+            <p>Conecte a origem, escolha os formulários que o KFlow360 deve gerir e monte o De/Para dos seus dados.</p>
+        </div>
+        <a class="btn btn-outline-primary" href="{{ path('kflow_erp_index') }}"><i class="bi bi-arrow-left"></i>ERPs</a>
+    </section>
+
+    <section class="kflow-surface kflow-connection-panel">
+        <div class="kflow-connection-panel__header">
+            <div><span class="kflow-eyebrow">{{ isActive ? 'ERP ativo' : 'Configuração' }}</span><h2>Modo de conexão</h2></div>
+            {% if isActive %}<span class="badge text-bg-success">{{ erp }} ativo</span>{% endif %}
+        </div>
+        <nav class="kflow-mode-switch" aria-label="Modo de conexão">
+            {% for key, label in methods %}
+                {% set icon = key == 'database' ? 'database' : (key == 'api' ? 'braces-asterisk' : 'diagram-3') %}
+                <a class="{{ key == method ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: key}) }}"><i class="bi bi-{{ icon }}"></i>{{ label }}</a>
+            {% endfor %}
+        </nav>
+
+        {% if method == 'webservice' and erp == 'Senior' and settings.endpoint|default('') %}
+            <form method="post" action="{{ path('kflow_erp_webservice_test', {erp: erp}) }}" class="kflow-ws-test-bar">
+                <input type="hidden" name="_token" value="{{ csrf_token('test-erp-webservice-'~erp) }}">
+                <div><span class="kflow-status-dot {{ settings.last_test_status|default('NAO_TESTADO') == 'SUCESSO' ? 'is-ready' }}">{{ settings.last_test_status|default('NAO_TESTADO') == 'NAO_TESTADO' ? 'Não testado' : settings.last_test_status }}</span><small>{{ settings.last_test_message|default('Teste o WSDL selecionado antes de ativar integrações.') }}</small></div>
+                <button class="btn btn-outline-primary" type="submit"><i class="bi bi-plug"></i>Testar conexão</button>
+            </form>
+        {% endif %}
+
+        <form method="post" action="{{ method == 'database' and databaseStep != 'connection' ? path('kflow_erp_database_binding', {erp: erp}) : (method != 'database' and integrationStep == 'mapping' ? path('kflow_erp_payload_mapping', {erp: erp}) : path('kflow_erp_connect_save', {erp: erp})) }}" class="kflow-connection-form" data-connection-form>
+            <input type="hidden" name="_token" value="{{ csrf_token(method == 'database' and databaseStep != 'connection' ? 'database-binding-'~erp : (method != 'database' and integrationStep == 'mapping' ? 'payload-mapping-'~erp~'-'~method : 'configure-erp-'~erp)) }}">
+            {% if method != 'database' or databaseStep == 'connection' %}<input type="hidden" name="method" value="{{ method }}">{% endif %}
+
+            {% if method == 'database' %}
+                <div class="kflow-connection-copy"><div><i class="bi bi-database-check"></i><strong>Vínculo via banco de dados</strong><p>Configure o acesso uma vez e conecte qualquer formulário à tabela e aos campos correspondentes.</p></div><span class="kflow-status-dot {{ settings.credentials_configured|default(false) ? 'is-ready' }}">{{ settings.credentials_configured|default(false) ? 'Credencial protegida' : 'Aguardando credencial' }}</span></div>
+                <nav class="kflow-binding-steps" aria-label="Etapas do vínculo por banco">
+                    <a class="{{ databaseStep == 'connection' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'connection'}) }}"><b>1</b>Conexão</a>
+                    <a class="{{ databaseStep == 'table' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'table', form: selectedForm}) }}"><b>2</b>Formulário e tabela</a>
+                    <a class="{{ databaseStep == 'mapping' ? 'is-active' }} {{ selectedTable ? '' : 'is-disabled' }}" href="{{ selectedTable ? path('kflow_erp_connect', {erp: erp, method: method, step: 'mapping', form: selectedForm}) : '#' }}"><b>3</b>De/Para de campos</a>
+                </nav>
+
+                {% if databaseStep == 'connection' %}
+                    <div class="kflow-form-grid">
+                        <div><label class="form-label" for="erp-driver">Driver</label><select class="form-select" id="erp-driver" name="settings[driver]"><option value="SQL Server" {{ settings.driver|default('SQL Server') starts with 'SQL' ? 'selected' }}>SQL Server</option><option value="PostgreSQL" {{ settings.driver|default('') == 'PostgreSQL' ? 'selected' }}>PostgreSQL</option></select></div>
+                        <div><label class="form-label" for="erp-host">Servidor</label><input class="form-control" id="erp-host" name="settings[host]" value="{{ settings.host|default('') }}" placeholder="Servidor ou IP" required></div>
+                        <div><label class="form-label" for="erp-port">Porta</label><input class="form-control" id="erp-port" name="settings[port]" inputmode="numeric" value="{{ settings.port|default('1433') }}" required></div>
+                        <div><label class="form-label" for="erp-database">Banco de dados</label><input class="form-control" id="erp-database" name="settings[database]" value="{{ settings.database|default('') }}" required></div>
+                        <div><label class="form-label" for="erp-user">Usuário</label><input class="form-control" id="erp-user" name="settings[username]" value="{{ settings.username|default('') }}" autocomplete="username" required></div>
+                        <div><label class="form-label" for="erp-password">Senha</label><input class="form-control" id="erp-password" name="settings[password]" type="password" autocomplete="new-password" placeholder="{{ settings.credentials_configured|default(false) ? 'Em branco mantém a senha atual' : 'Informe a senha' }}" {{ settings.credentials_configured|default(false) ? '' : 'required' }}></div>
+                    </div>
+                {% else %}
+                    <div class="kflow-binding-context"><span><i class="bi bi-{{ databaseStep == 'table' ? 'table' : 'diagram-2' }}"></i></span><div><strong>{{ databaseStep == 'table' ? 'Selecione a origem do cadastro' : 'Faça o De/Para dos campos' }}</strong><p>{{ databaseStep == 'table' ? 'As tabelas são carregadas diretamente do banco configurado.' : 'Cada campo do formulário KFlow360 apontará para uma coluna da tabela escolhida.' }}</p></div></div>
+                    <div class="kflow-form-catalog" data-form-catalog data-url="{{ path('kflow_erp_forms_create', {erp: erp}) }}" data-token="{{ csrf_token('create-integration-form-'~erp~'-'~method) }}" data-method="{{ method }}"><i class="bi bi-ui-checks-grid"></i><div><strong>Novo formulário</strong><small>Crie quantos vínculos forem necessários para esta integração.</small></div><select class="form-select" data-form-template>{% for key, definition in databaseForms %}<option value="{{ key }}">Modelo: {{ definition.label }}</option>{% endfor %}</select><input class="form-control" data-form-label placeholder="Nome do formulário"><button class="btn btn-outline-primary" type="button" data-form-create><i class="bi bi-plus-lg"></i>Adicionar</button><span data-form-status></span></div>
+                    {{ include('kflow/erp/_form_manager.html.twig', {erp: erp, method: method, configuredForms: configuredForms}) }}
+                    {% if databaseTablesError %}<div class="alert alert-warning kflow-alert">{{ databaseTablesError }} <a href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'connection'}) }}">Editar conexão</a></div>{% endif %}
+                    <div class="kflow-binding-form">
+                        {% if databaseStep == 'mapping' %}<input type="hidden" name="form" value="{{ selectedForm }}">{% endif %}
+                        {% if databaseStep == 'table' %}
+                            <div class="kflow-form-grid">
+                                <div><label class="form-label" for="binding-form">Formulário KFlow360</label><select class="form-select" id="binding-form" name="form">{% for definition in configuredForms %}<option value="{{ definition.id }}" {{ selectedForm == definition.id ? 'selected' }}>{{ definition.label }}</option>{% endfor %}</select></div>
+                                <div><label class="form-label" for="binding-table">Tabela de origem</label><select class="form-select" id="binding-table" name="table" required><option value="">Selecione uma tabela</option>{% for table in databaseTables %}<option value="{{ table }}" {{ selectedTable == table ? 'selected' }}>{{ table }}</option>{% endfor %}</select><small class="kflow-input-help">{{ databaseTables|length }} tabelas encontradas.</small></div>
+                            </div>
+                            <div class="kflow-connection-actions"><small>O formulário e a tabela podem ser alterados depois.</small><button class="btn btn-primary" type="submit"><i class="bi bi-arrow-right"></i>Continuar para campos</button></div>
+                        {% else %}
+                            <input type="hidden" name="table" value="{{ selectedTable }}">
+                            <div class="kflow-mapping-heading"><div><span class="kflow-eyebrow">{{ selectedFormLabel }} · {{ selectedTable }}</span><h2>Campos vinculados</h2><p>Escolha a coluna correspondente para cada informação do formulário.</p></div><span>{{ databaseColumns|length }} campos</span></div>
+                            {% if databaseColumnsError %}<div class="alert alert-warning kflow-alert">{{ databaseColumnsError }}</div>{% endif %}
+                            <div class="kflow-mapping-grid">{% for key, field in selectedFormDefinition.fields %}<div class="kflow-mapping-field"><label class="form-label" for="mapping-{{ key }}">{{ field.label }}</label><div class="kflow-mapping-control"><select class="form-select" id="mapping-{{ key }}" name="mapping[{{ key }}]"><option value="">Não vincular agora</option>{% for column in databaseColumns %}<option value="{{ column }}" {{ bindingMapping[key]|default('')|lower == column|lower ? 'selected' }}>{{ column }}</option>{% endfor %}</select><button class="kflow-clear-mapping" type="button" data-clear-mapping="mapping-{{ key }}" aria-label="Remover vínculo de {{ field.label }}" title="Remover vínculo"><i class="bi bi-trash3"></i></button></div><small>{{ field.hint }}</small></div>{% endfor %}</div>
+                            <div class="kflow-connection-actions"><a class="btn btn-outline-primary" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'table', form: selectedForm}) }}"><i class="bi bi-arrow-left"></i>Trocar tabela</a><button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle"></i>Salvar De/Para</button></div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% elseif method == 'api' %}
+                <nav class="kflow-binding-steps kflow-binding-steps--integration" aria-label="Etapas da integração API"><a class="{{ integrationStep == 'connection' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'connection'}) }}"><b>1</b>Conexão API</a><a class="{{ integrationStep == 'mapping' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'mapping', form: selectedForm}) }}"><b>2</b>Formulários e campos</a></nav>
+                {% if integrationStep == 'mapping' %}
+                    <input type="hidden" name="method" value="{{ method }}">
+                    <div class="kflow-binding-context"><span><i class="bi bi-braces-asterisk"></i></span><div><strong>De/Para do payload da API</strong><p>Informe o caminho de origem de cada informação, por exemplo: <code>data.product.code</code>.</p></div></div>
+                    <div class="kflow-form-catalog" data-form-catalog data-url="{{ path('kflow_erp_forms_create', {erp: erp}) }}" data-token="{{ csrf_token('create-integration-form-'~erp~'-'~method) }}" data-method="{{ method }}"><i class="bi bi-ui-checks-grid"></i><div><strong>Novo formulário</strong><small>Adicione mais cadastros para esta API.</small></div><select class="form-select" data-form-template>{% for key, definition in databaseForms %}<option value="{{ key }}">Modelo: {{ definition.label }}</option>{% endfor %}</select><input class="form-control" data-form-label placeholder="Nome do formulário"><button class="btn btn-outline-primary" type="button" data-form-create><i class="bi bi-plus-lg"></i>Adicionar</button><span data-form-status></span></div>
+                    {{ include('kflow/erp/_form_manager.html.twig', {erp: erp, method: method, configuredForms: configuredForms}) }}
+                    <div class="kflow-form-grid"><div class="kflow-form-grid__wide"><label class="form-label" for="payload-form-api">Formulário KFlow360</label><select class="form-select" id="payload-form-api" name="form">{% for definition in configuredForms %}<option value="{{ definition.id }}" {{ selectedForm == definition.id ? 'selected' }}>{{ definition.label }}</option>{% endfor %}</select></div></div>
+                    <div class="kflow-mapping-grid kflow-mapping-grid--payload">{% for key, field in selectedFormDefinition.fields %}<div class="kflow-mapping-field"><label class="form-label" for="api-mapping-{{ key }}">{{ field.label }}</label><div class="kflow-mapping-control"><input class="form-control" id="api-mapping-{{ key }}" name="mapping[{{ key }}]" value="{{ payloadMapping[key]|default('') }}" placeholder="data.{{ key }}"><button class="kflow-clear-mapping" type="button" data-clear-mapping="api-mapping-{{ key }}" aria-label="Remover vínculo de {{ field.label }}" title="Remover vínculo"><i class="bi bi-trash3"></i></button></div><small>{{ field.hint }}</small></div>{% endfor %}</div>
+                {% else %}
+                <div class="kflow-connection-copy"><div><i class="bi bi-braces-asterisk"></i><strong>Vínculo via API</strong><p>Registre o endpoint e o tipo de autenticação da API do ERP.</p></div></div>
+                <div class="kflow-form-grid">
+                    <div class="kflow-form-grid__wide"><label class="form-label" for="api-endpoint">URL base</label><input class="form-control" id="api-endpoint" name="settings[endpoint]" type="url" value="{{ settings.endpoint|default('') }}" placeholder="https://api.exemplo.com" required></div>
+                    <div><label class="form-label" for="api-auth">Autenticação</label><select class="form-select" id="api-auth" name="settings[authentication]"><option value="bearer" {{ settings.authentication|default('bearer') == 'bearer' ? 'selected' }}>Bearer token</option><option value="api_key" {{ settings.authentication|default('') == 'api_key' ? 'selected' }}>API key</option><option value="oauth_client" {{ settings.authentication|default('') == 'oauth_client' ? 'selected' }}>OAuth client credentials</option></select></div>
+                    <div><label class="form-label" for="api-key-name">Nome do header</label><input class="form-control" id="api-key-name" name="settings[api_key_name]" value="{{ settings.api_key_name|default('Authorization') }}"></div>
+                    <div><label class="form-label" for="api-token">Token ou API key</label><input class="form-control" id="api-token" name="settings[token]" type="password" autocomplete="new-password" placeholder="{{ settings.token_configured|default(false) ? 'Credencial já configurada' : 'Informe o token' }}"></div>
+                    <div><label class="form-label" for="api-client">Client ID</label><input class="form-control" id="api-client" name="settings[client_id]" value="{{ settings.client_id|default('') }}"></div>
+                    <div><label class="form-label" for="api-secret">Client secret</label><input class="form-control" id="api-secret" name="settings[client_secret]" type="password" autocomplete="new-password"></div>
+                </div>
+                {% endif %}
+            {% else %}
+                <nav class="kflow-binding-steps kflow-binding-steps--integration" aria-label="Etapas da integração WebService"><a class="{{ integrationStep == 'connection' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'connection'}) }}"><b>1</b>Conexão WebService</a><a class="{{ integrationStep == 'mapping' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'mapping', form: selectedForm}) }}"><b>2</b>Formulários e campos</a></nav>
+                {% if integrationStep == 'mapping' %}
+                    <input type="hidden" name="method" value="{{ method }}">
+                    <div class="kflow-binding-context"><span><i class="bi bi-diagram-3"></i></span><div><strong>De/Para da mensagem WebService</strong><p>Informe a propriedade de origem da mensagem SOAP/XML, por exemplo: <code>produto.codigo</code>.</p></div></div>
+                    <div class="kflow-form-catalog" data-form-catalog data-url="{{ path('kflow_erp_forms_create', {erp: erp}) }}" data-token="{{ csrf_token('create-integration-form-'~erp~'-'~method) }}" data-method="{{ method }}"><i class="bi bi-ui-checks-grid"></i><div><strong>Novo formulário</strong><small>Adicione mais cadastros para este WebService.</small></div><select class="form-select" data-form-template>{% for key, definition in databaseForms %}<option value="{{ key }}">Modelo: {{ definition.label }}</option>{% endfor %}</select><input class="form-control" data-form-label placeholder="Nome do formulário"><button class="btn btn-outline-primary" type="button" data-form-create><i class="bi bi-plus-lg"></i>Adicionar</button><span data-form-status></span></div>
+                    {{ include('kflow/erp/_form_manager.html.twig', {erp: erp, method: method, configuredForms: configuredForms}) }}
+                    <div class="kflow-form-grid"><div class="kflow-form-grid__wide"><label class="form-label" for="payload-form-ws">Formulário KFlow360</label><select class="form-select" id="payload-form-ws" name="form">{% for definition in configuredForms %}<option value="{{ definition.id }}" {{ selectedForm == definition.id ? 'selected' }}>{{ definition.label }}</option>{% endfor %}</select></div></div>
+                    <div class="kflow-mapping-grid kflow-mapping-grid--payload">{% for key, field in selectedFormDefinition.fields %}<div class="kflow-mapping-field"><label class="form-label" for="ws-mapping-{{ key }}">{{ field.label }}</label><div class="kflow-mapping-control"><input class="form-control" id="ws-mapping-{{ key }}" name="mapping[{{ key }}]" value="{{ payloadMapping[key]|default('') }}" placeholder="mensagem.{{ key }}"><button class="kflow-clear-mapping" type="button" data-clear-mapping="ws-mapping-{{ key }}" aria-label="Remover vínculo de {{ field.label }}" title="Remover vínculo"><i class="bi bi-trash3"></i></button></div><small>{{ field.hint }}</small></div>{% endfor %}</div>
+                {% else %}
+                <div class="kflow-connection-copy"><div><i class="bi bi-diagram-3"></i><strong>Vínculo via WebService</strong><p>Gerencie endpoint, porta/operação e credenciais sem expor a senha armazenada.</p></div>{% if erp == 'Senior' %}<span class="kflow-status-dot {{ settings.credentials_configured|default(false) ? 'is-ready' }}">{{ settings.credentials_configured|default(false) ? 'Credencial protegida' : 'Credencial pendente' }}</span>{% endif %}</div>
+                <div class="kflow-form-grid">
+                    <div><label class="form-label" for="ws-name">Nome da conexão</label><input class="form-control" id="ws-name" name="settings[connection_name]" value="{{ settings.connection_name|default(erp~' WebService') }}" required></div>
+                    <div><label class="form-label" for="ws-environment">Ambiente</label><select class="form-select" id="ws-environment" name="settings[environment]"><option value="HOMOLOGACAO" {{ settings.environment|default('HOMOLOGACAO') == 'HOMOLOGACAO' ? 'selected' }}>Homologação</option><option value="PRODUCAO" {{ settings.environment|default('') == 'PRODUCAO' ? 'selected' }}>Produção</option><option value="TESTE" {{ settings.environment|default('') == 'TESTE' ? 'selected' }}>Teste</option><option value="DESENVOLVIMENTO" {{ settings.environment|default('') == 'DESENVOLVIMENTO' ? 'selected' }}>Desenvolvimento</option></select></div>
+                    <div class="kflow-form-grid__wide"><label class="form-label" for="ws-endpoint">URL base WS</label><input class="form-control" id="ws-endpoint" name="settings[endpoint]" type="url" value="{{ settings.endpoint|default('') }}" placeholder="https://servidor-senior.example/g5-senior-services" required><small class="kflow-input-help">Informe a URL base ou uma URL WSDL completa.</small></div>
+                    <div>
+                        <label class="form-label" for="ws-service">Serviço principal</label>
+                        {% if seniorWebServices is not empty %}
+                            <select class="form-select" id="ws-service" name="settings[service_key]" data-ws-service-select>{% for key, service in seniorWebServices %}<option value="{{ key }}" data-operation="{{ service.port ?: service.method }}" {{ settings.service_key|default('product') == key ? 'selected' }}>{{ service.label }}</option>{% endfor %}</select>
+                        {% else %}
+                            <input class="form-control" id="ws-service" name="settings[service_key]" value="{{ settings.service_key|default('product') }}">
+                        {% endif %}
+                    </div>
+                    <div><label class="form-label" for="ws-operation">Porta / operação WS</label><input class="form-control" id="ws-operation" name="settings[operation]" value="{{ settings.operation|default('CadastrarProduto') }}" placeholder="exportar_2" data-ws-operation required></div>
+                    <div><label class="form-label" for="ws-user">Usuário WS</label><input class="form-control" id="ws-user" name="settings[username]" value="{{ settings.username|default('') }}" autocomplete="off" required></div>
+                    <div><label class="form-label" for="ws-password">{{ settings.credentials_configured|default(false) ? 'Nova senha WS' : 'Senha WS' }}</label><input class="form-control" id="ws-password" name="settings[password]" type="password" autocomplete="new-password" placeholder="{{ settings.credentials_configured|default(false) ? 'Em branco mantém a senha atual' : 'Informe a senha' }}" {{ settings.credentials_configured|default(false) ? '' : 'required' }}></div>
+                    <div><label class="form-label" for="ws-system">Sistema de integração</label><input class="form-control" id="ws-system" name="settings[system]" value="{{ settings.system|default(erp == 'Senior' ? 'Senior G5' : erp) }}" required></div>
+                    <div><label class="form-label" for="ws-timeout">Timeout em segundos</label><input class="form-control" id="ws-timeout" name="settings[timeout_seconds]" type="number" min="1" max="120" value="{{ settings.timeout_seconds|default(20) }}" required></div>
+                    <label class="kflow-toggle-field kflow-form-grid__wide"><input type="checkbox" name="settings[active]" value="1" {{ settings.active|default(true) ? 'checked' }}><span><strong>Conexão ativa</strong><small>Permite testes, sincronizações e envio de cadastros pelo perfil.</small></span></label>
+                </div>
+
+                {% if seniorWebServices is not empty %}
+                    <div class="kflow-mapping-heading"><div><span class="kflow-eyebrow">Estrutura Kadastro360</span><h2>WebServices Senior disponíveis</h2><p>Serviços transportados da integração original Django/Zeep.</p></div><span>{{ seniorWebServices|length }} serviços</span></div>
+                    <div class="table-responsive"><table class="table kflow-table kflow-ws-table"><thead><tr><th>Serviço</th><th>WebService</th><th>Porta / método</th><th>Status</th></tr></thead><tbody>{% for key, service in seniorWebServices %}<tr><td><strong>{{ service.label }}</strong><small>{{ service.purpose }}</small></td><td><code>{{ service.webservice }}</code></td><td>{{ service.port ?: '-' }}{% if service.method %}<small>{{ service.method }}</small>{% endif %}</td><td><span class="badge {{ service.implemented ? 'text-bg-success' : 'text-bg-light' }}">{{ service.implemented ? 'Implementado' : 'Planejado' }}</span></td></tr>{% endfor %}</tbody></table></div>
+                {% endif %}
+                {% endif %}
+            {% endif %}
+
+            {% if method != 'database' or databaseStep == 'connection' %}<div class="kflow-connection-actions"><small><i class="bi bi-shield-lock"></i> Senhas, tokens e secrets não são exibidos após o envio.</small><button class="btn btn-primary" type="submit" data-connection-submit><i class="bi bi-check2-circle"></i><span data-connection-label>Salvar vínculo</span><span data-connection-loading hidden><span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Salvando</span></button></div>{% endif %}
+        </form>
+
+        {% if method == 'webservice' and webServiceLogs is not empty %}
+            <div class="kflow-ws-history"><div class="kflow-mapping-heading"><div><span class="kflow-eyebrow">Rastreabilidade</span><h2>Últimas execuções</h2></div></div><div class="table-responsive"><table class="table kflow-table"><thead><tr><th>Data</th><th>Serviço</th><th>Resultado</th><th>HTTP</th><th>Tempo</th></tr></thead><tbody>{% for log in webServiceLogs %}<tr><td>{{ log.createdAt|date('d/m/Y H:i') }}</td><td>{{ log.serviceName }}</td><td><span class="badge {{ log.success ? 'text-bg-success' : 'text-bg-danger' }}">{{ log.success ? 'Sucesso' : 'Erro' }}</span>{% if log.errorMessage %}<small>{{ log.errorMessage }}</small>{% endif %}</td><td>{{ log.statusHttp ?: '-' }}</td><td>{{ log.responseTimeMs }} ms</td></tr>{% endfor %}</tbody></table></div></div>
+        {% endif %}
+    </section>
+{% endblock %}

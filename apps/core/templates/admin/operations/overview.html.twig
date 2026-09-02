@@ -1,0 +1,154 @@
+{% extends 'base.html.twig' %}
+{% block title %}Operações · Visão Geral{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+
+  {# Page header #}
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1">
+        <i class="bi bi-grid-3x3-gap-fill text-teal me-2"></i>Operações · Visão Geral
+      </h1>
+      <p class="text-muted mb-0">Orquestração, observabilidade e saúde da plataforma · Fase 6</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ path('app_admin_operations_observability') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-heart-pulse me-1"></i>Saúde
+      </a>
+      <a href="{{ path('app_admin_operations_pipelines') }}" class="btn btn-teal btn-sm">
+        <i class="bi bi-diagram-3 me-1"></i>Pipelines
+      </a>
+    </div>
+  </div>
+
+  {% for msg in app.flashes('success') %}<div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+
+  {# KPI Cards #}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body text-center py-3">
+          <div class="fs-1 fw-bold text-teal">{{ summary.pipelines_active }}</div>
+          <div class="small text-muted">Pipelines Ativos</div>
+          <div class="small text-muted">de {{ summary.pipelines_total }} total</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 h-100 {% if summary.failed_today > 0 %}border-start border-danger border-3{% endif %}">
+        <div class="card-body text-center py-3">
+          <div class="fs-1 fw-bold {% if summary.failed_today > 0 %}text-danger{% else %}text-success{% endif %}">{{ summary.failed_today }}</div>
+          <div class="small text-muted">Falhas Hoje</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 h-100 {% if summary.alerts_critical > 0 %}border-start border-danger border-3{% endif %}">
+        <div class="card-body text-center py-3">
+          <div class="fs-1 fw-bold {% if summary.alerts_critical > 0 %}text-danger{% else %}text-secondary{% endif %}">{{ summary.alerts_critical }}</div>
+          <div class="small text-muted">Alertas Críticos</div>
+          <div class="small text-muted">{{ summary.alerts_active }} alertas ativos</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 h-100 {% if overallHealth == 'online' %}border-start border-success border-3{% elseif overallHealth == 'degraded' %}border-start border-warning border-3{% else %}border-start border-danger border-3{% endif %}">
+        <div class="card-body text-center py-3">
+          <div class="fs-4 fw-bold {% if overallHealth == 'online' %}text-success{% elseif overallHealth == 'degraded' %}text-warning{% else %}text-danger{% endif %}">
+            <i class="bi bi-{% if overallHealth == 'online' %}check-circle-fill{% elseif overallHealth == 'degraded' %}exclamation-triangle-fill{% else %}x-circle-fill{% endif %}"></i>
+          </div>
+          <div class="small text-muted">Status Geral</div>
+          <div class="badge bg-{% if overallHealth == 'online' %}success{% elseif overallHealth == 'degraded' %}warning{% else %}danger{% endif %} text-capitalize">{{ overallHealth }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Health grid #}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-0 py-3">
+          <h6 class="fw-semibold mb-0"><i class="bi bi-heart-pulse text-teal me-2"></i>Saúde dos Serviços</h6>
+        </div>
+        <div class="card-body p-3">
+          <div class="row g-2">
+            {% for service, info in health %}
+            <div class="col-6 col-md-4 col-lg-3">
+              <div class="d-flex align-items-center gap-2 p-2 rounded-2 bg-light">
+                <span class="badge rounded-pill bg-{% if info.status == 'online' %}success{% elseif info.status == 'degraded' %}warning{% else %}danger{% endif %} p-1">
+                  <i class="bi bi-circle-fill" style="font-size:.5rem"></i>
+                </span>
+                <div>
+                  <div class="small fw-semibold text-capitalize">{{ service }}</div>
+                  {% if info.latency_ms is defined %}<div class="text-muted" style="font-size:.7rem">{{ info.latency_ms }}ms</div>{% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    {# Recent Executions #}
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between">
+          <h6 class="fw-semibold mb-0"><i class="bi bi-clock-history text-teal me-2"></i>Execuções Recentes</h6>
+          <a href="{{ path('app_admin_operations_executions') }}" class="btn btn-sm btn-outline-secondary">Ver todas</a>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light"><tr><th>Pipeline</th><th>Status</th><th>Iniciado</th><th>Duração</th></tr></thead>
+            <tbody>
+            {% for exec in recentExecutions %}
+            <tr>
+              <td><small>{{ exec.pipeline ? exec.pipeline.name : '—' }}</small></td>
+              <td>
+                <span class="badge bg-{% if exec.status == 'SUCCESS' %}success{% elseif exec.status == 'FAILED' %}danger{% elseif exec.status == 'RUNNING' %}primary{% else %}secondary{% endif %}">
+                  {{ exec.status }}
+                </span>
+              </td>
+              <td><small class="text-muted">{{ exec.startedAt ? exec.startedAt|date('d/m H:i') : '—' }}</small></td>
+              <td><small>{{ exec.durationMs ? (exec.durationMs / 1000)|number_format(1) ~ 's' : '—' }}</small></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Nenhuma execução</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    {# Recent Alerts #}
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between">
+          <h6 class="fw-semibold mb-0"><i class="bi bi-bell text-teal me-2"></i>Alertas Recentes</h6>
+          <a href="{{ path('app_admin_operations_alerts') }}" class="btn btn-sm btn-outline-secondary">Ver todos</a>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light"><tr><th>Título</th><th>Nível</th></tr></thead>
+            <tbody>
+            {% for alert in recentAlerts %}
+            <tr>
+              <td><small>{{ alert.title }}</small></td>
+              <td><span class="badge bg-{% if alert.level == 'critical' %}danger{% elseif alert.level == 'warning' %}warning text-dark{% else %}info{% endif %}">{{ alert.level }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="text-center text-muted py-3">Sem alertas ativos</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

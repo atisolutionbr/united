@@ -1,0 +1,119 @@
+{% extends 'base.html.twig' %}
+{% block title %}Logs de IA — Governança — Plataforma360{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h1 class="h3 fw-bold mb-1"><i class="bi bi-clock-history text-teal me-2"></i>Logs de Governança de IA</h1>
+            <p class="text-muted small mb-0">Todas as interações com IA registradas · {{ total|number_format }} registros</p>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            <a href="{{ path('app_admin_ai_assistant') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-robot me-1"></i>Assistente</a>
+        </div>
+    </div>
+
+    {# Stats row #}
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+                <div class="fs-4 fw-bold">{{ stats.total|number_format }}</div>
+                <div class="small text-muted">Total</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+                <div class="fs-4 fw-bold text-success">{{ stats.success|number_format }}</div>
+                <div class="small text-muted">Sucesso</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+                <div class="fs-4 fw-bold text-danger">{{ stats.failed|number_format }}</div>
+                <div class="small text-muted">Falhas</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+                <div class="fs-4 fw-bold text-warning">{{ stats.external|number_format }}</div>
+                <div class="small text-muted">Externas</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+                <div class="fs-4 fw-bold">{{ stats.total_tokens|number_format }}</div>
+                <div class="small text-muted">Tokens</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 text-center py-3">
+                <div class="fs-4 fw-bold">{{ stats.avg_duration_ms|number_format }}ms</div>
+                <div class="small text-muted">Latência Média</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle small">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">#</th>
+                        <th>Data</th>
+                        <th>Provider</th>
+                        <th>Modelo</th>
+                        <th>Agente</th>
+                        <th>Usuário</th>
+                        <th>Tokens</th>
+                        <th>Duração</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if interactions is empty %}
+                    <tr><td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-clock-history fs-2 d-block mb-2"></i>Nenhuma interação registrada ainda.
+                    </td></tr>
+                {% else %}
+                    {% for i in interactions %}
+                    <tr>
+                        <td class="ps-4 text-muted">{{ i.id }}</td>
+                        <td>{{ i.createdAt|date('d/m/Y H:i') }}</td>
+                        <td>
+                            <span class="badge {% if i.isExternalProvider %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                {{ i.provider }}
+                            </span>
+                        </td>
+                        <td><code>{{ i.modelName }}</code></td>
+                        <td class="text-muted">{{ i.agentSlug ?? '—' }}</td>
+                        <td class="text-muted">{{ i.userIdentifier ?? 'anon' }}</td>
+                        <td class="text-muted">
+                            {% if i.tokensInput %}{{ (i.tokensInput + i.tokensOutput)|number_format }}{% else %}—{% endif %}
+                        </td>
+                        <td class="text-muted">
+                            {% if i.durationMs %}{{ i.durationMs }}ms{% else %}—{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if i.status == 'success' %}bg-success{% elseif i.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {{ i.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% if total_pages > 1 %}
+        <div class="card-footer bg-transparent d-flex justify-content-center py-3">
+            <nav><ul class="pagination pagination-sm mb-0">
+                {% for p in 1..total_pages %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+            </ul></nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

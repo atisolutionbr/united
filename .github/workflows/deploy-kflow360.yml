@@ -1,0 +1,39 @@
+name: Deploy KFlow360
+
+on:
+  push:
+    branches: [kflow360]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kflow360-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy no servidor
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Atualizar aplicação por SSH
+        uses: appleboy/ssh-action@v1.2.1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          script_stop: true
+          script: |
+            set -eu
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch origin kflow360
+            git checkout kflow360
+            git pull --ff-only origin kflow360
+            docker compose up -d --build --remove-orphans
+            docker compose exec -T php php bin/console sass:build
+            docker compose exec -T php php bin/console asset-map:compile --env=prod
+            docker compose exec -T php php bin/console cache:clear --env=prod --no-warmup
+            docker image prune -f

@@ -1,0 +1,13 @@
+api_platform:
+    title: Plataforma360 API
+    version: 1.0.0
+    description: APIs publicas para inteligencia territorial, turismo inteligente e interoperabilidade municipal.
+    defaults:
+        stateless: true
+        pagination_enabled: true
+        pagination_items_per_page: 20
+        pagination_client_items_per_page: true
+        cache_headers:
+            vary: ['Content-Type', 'Authorization', 'Origin']
+    swagger:
+        api_keys: []

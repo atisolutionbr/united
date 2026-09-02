@@ -1,0 +1,144 @@
+{% extends 'base.html.twig' %}
+{% block title %}Operações · Hub{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'admin/data_management/_styles.html.twig' %}
+{% endblock %}
+
+{% block body %}
+<section class="py-4 py-lg-5">
+
+  {# Hero banner #}
+  <div class="data-management-hero p-4 p-lg-5 mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <span class="badge rounded-pill text-bg-light text-primary mb-3">Fase 6 · Pipelines & Monitoramento</span>
+        <h1 class="display-6 fw-bold mb-3">Operações</h1>
+        <p class="lead mb-3">Pipelines de dados, execuções, alertas e métricas operacionais.</p>
+        <p class="mb-0 opacity-75">Gerencie pipelines Kestra, acompanhe execuções em tempo real e monitore alertas críticos de infraestrutura e IA.</p>
+      </div>
+      <div class="col-lg-4">
+        <div class="data-management-panel p-4 h-100">
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Status operacional</p>
+          <div class="row g-2 text-center">
+            <div class="col-6">
+              <p class="data-management-card__total mb-0" style="font-size:1.75rem">{{ stats.pipelines_active }}</p>
+              <p class="text-muted small mb-0">Pipelines ativos</p>
+            </div>
+            <div class="col-6">
+              <p class="data-management-card__total mb-0" style="font-size:1.75rem; color: {{ stats.alerts_critical > 0 ? '#dc3545' : '#198754' }}">{{ stats.alerts_critical }}</p>
+              <p class="text-muted small mb-0">Alertas críticos</p>
+            </div>
+          </div>
+          <div class="mt-3 d-flex flex-wrap gap-2">
+            <a class="btn btn-primary btn-sm" href="{{ path('app_admin_operations_overview') }}">
+              <i class="bi bi-grid-3x3-gap-fill me-1"></i>Visão geral
+            </a>
+            <a class="btn btn-outline-primary btn-sm" href="{{ path('app_admin_operations_alerts') }}">
+              <i class="bi bi-bell-fill me-1"></i>Alertas
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Pipelines #}
+  <h2 class="h5 fw-semibold mb-3">Pipelines</h2>
+  <div class="row g-4 mb-4">
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_operations_overview') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+          </div>
+          <h3 class="h5 mb-2">Visão Geral</h3>
+          <p class="text-secondary small mb-3">Dashboard de operações, saúde dos serviços e alertas ativos.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver dashboard</span>
+        </article>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_operations_pipelines') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-diagram-3"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">{{ stats.pipelines_active }} ativos</span>
+          </div>
+          <h3 class="h5 mb-2">Pipelines</h3>
+          <p class="text-secondary small mb-3">Gerencie e dispare pipelines de dados via Kestra.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Gerenciar</span>
+        </article>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_operations_executions') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-clock-history"></i></div>
+          </div>
+          <h3 class="h5 mb-2">Execuções</h3>
+          <p class="text-secondary small mb-3">Histórico detalhado de execuções com logs e outputs.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver histórico</span>
+        </article>
+      </a>
+    </div>
+
+  </div>
+
+  {# Monitoramento #}
+  <h2 class="h5 fw-semibold mb-3">Monitoramento</h2>
+  <div class="row g-4">
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_operations_alerts') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-bell-fill"></i></div>
+            {% if stats.alerts_critical > 0 %}
+              <span class="badge rounded-pill text-bg-danger">{{ stats.alerts_critical }} críticos</span>
+            {% else %}
+              <span class="badge rounded-pill text-bg-success">Operacional</span>
+            {% endif %}
+          </div>
+          <h3 class="h5 mb-2">Alertas</h3>
+          <p class="text-secondary small mb-3">Central de alertas operacionais, infraestrutura e execuções.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver alertas</span>
+        </article>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_operations_ai_metrics') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-robot"></i></div>
+          </div>
+          <h3 class="h5 mb-2">Métricas IA</h3>
+          <p class="text-secondary small mb-3">Monitoramento de uso, custos e performance dos provedores de IA.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver métricas</span>
+        </article>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_operations_logs') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-journal-text"></i></div>
+          </div>
+          <h3 class="h5 mb-2">Logs</h3>
+          <p class="text-secondary small mb-3">Logs de sistema, aplicação e infraestrutura para diagnóstico.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver logs</span>
+        </article>
+      </a>
+    </div>
+
+  </div>
+
+</section>
+{% endblock %}

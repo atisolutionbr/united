@@ -1,0 +1,261 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Assistente de Inteligência Territorial — Plataforma360{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h1 class="h3 fw-bold mb-1">
+                <i class="bi bi-robot text-teal me-2"></i>Assistente de Inteligência Territorial
+            </h1>
+            <p class="text-muted small mb-0">IA híbrida local + nuvem · Plataforma360 · Dados públicos e indicadores governamentais</p>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            {% if ollama_available %}
+                <span class="badge bg-success fs-7"><i class="bi bi-circle-fill me-1" style="font-size:.5em"></i>Ollama Online</span>
+            {% else %}
+                <span class="badge bg-warning text-dark fs-7"><i class="bi bi-exclamation-triangle me-1"></i>Ollama Offline</span>
+            {% endif %}
+            <a href="{{ path('app_admin_ai_settings') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-gear me-1"></i>Configurações</a>
+            <a href="{{ path('app_admin_ai_logs') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-clock-history me-1"></i>Logs</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {# Sidebar: Model/Context/Agent Selectors #}
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm rounded-3 mb-3">
+                <div class="card-header bg-transparent border-0 pb-0 pt-3 px-3">
+                    <h6 class="fw-semibold small mb-0"><i class="bi bi-sliders me-1 text-teal"></i>Configuração</h6>
+                </div>
+                <div class="card-body px-3 py-3">
+                    <label class="fw-semibold small mb-1">Agente</label>
+                    <select id="agentSelect" class="form-select form-select-sm mb-3">
+                        <option value="0">— Nenhum agente (direto) —</option>
+                        {% for agent in agents %}
+                            <option value="{{ agent.id }}">{{ agent.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label class="fw-semibold small mb-1">Modelo</label>
+                    <select id="modelSelect" class="form-select form-select-sm mb-3">
+                        {% if models is empty %}
+                            <option value="0">Nenhum modelo configurado</option>
+                        {% else %}
+                            {% for model in models %}
+                                <option value="{{ model.id }}" {% if model.isDefault %}selected{% endif %}>
+                                    {{ model.name }}
+                                    {% if model.isDefault %}★{% endif %}
+                                    {% if model.isExternal() %}<span class="text-danger"> ⚠ Externo</span>{% endif %}
+                                </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+
+                    <label class="fw-semibold small mb-1">Contexto</label>
+                    <select id="contextSelect" class="form-select form-select-sm mb-3">
+                        <option value="0">— Sem contexto —</option>
+                        {% for ctx in contexts %}
+                            <option value="{{ ctx.id }}">{{ ctx.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <div id="externalWarning" class="alert alert-warning py-2 small d-none">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <strong>Atenção:</strong> Provedor externo selecionado. Os dados enviados sairão da sua infraestrutura.
+                    </div>
+                </div>
+            </div>
+
+            {# Stats Card #}
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-transparent border-0 pb-0 pt-3 px-3">
+                    <h6 class="fw-semibold small mb-0"><i class="bi bi-bar-chart me-1 text-teal"></i>Uso de IA</h6>
+                </div>
+                <div class="card-body px-3 py-2">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Total de consultas</span>
+                        <strong>{{ stats.total|number_format }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Sucesso</span>
+                        <strong class="text-success">{{ stats.success|number_format }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Falhas</span>
+                        <strong class="text-danger">{{ stats.failed|number_format }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Externas</span>
+                        <strong class="text-warning">{{ stats.external|number_format }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-muted">Tokens totais</span>
+                        <strong>{{ stats.total_tokens|number_format }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Chat Area #}
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm rounded-3 h-100" style="min-height: 600px;">
+                <div class="card-header bg-transparent border-bottom d-flex align-items-center gap-2 py-3">
+                    <i class="bi bi-chat-text-fill text-teal fs-5"></i>
+                    <span class="fw-semibold">Consulta Inteligente</span>
+                    <span class="ms-auto badge bg-light text-muted small" id="currentModelBadge">Modelo padrão</span>
+                </div>
+
+                {# Messages #}
+                <div id="chatMessages" class="card-body overflow-auto px-4 py-3" style="height: 420px;">
+                    <div class="d-flex gap-3 mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white" style="width:36px;height:36px;background:linear-gradient(135deg,#0f766e,#0d4d6a)">
+                                <i class="bi bi-robot" style="font-size:.9rem"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="bg-light rounded-3 p-3 small">
+                                <strong class="d-block mb-1 text-teal">Plataforma360 · Assistente IA</strong>
+                                Olá! Sou o Assistente de Inteligência Territorial. Posso ajudar você a analisar indicadores, consultar datasets, gerar relatórios e explorar os dados públicos da plataforma. Como posso ajudar?
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Input #}
+                <div class="card-footer bg-transparent border-top p-3">
+                    <div class="input-group">
+                        <textarea id="chatInput" class="form-control rounded-3 border-end-0" rows="2"
+                            placeholder="Digite sua pergunta sobre os dados da plataforma..." style="resize:none;"></textarea>
+                        <button id="sendBtn" class="btn btn-teal rounded-3 ms-2 px-4" style="background:#0f766e;color:white">
+                            <span id="sendIcon"><i class="bi bi-send-fill"></i></span>
+                            <span id="sendSpinner" class="spinner-border spinner-border-sm d-none"></span>
+                        </button>
+                    </div>
+                    <div class="d-flex gap-2 mt-2 flex-wrap">
+                        <button class="btn btn-sm btn-outline-secondary quick-prompt" data-prompt="Quais são os principais indicadores de turismo disponíveis?">📊 Indicadores de turismo</button>
+                        <button class="btn btn-sm btn-outline-secondary quick-prompt" data-prompt="Liste os datasets ativos na plataforma com seu status de qualidade.">📁 Datasets ativos</button>
+                        <button class="btn btn-sm btn-outline-secondary quick-prompt" data-prompt="Gere um resumo executivo com os dados do warehouse de turismo.">📋 Resumo executivo</button>
+                        <button class="btn btn-sm btn-outline-secondary quick-prompt" data-prompt="Quais municípios têm mais agências de turismo registradas?">🗺️ Ranking municípios</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.text-teal { color: #0f766e !important; }
+.bg-teal { background: #0f766e !important; }
+.chat-user { flex-direction: row-reverse; }
+.chat-user .rounded-3 { background: linear-gradient(135deg, #0f766e22, #0d4d6a11); }
+</style>
+
+<script>
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const sendIcon = document.getElementById('sendIcon');
+const sendSpinner = document.getElementById('sendSpinner');
+const agentSelect = document.getElementById('agentSelect');
+const modelSelect = document.getElementById('modelSelect');
+const contextSelect = document.getElementById('contextSelect');
+const externalWarning = document.getElementById('externalWarning');
+const currentModelBadge = document.getElementById('currentModelBadge');
+
+// External provider warning
+modelSelect.addEventListener('change', () => {
+    const selected = modelSelect.options[modelSelect.selectedIndex];
+    const text = selected.text || '';
+    const isExternal = text.includes('⚠ Externo') || text.includes('openai') || text.includes('azure');
+    externalWarning.classList.toggle('d-none', !isExternal);
+    currentModelBadge.textContent = selected.text.replace('★', '').trim();
+});
+
+// Quick prompts
+document.querySelectorAll('.quick-prompt').forEach(btn => {
+    btn.addEventListener('click', () => {
+        chatInput.value = btn.dataset.prompt;
+        chatInput.focus();
+    });
+});
+
+// Send on Ctrl+Enter
+chatInput.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'Enter') sendMessage();
+});
+
+sendBtn.addEventListener('click', sendMessage);
+
+function appendMessage(role, content, extra = '') {
+    const isUser = role === 'user';
+    const html = `
+    <div class="d-flex gap-3 mb-4 ${isUser ? 'chat-user' : ''}">
+        <div class="flex-shrink-0">
+            <div class="rounded-circle d-flex align-items-center justify-content-center ${isUser ? 'bg-secondary' : ''} text-white" style="width:36px;height:36px;${!isUser ? 'background:linear-gradient(135deg,#0f766e,#0d4d6a)' : ''}">
+                <i class="bi bi-${isUser ? 'person-fill' : 'robot'}" style="font-size:.9rem"></i>
+            </div>
+        </div>
+        <div class="flex-grow-1">
+            <div class="rounded-3 p-3 small" style="${isUser ? 'background:linear-gradient(135deg,#0f766e22,#0d4d6a11)' : 'background:#f8f9fa'}">
+                ${!isUser ? '<strong class="d-block mb-1 text-teal">Assistente IA</strong>' : ''}
+                <div class="message-content">${escapeHtml(content).replace(/\n/g, '<br>')}</div>
+                ${extra ? `<div class="mt-2 text-muted" style="font-size:.75rem">${extra}</div>` : ''}
+            </div>
+        </div>
+    </div>`;
+    chatMessages.insertAdjacentHTML('beforeend', html);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function sendMessage() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    appendMessage('user', message);
+    chatInput.value = '';
+    sendBtn.disabled = true;
+    sendIcon.classList.add('d-none');
+    sendSpinner.classList.remove('d-none');
+
+    try {
+        const body = {
+            message,
+            model_id: parseInt(modelSelect.value) || 0,
+            context_id: parseInt(contextSelect.value) || 0,
+            agent_id: parseInt(agentSelect.value) || 0,
+        };
+
+        const res = await fetch('{{ path("app_admin_ai_chat") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+        });
+
+        const data = await res.json();
+
+        if (data.success && data.response) {
+            const meta = [];
+            if (data.tokens_input) meta.push(`${data.tokens_input + (data.tokens_output||0)} tokens`);
+            if (data.duration_ms) meta.push(`${data.duration_ms}ms`);
+            if (data.provider) meta.push(data.provider);
+            appendMessage('assistant', data.response, meta.join(' · '));
+        } else {
+            appendMessage('assistant', '⚠️ ' + (data.error || 'Erro ao processar sua consulta. Verifique se um modelo de IA está configurado.'));
+        }
+    } catch (e) {
+        appendMessage('assistant', '⚠️ Erro de comunicação com o servidor. Tente novamente.');
+    } finally {
+        sendBtn.disabled = false;
+        sendIcon.classList.remove('d-none');
+        sendSpinner.classList.add('d-none');
+    }
+}
+</script>
+{% endblock %}

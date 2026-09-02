@@ -1,0 +1,133 @@
+{% extends 'base.html.twig' %}
+{% block title %}Inteligência & Analytics · Hub{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'admin/data_management/_styles.html.twig' %}
+{% endblock %}
+
+{% block body %}
+<section class="py-4 py-lg-5">
+
+  <div class="data-management-hero p-4 p-lg-5 mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <span class="badge rounded-pill text-bg-light text-primary mb-3">Painéis · Analytics · Observabilidade</span>
+        <h1 class="display-6 fw-bold mb-3">Inteligência & Analytics</h1>
+        <p class="lead mb-3">Dashboards, indicadores, analytics e observabilidade da plataforma.</p>
+        <p class="mb-0 opacity-75">Consolide a leitura executiva da operação, acompanhe indicadores estratégicos e centralize a visibilidade analitica do ecossistema GovTech.</p>
+      </div>
+      <div class="col-lg-4">
+        <div class="data-management-panel p-4 h-100">
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Acesso rapido</p>
+          <p class="text-secondary small mb-3">Abra os paineis principais e acompanhe a visao executiva da plataforma.</p>
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary btn-sm" href="{{ path('dashboard') }}">
+              <i class="bi bi-grid-1x2 me-1"></i>Dashboard
+            </a>
+            <a class="btn btn-outline-primary btn-sm" href="{{ path('app_platform_analytics') }}">
+              <i class="bi bi-activity me-1"></i>Analytics
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="h5 fw-semibold mb-3"><i class="bi bi-bar-chart-line me-2 text-primary"></i>Paineis estrategicos</h2>
+  <div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('dashboard') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-grid-1x2"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Principal</span>
+          </div>
+          <h3 class="h5 mb-2">Dashboard</h3>
+          <p class="text-secondary small mb-3">Visao executiva da governanca territorial, turismo e operacao.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Abrir painel</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_platform_indicators') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-graph-up-arrow"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">KPI</span>
+          </div>
+          <h3 class="h5 mb-2">Indicadores</h3>
+          <p class="text-secondary small mb-3">Painel analitico dedicado aos indicadores estrategicos da cidade.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver indicadores</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_platform_analytics') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-activity"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Avancado</span>
+          </div>
+          <h3 class="h5 mb-2">Analytics</h3>
+          <p class="text-secondary small mb-3">Exploracao analitica avancada e inteligencia operacional da plataforma.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Abrir analytics</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_metabase_dashboards') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-bar-chart-line-fill"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">BI</span>
+          </div>
+          <h3 class="h5 mb-2">Dashboards BI</h3>
+          <p class="text-secondary small mb-3">Central Metabase para dashboards incorporados e leitura estrategica.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Abrir dashboards</span>
+        </article>
+      </a>
+    </div>
+  </div>
+
+  <h2 class="h5 fw-semibold mb-3"><i class="bi bi-broadcast-pin me-2 text-primary"></i>Observabilidade operacional</h2>
+  <div class="row g-4">
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_batch_monitor') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-database-gear"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Batch</span>
+          </div>
+          <h3 class="h5 mb-2">Monitoramento Batch</h3>
+          <p class="text-secondary small mb-3">Observabilidade das coletas automatizadas e sincronizacoes criticas.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Abrir monitoramento</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+      <article class="data-management-card p-4 opacity-75" style="cursor: not-allowed;">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div class="data-management-icon"><i class="bi bi-broadcast-pin"></i></div>
+          <span class="badge rounded-pill text-bg-warning">Em breve</span>
+        </div>
+        <h3 class="h5 mb-2">Observabilidade</h3>
+        <p class="text-secondary small mb-3">Sinais de saude, disponibilidade e eventos operacionais da plataforma.</p>
+        <span class="btn btn-outline-secondary btn-sm w-100 disabled">Disponivel em breve</span>
+      </article>
+    </div>
+    <div class="col-md-6 col-xl-4">
+      <article class="data-management-card p-4 opacity-75" style="cursor: not-allowed;">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div class="data-management-icon"><i class="bi bi-journal-text"></i></div>
+          <span class="badge rounded-pill text-bg-warning">Em breve</span>
+        </div>
+        <h3 class="h5 mb-2">Logs Operacionais</h3>
+        <p class="text-secondary small mb-3">Trilha operacional para auditoria, suporte e rastreabilidade.</p>
+        <span class="btn btn-outline-secondary btn-sm w-100 disabled">Disponivel em breve</span>
+      </article>
+    </div>
+  </div>
+
+</section>
+{% endblock %}

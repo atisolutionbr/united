@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}KFlow360 · {{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block main %}
+    <section class="kflow-page-heading kflow-page-heading--compact">
+        <div><span class="kflow-eyebrow">KFlow360</span><h1>{{ title }}</h1><p>{{ description }}</p></div>
+    </section>
+    <section class="kflow-development-state">
+        <span class="kflow-development-state__icon"><i class="bi bi-{{ icon }}"></i></span>
+        <div><span class="kflow-eyebrow">Módulo planejado</span><h2>Em desenvolvimento</h2><p>Esta área já está integrada ao fluxo da plataforma e receberá suas regras de negócio nas próximas etapas.</p></div>
+    </section>
+{% endblock %}

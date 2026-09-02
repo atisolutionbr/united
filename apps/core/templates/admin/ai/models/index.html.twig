@@ -1,0 +1,111 @@
+{% extends 'base.html.twig' %}
+{% block title %}Modelos de IA — Plataforma360{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h1 class="h3 fw-bold mb-1"><i class="bi bi-cpu text-teal me-2"></i>Modelos de IA</h1>
+            <p class="text-muted small mb-0">Configure modelos locais (Ollama) e externos (OpenAI/Azure)</p>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            {% if ollama_available %}
+                <span class="badge bg-success"><i class="bi bi-circle-fill me-1" style="font-size:.5em"></i>Ollama Online</span>
+            {% else %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Ollama Offline</span>
+            {% endif %}
+            <a href="{{ path('app_admin_ai_models_new') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus me-1"></i>Novo Modelo</a>
+        </div>
+    </div>
+
+    {% for msg in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}
+
+    {% if ollama_available and ollama_models is not empty %}
+    <div class="alert alert-info small mb-4">
+        <i class="bi bi-info-circle me-1"></i><strong>Modelos Ollama disponíveis:</strong>
+        {% for m in ollama_models %}<code class="me-2">{{ m }}</code>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Modelo</th>
+                        <th>Provider</th>
+                        <th>Model Name</th>
+                        <th>Tokens</th>
+                        <th>Embeddings</th>
+                        <th>Padrão</th>
+                        <th>Status</th>
+                        <th class="pe-4">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if models is empty %}
+                    <tr><td colspan="8" class="text-center py-5 text-muted">
+                        <i class="bi bi-cpu fs-2 d-block mb-2"></i>Nenhum modelo configurado.
+                        <a href="{{ path('app_admin_ai_models_new') }}" class="d-block mt-2">Cadastrar primeiro modelo</a>
+                    </td></tr>
+                {% else %}
+                    {% for model in models %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-semibold">{{ model.name }}</div>
+                            <small class="text-muted">{{ model.slug }}</small>
+                        </td>
+                        <td>
+                            <span class="badge {% if model.isLocal() %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                {{ model.provider }}
+                            </span>
+                        </td>
+                        <td><code class="small">{{ model.modelName }}</code></td>
+                        <td class="small text-muted">
+                            {% if model.maxTokens %}{{ model.maxTokens|number_format }} max{% endif %}
+                        </td>
+                        <td>
+                            {% if model.supportsEmbeddings %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-dash text-muted"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if model.isDefault %}
+                                <span class="badge bg-primary">★ Padrão</span>
+                            {% else %}
+                                <form method="post" action="{{ path('app_admin_ai_models_set_default', {id: model.id}) }}" class="d-inline">
+                                    <button class="btn btn-sm btn-outline-secondary btn-sm py-0 px-1 small">Definir</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if model.isActive %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ model.isActive ? 'Ativo' : 'Inativo' }}
+                            </span>
+                        </td>
+                        <td class="pe-4">
+                            <div class="d-flex gap-1">
+                                <a href="{{ path('app_admin_ai_models_edit', {id: model.id}) }}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
+                                <form method="post" action="{{ path('app_admin_ai_models_toggle', {id: model.id}) }}" class="d-inline">
+                                    <button class="btn btn-sm btn-outline-secondary" title="{{ model.isActive ? 'Desativar' : 'Ativar' }}">
+                                        <i class="bi bi-{{ model.isActive ? 'toggle-on' : 'toggle-off' }}"></i>
+                                    </button>
+                                </form>
+                                <form method="post" action="{{ path('app_admin_ai_models_delete', {id: model.id}) }}" class="d-inline"
+                                    onsubmit="return confirm('Remover modelo {{ model.name }}?')">
+                                    <button class="btn btn-sm btn-outline-danger" title="Remover"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

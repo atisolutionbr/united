@@ -1,0 +1,68 @@
+{% extends 'base.html.twig' %}
+{% block title %}Logs Operacionais{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 fw-bold mb-0"><i class="bi bi-journal-text text-teal me-2"></i>Logs Operacionais</h1>
+    <a href="{{ path('app_admin_operations_overview') }}" class="btn btn-outline-secondary btn-sm">← Operações</a>
+  </div>
+
+  <div class="row g-3">
+    {# Audit Logs #}
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-0 py-3">
+          <h6 class="fw-semibold mb-0"><i class="bi bi-shield-check text-teal me-2"></i>Auditoria</h6>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0 align-middle" style="font-size:.85rem">
+            <thead class="table-light"><tr><th>Ação</th><th>Descrição</th><th>Usuário</th><th>Quando</th></tr></thead>
+            <tbody>
+            {% for log in auditLogs %}
+            <tr>
+              <td><span class="badge bg-secondary">{{ log.action }}</span></td>
+              <td><small>{{ log.description|slice(0,60) }}{% if log.description|length > 60 %}…{% endif %}</small></td>
+              <td><small class="text-muted">{{ log.userIdentifier ?? '—' }}</small></td>
+              <td><small class="text-muted">{{ log.createdAt|date('d/m H:i') }}</small></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Sem logs de auditoria</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    {# Pipeline Logs #}
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-0 py-3">
+          <h6 class="fw-semibold mb-0"><i class="bi bi-diagram-3 text-teal me-2"></i>Execuções de Pipelines</h6>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0 align-middle" style="font-size:.85rem">
+            <thead class="table-light"><tr><th>#</th><th>Pipeline</th><th>Status</th><th>Duração</th><th>Quando</th></tr></thead>
+            <tbody>
+            {% for exec in pipelineLogs %}
+            <tr>
+              <td><a href="{{ path('app_admin_operations_execution_detail', {id: exec.id}) }}">#{{ exec.id }}</a></td>
+              <td><small>{{ exec.pipeline ? exec.pipeline.name : '—' }}</small></td>
+              <td><span class="badge bg-{% if exec.status == 'SUCCESS' %}success{% elseif exec.status == 'FAILED' %}danger{% elseif exec.status == 'RUNNING' %}primary{% else %}secondary{% endif %}">{{ exec.status }}</span></td>
+              <td><small>{{ exec.durationMs ? (exec.durationMs / 1000)|number_format(1) ~ 's' : '—' }}</small></td>
+              <td><small class="text-muted">{{ exec.startedAt ? exec.startedAt|date('d/m H:i') : '—' }}</small></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-3">Sem execuções</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer bg-white border-0 py-2">
+          <a href="{{ path('app_admin_operations_executions') }}" class="small text-teal">Ver todas →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

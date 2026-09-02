@@ -1,0 +1,182 @@
+{% extends 'base.html.twig' %}
+{% block title %}Inteligência Artificial · Hub{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'admin/data_management/_styles.html.twig' %}
+{% endblock %}
+
+{% block body %}
+<section class="py-4 py-lg-5">
+
+  {# Hero banner #}
+  <div class="data-management-hero p-4 p-lg-5 mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <span class="badge rounded-pill text-bg-light text-primary mb-3">Fase 5 · IA Híbrida</span>
+        <h1 class="display-6 fw-bold mb-3">Inteligência Artificial</h1>
+        <p class="lead mb-3">Assistência, modelos, agentes e governança de IA da plataforma.</p>
+        <p class="mb-0 opacity-75">Consulte dados em linguagem natural com Ollama local ou OpenAI, gerencie agentes especializados e acompanhe o uso com auditoria completa.</p>
+      </div>
+      <div class="col-lg-4">
+        <div class="data-management-panel p-4 h-100">
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Status Ollama</p>
+          {% if ollama_online %}
+            <span class="badge bg-success rounded-pill px-3 py-2 mb-3 d-block text-start">
+              <i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Online — pronto para consultas locais
+            </span>
+          {% else %}
+            <span class="badge bg-warning text-dark rounded-pill px-3 py-2 mb-3 d-block text-start">
+              <i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Offline — usando OpenAI como fallback
+            </span>
+          {% endif %}
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary btn-sm" href="{{ path('app_admin_ai_assistant') }}">
+              <i class="bi bi-robot me-1"></i>Abrir assistente
+            </a>
+            <a class="btn btn-outline-primary btn-sm" href="{{ path('app_admin_ai_settings') }}">
+              <i class="bi bi-gear me-1"></i>Configurações
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# KPI strip #}
+  <div class="row g-3 mb-4" aria-label="Indicadores de IA">
+    <div class="col-6 col-lg-3">
+      <div class="data-management-panel p-3 text-center h-100">
+        <p class="data-management-card__total mb-1">{{ stats.models_active }}</p>
+        <p class="text-muted small mb-0">Modelos ativos<br><span class="text-secondary" style="font-size:.75rem">de {{ stats.models }} configurados</span></p>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="data-management-panel p-3 text-center h-100">
+        <p class="data-management-card__total mb-1">{{ stats.agents }}</p>
+        <p class="text-muted small mb-0">Agentes</p>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="data-management-panel p-3 text-center h-100">
+        <p class="data-management-card__total mb-1">{{ stats.contexts }}</p>
+        <p class="text-muted small mb-0">Contextos</p>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="data-management-panel p-3 text-center h-100">
+        <p class="data-management-card__total mb-1">{{ stats.interactions }}</p>
+        <p class="text-muted small mb-0">Interações recentes</p>
+      </div>
+    </div>
+  </div>
+
+  {# Seção: Assistência #}
+  <h2 class="h5 fw-semibold mb-3"><i class="bi bi-stars me-2 text-primary"></i>Assistência inteligente</h2>
+  <div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_ai_assistant') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-robot"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Principal</span>
+          </div>
+          <h3 class="h5 mb-2">Assistente IA</h3>
+          <p class="text-secondary small mb-3">Consulte dados, indicadores e warehouse em linguagem natural com IA híbrida.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Abrir assistente</span>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+      <a href="{{ path('app_admin_ai_insights') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-stars"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">Auto</span>
+          </div>
+          <h3 class="h5 mb-2">Insights</h3>
+          <p class="text-secondary small mb-3">Análises automáticas e recomendações estratégicas geradas por IA.</p>
+          <span class="btn btn-outline-primary btn-sm w-100">Ver insights</span>
+        </article>
+      </a>
+    </div>
+  </div>
+
+  {# Seção: Configuração #}
+  <h2 class="h5 fw-semibold mb-3"><i class="bi bi-gear me-2 text-primary"></i>Configuração e governança</h2>
+  <div class="row g-4">
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_ai_models') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-cpu"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">{{ stats.models_active }} ativos</span>
+          </div>
+          <h3 class="h5 mb-2">Modelos</h3>
+          <p class="text-secondary small mb-0">Configure modelos Ollama (local) e OpenAI (externo).</p>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_ai_agents') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-person-gear"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">{{ stats.agents }} agentes</span>
+          </div>
+          <h3 class="h5 mb-2">Agentes</h3>
+          <p class="text-secondary small mb-0">Agentes especializados por domínio com ferramentas configuráveis.</p>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_ai_contexts') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-layers"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">{{ stats.contexts }} ativos</span>
+          </div>
+          <h3 class="h5 mb-2">Contextos</h3>
+          <p class="text-secondary small mb-0">Fontes de dados disponíveis por consulta de IA.</p>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_ai_prompts') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-chat-quote"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">{{ stats.prompts }} templates</span>
+          </div>
+          <h3 class="h5 mb-2">Prompts</h3>
+          <p class="text-secondary small mb-0">Templates de prompts reutilizáveis por domínio.</p>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_ai_logs') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-clock-history"></i></div>
+            <span class="badge rounded-pill text-bg-light text-primary">{{ stats.interactions }} recentes</span>
+          </div>
+          <h3 class="h5 mb-2">Logs de IA</h3>
+          <p class="text-secondary small mb-0">Auditoria completa de todas as interações com IA.</p>
+        </article>
+      </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <a href="{{ path('app_admin_ai_settings') }}" class="text-decoration-none">
+        <article class="data-management-card p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div class="data-management-icon"><i class="bi bi-gear"></i></div>
+          </div>
+          <h3 class="h5 mb-2">Configurações</h3>
+          <p class="text-secondary small mb-0">Status do Ollama, modelos disponíveis e resumo de uso.</p>
+        </article>
+      </a>
+    </div>
+  </div>
+
+</section>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html.twig' %}
+{% block title %}Custos da Plataforma{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1"><i class="bi bi-currency-dollar text-teal me-2"></i>Custos da Plataforma</h1>
+      <p class="text-muted mb-0">Rastreamento de custos por serviço externo</p>
+    </div>
+  </div>
+
+  {# Total card #}
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 text-center py-4
+        {% if totalThisMonthUsd > 50 %}border-start border-danger border-3{% elseif totalThisMonthUsd > 10 %}border-start border-warning border-3{% else %}border-start border-success border-3{% endif %}">
+        <div class="fs-1 fw-bold {% if totalThisMonthUsd > 50 %}text-danger{% elseif totalThisMonthUsd > 10 %}text-warning{% else %}text-success{% endif %}">${{ totalThisMonthUsd|number_format(2) }}</div>
+        <div class="text-muted">Total este mês (USD)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    {# By service #}
+    <div class="col-md-5">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0">Por Serviço</h6></div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light"><tr><th>Serviço</th><th>Total (USD)</th></tr></thead>
+            <tbody>
+            {% for row in byService %}
+            <tr>
+              <td><span class="badge bg-secondary">{{ row.service }}</span></td>
+              <td><strong>${{ row.total|number_format(4) }}</strong></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="text-center text-muted py-3">Sem registros de custo</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    {# Daily series #}
+    <div class="col-md-7">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-0 py-3"><h6 class="fw-semibold mb-0">Últimos 30 dias</h6></div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0 align-middle" style="font-size:.85rem">
+            <thead class="table-light"><tr><th>Data</th><th>Total (USD)</th></tr></thead>
+            <tbody>
+            {% for row in dailySeries|slice(0,15) %}
+            <tr>
+              <td>{{ row.period_date }}</td>
+              <td>${{ row.total|number_format(6) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="text-center text-muted py-3">Sem dados diários</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info mt-4">
+    <i class="bi bi-info-circle me-2"></i>
+    Os custos são registrados automaticamente pelas interações com IA externa. Serviços locais como Ollama e Qdrant têm custo zero nesta tabela.
+  </div>
+</div>
+{% endblock %}

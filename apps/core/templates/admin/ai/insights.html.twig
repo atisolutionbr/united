@@ -1,0 +1,97 @@
+{% extends 'base.html.twig' %}
+{% block title %}Insights de IA — Plataforma360{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h1 class="h3 fw-bold mb-1"><i class="bi bi-stars text-teal me-2"></i>Insights de Inteligência Artificial</h1>
+            <p class="text-muted small mb-0">Análises e recomendações geradas automaticamente pela IA da plataforma</p>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            {% if ollama_available %}
+                <span class="badge bg-success"><i class="bi bi-circle-fill me-1" style="font-size:.5em"></i>Ollama Online</span>
+            {% else %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Ollama Offline</span>
+            {% endif %}
+            <a href="{{ path('app_admin_ai_assistant') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-robot me-1"></i>Assistente</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-3 h-100" style="border-left: 4px solid #0f766e !important;">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="rounded-2 p-2" style="background:#0f766e22"><i class="bi bi-robot text-teal fs-5"></i></div>
+                        <h6 class="fw-semibold mb-0">Status da IA</h6>
+                    </div>
+                    <ul class="list-unstyled small mb-0">
+                        <li class="d-flex justify-content-between mb-2"><span class="text-muted">Modelos ativos</span><strong>{{ models|length }}</strong></li>
+                        <li class="d-flex justify-content-between mb-2"><span class="text-muted">Consultas totais</span><strong>{{ stats.total|number_format }}</strong></li>
+                        <li class="d-flex justify-content-between mb-2"><span class="text-muted">Taxa de sucesso</span>
+                            <strong class="text-success">
+                                {% if stats.total > 0 %}{{ ((stats.success / stats.total) * 100)|number_format(1) }}%{% else %}—{% endif %}
+                            </strong>
+                        </li>
+                        <li class="d-flex justify-content-between mb-2"><span class="text-muted">Latência média</span><strong>{{ stats.avg_duration_ms|number_format }}ms</strong></li>
+                        <li class="d-flex justify-content-between"><span class="text-muted">Tokens totais</span><strong>{{ stats.total_tokens|number_format }}</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-4">
+                    <h6 class="fw-semibold mb-3"><i class="bi bi-lightbulb text-warning me-2"></i>Capacidades Disponíveis</h6>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="p-3 rounded-3 bg-light">
+                                <i class="bi bi-translate text-teal me-2"></i>
+                                <strong class="small">Natural Language to SQL</strong>
+                                <p class="small text-muted mb-0 mt-1">Converta perguntas em consultas SQL seguras ao warehouse.</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-3 rounded-3 bg-light">
+                                <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                                <strong class="small">Geração de Relatórios</strong>
+                                <p class="small text-muted mb-0 mt-1">Relatórios executivos automáticos com base nos dados.</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-3 rounded-3 bg-light">
+                                <i class="bi bi-bar-chart text-success me-2"></i>
+                                <strong class="small">Análise de Indicadores</strong>
+                                <p class="small text-muted mb-0 mt-1">Interpretação inteligente de indicadores territoriais.</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="p-3 rounded-3 bg-light">
+                                <i class="bi bi-geo-alt text-danger me-2"></i>
+                                <strong class="small">Comparação Territorial</strong>
+                                <p class="small text-muted mb-0 mt-1">Compare municípios, estados e regiões automaticamente.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not ollama_available %}
+    <div class="alert alert-warning mt-4">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Ollama está offline.</strong> Para usar IA local, inicie o serviço Ollama no Docker:
+        <code class="ms-2">docker compose up -d ollama</code> e instale um modelo:
+        <code class="ms-2">docker compose exec ollama ollama pull llama3</code>
+    </div>
+    {% endif %}
+
+    {% if models is empty %}
+    <div class="alert alert-info mt-4">
+        <i class="bi bi-info-circle me-2"></i>
+        Nenhum modelo de IA configurado. <a href="{{ path('app_admin_ai_models_new') }}">Configure um modelo</a> para começar a usar os insights automáticos.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

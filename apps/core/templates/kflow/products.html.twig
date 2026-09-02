@@ -1,0 +1,66 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}KFlow360 · Produtos{% endblock %}
+{% block page_title %}Produtos{% endblock %}
+
+{% block main %}
+    <section class="kflow-page-heading">
+        <div><span class="kflow-eyebrow">Kadastro360</span><h1>Produtos</h1><p>{% if activeErp %}Consulta orientada pelo ERP {{ activeErp }}.{% else %}Selecione um ERP para iniciar a consulta de produtos.{% endif %}</p></div>
+        <a class="btn btn-outline-primary" href="{{ activeErp ? path('kflow_erp_connect', {erp: activeErp}) : path('kflow_erp_index') }}"><i class="bi bi-hdd-network"></i>{{ activeErp ?: 'Selecionar ERP' }}</a>
+    </section>
+
+    {% if activeErp == 'Senior' and productData.products is not empty %}
+        {% set firstProduct = productData.products|first %}
+        {% set fiscalMappings = {'Ncm': 'ncm', 'CstPis': 'cst_pis', 'CstCofins': 'cst_cofins', 'CstIcms': 'cst_icms'} %}
+        <section class="kflow-product-workspace">
+            <div class="kflow-surface kflow-product-list">
+                <div class="kflow-section-heading"><div><span class="kflow-eyebrow">{{ productData.sourceTable }}</span><h2>Produtos encontrados</h2></div><span class="badge text-bg-light">{{ productData.recordCount }} registros</span></div>
+                <div class="kflow-table-caption">Exibindo os primeiros {{ productData.products|length }} registros da tabela vinculada.</div>
+                <div class="table-responsive"><table class="table table-hover kflow-table"><thead><tr><th>Empresa</th><th>Código</th><th>Descrição</th><th>Unidade</th><th></th></tr></thead><tbody>{% for product in productData.products %}<tr class="{{ loop.first ? 'is-selected' }}" data-product-row><td>{{ product.CodEmp }}</td><td><strong>{{ product.CodPro }}</strong></td><td>{{ product.DesPro }}</td><td>{{ product.UniMed }}</td><td class="text-end"><button type="button" class="kflow-icon-button" data-product-select data-product="{{ product|json_encode|e('html_attr') }}" aria-label="Ver produto {{ product.CodPro }}" title="Ver produto"><i class="bi bi-arrow-right"></i></button></td></tr>{% endfor %}</tbody></table></div>
+            </div>
+            <aside class="kflow-surface kflow-product-detail">
+                <span class="kflow-eyebrow">Produto selecionado</span><h2>Informações do produto</h2>
+                <form method="post" action="{{ path('kflow_senior_product_fiscal') }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('senior-product-fiscal') }}">
+                    <input type="hidden" name="company" data-product-field="CodEmp" value="{{ firstProduct.CodEmp|default('') }}">
+                    <input type="hidden" name="product_code" data-product-field="CodPro" value="{{ firstProduct.CodPro|default('') }}">
+                    <input type="hidden" name="product_name" data-product-field="DesPro" value="{{ firstProduct.DesPro|default('') }}">
+                    <input type="hidden" name="unit" data-product-field="UniMed" value="{{ firstProduct.UniMed|default('') }}">
+                    <input type="hidden" name="origin_code" data-product-field="CodOri" value="{{ firstProduct.CodOri|default('') }}">
+                    <input type="hidden" name="family" data-product-field="CodFam" value="{{ firstProduct.CodFam|default('') }}">
+                    {% for field in fields %}
+                        {% set mappingKey = fiscalMappings[field.key]|default('') %}
+                        {% set inputName = mappingKey ?: '' %}
+                        {% set editable = mappingKey and (fiscalWriteAvailable or mapping[mappingKey]|default('')) %}
+                        <div class="mb-3">
+                            <label class="form-label" for="product-{{ field.key }}">{{ field.label }}</label>
+                            <input id="product-{{ field.key }}" class="form-control {{ field.fiscal|default(false) ? 'is-fiscal-field' }}" {{ inputName ? 'name='~inputName }} {{ editable ? '' : 'readonly' }} data-product-field="{{ field.key }}" value="{{ firstProduct[field.key]|default('') }}" {% if field.key == 'Ncm' %}inputmode="numeric" maxlength="8" placeholder="{{ editable ? 'Informe o NCM' : 'Mapeie NCM' }}"{% endif %}>
+                            {% if mappingKey and not editable %}<small class="kflow-field-note">Configure o WebService ou mapeie a coluna em Conectar ERP.</small>{% elseif mappingKey and fiscalWriteAvailable %}<small class="kflow-field-note is-ready">Alterações serão enviadas pelo WebService Senior.</small>{% endif %}
+                        </div>
+                    {% endfor %}
+                    <div class="kflow-product-detail__actions"><button class="btn btn-primary" type="submit" {{ fiscalWriteAvailable ? '' : 'disabled' }}><i class="bi bi-cloud-arrow-up"></i>Atualizar no Senior</button>{% if not fiscalWriteAvailable %}<a href="{{ path('kflow_erp_connect', {erp: 'Senior', method: 'webservice'}) }}">Configurar WebService para gravar</a>{% endif %}</div>
+                </form>
+            </aside>
+        </section>
+
+        <section class="kflow-product-insights">
+            <div class="kflow-surface kflow-fiscal-review">
+                <div class="kflow-section-heading"><div><span class="kflow-eyebrow">Inteligência fiscal</span><h2>{{ fiscalReview.chapter }}</h2></div><i class="bi bi-shield-check"></i></div>
+                <p>{{ fiscalReview.guidance }}</p>
+                {% if fiscalReview.ready %}<span class="kflow-fiscal-review__ncm">NCM {{ fiscalReview.ncm }}</span>{% else %}<a href="{{ path('kflow_erp_connect', {erp: 'Senior', method: 'webservice'}) }}">Configurar atualização fiscal</a>{% endif %}
+            </div>
+            <div class="kflow-surface kflow-sanitization">
+                <div class="kflow-section-heading"><div><span class="kflow-eyebrow">Sanitização</span><h2>Padronização de cadastro</h2></div><i class="bi bi-stars"></i></div>
+                {% if sanitization.duplicates is not empty %}<strong>Possíveis duplicidades</strong><ul>{% for item in sanitization.duplicates %}<li><span>{{ item.left.CodPro }} · {{ item.left.DesPro }}</span><small>{{ item.score }}% similar a {{ item.right.CodPro }}</small></li>{% endfor %}</ul>{% endif %}
+                {% if sanitization.abbreviations is not empty %}<strong class="kflow-sanitization__subheading">Abreviações para revisar</strong><ul>{% for item in sanitization.abbreviations %}<li><span>{{ item.code }} · {{ item.description }}</span><small>Sugestão: {{ item.suggestion }}</small></li>{% endfor %}</ul>{% endif %}
+                {% if sanitization.duplicates is empty and sanitization.abbreviations is empty %}<p>Não há duplicidades ou abreviações pendentes entre os produtos exibidos.</p>{% endif %}
+            </div>
+        </section>
+    {% elseif activeErp == 'Senior' %}
+        <section class="kflow-development-state"><span class="kflow-development-state__icon"><i class="bi bi-database"></i></span><div><span class="kflow-eyebrow">Senior · E075PRO</span><h2>{{ productData.error ?: (productData.configured ? 'Nenhum produto encontrado' : 'Conexão Senior pendente') }}</h2><p>{% if productData.configured %}A consulta foi executada sem registros retornados.{% else %}Abra Conectar ERP, selecione Banco de dados e confira o vínculo da E075PRO.{% endif %}</p></div></section>
+    {% elseif activeErp == 'Sankhya' %}
+        <section class="kflow-development-state"><span class="kflow-development-state__icon"><i class="bi bi-boxes"></i></span><div><span class="kflow-eyebrow">Sankhya · TBLProdutos</span><h2>Em desenvolvimento</h2><p>A estrutura de Produtos para Sankhya está reservada e ainda não carrega campos da tabela.</p></div></section>
+    {% else %}
+        <section class="kflow-development-state"><span class="kflow-development-state__icon"><i class="bi bi-tools"></i></span><div><span class="kflow-eyebrow">Produtos{% if activeErp %} · {{ activeErp }}{% endif %}</span><h2>Em desenvolvimento</h2><p>{% if activeErp %}A consulta de produtos para {{ activeErp }} será acrescentada em uma próxima etapa.{% else %}Selecione um ERP em Configurações de Conexão para continuar.{% endif %}</p></div></section>
+    {% endif %}
+{% endblock %}
