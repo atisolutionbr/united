@@ -27,6 +27,9 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 
 #[Route('/kflow')]
 #[IsGranted(User::ROLE_USER)]
@@ -64,6 +67,8 @@ final class KFlowController extends AbstractController
         private readonly ProductSanitizationService $sanitizationService,
         private readonly KFlowAccess $access,
         private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly HttpClientInterface $httpClient,
+        private readonly CacheInterface $cache,
         private readonly CsrfTokenManagerInterface $csrfTokenManager,
         #[Autowire('%env(METABASE_URL)%')]
         private readonly string $metabaseUrl,
@@ -78,10 +83,7 @@ final class KFlowController extends AbstractController
         $activeErp = $connection?->getErpName();
         $products = ['recordCount' => 0, 'products' => []];
         $customers = ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0];
-        if ('Senior' === $activeErp) {
-            $products = $this->seniorProductCatalog->listProducts($this->effectiveMapping($connection), 1, 50);
-            $customers = $this->seniorCustomerCatalog->listCustomers($this->customerBinding($connection), 1, 10);
-        }
+        if ('Senior' === $activeErp) { $products = $this->cachedResult('products', 1); $customers = $this->cachedResult('customers', 1); }
         $productSample = $products['products'] ?? [];
         $sanitization = $this->sanitizationService->analyze($productSample);
         $fiscalPending = count(array_filter($productSample, static fn (array $product): bool => '' === trim((string) ($product['Ncm'] ?? ''))));
@@ -133,7 +135,7 @@ final class KFlowController extends AbstractController
 
         if ('Senior' === $activeErp) {
             $mapping = $this->effectiveMapping($connection);
-            $productData = $this->seniorProductCatalog->listProducts($mapping, max(1, $request->query->getInt('page', 1)));
+            $productData = $this->cachedResult('products', max(1, $request->query->getInt('page', 1)), $connection);
         }
 
         $products = $productData['products'];
@@ -183,7 +185,7 @@ final class KFlowController extends AbstractController
             'staleCount' => 0,
         ];
         if ('Senior' === $activeErp) {
-            $customerData = $this->seniorCustomerCatalog->listCustomers($this->customerBinding($connection), max(1, $request->query->getInt('page', 1)));
+            $customerData = $this->cachedResult('customers', max(1, $request->query->getInt('page', 1)), $connection);
         }
 
         return $this->render('kflow/clients.html.twig', [
@@ -235,7 +237,7 @@ final class KFlowController extends AbstractController
         if (!$this->isCsrfTokenValid('create-company', (string) $request->request->get('_token'))) throw $this->createAccessDeniedException();
         $name = mb_substr(trim((string) $request->request->get('name')), 0, 160);
         if ('' === $name) { $this->addFlash('warning', 'Informe o nome da empresa.'); return $this->redirectToRoute('kflow_companies'); }
-        $company = (new Company($name))->setLegalName(mb_substr(trim((string) $request->request->get('legal_name')), 0, 220) ?: null)->setDocument(mb_substr(trim((string) $request->request->get('document')), 0, 24) ?: null);
+        $company = (new Company($name))->setLegalName(mb_substr(trim((string) $request->request->get('legal_name')), 0, 220) ?: null)->setDocument(mb_substr(trim((string) $request->request->get('document')), 0, 24) ?: null)->setHoldingName(mb_substr(trim((string) $request->request->get('holding_name')), 0, 160) ?: null);
         $this->entityManager->persist($company);
         $this->entityManager->flush();
         $request->getSession()->set('kflow_company_id', $company->getId());
@@ -249,6 +251,50 @@ final class KFlowController extends AbstractController
         if (!$this->isCsrfTokenValid('select-company-'.$company->getId(), (string) $request->request->get('_token')) || (!$this->access->isPlatformAdmin($this->currentUser()) && !in_array($company, $this->access->companies($this->currentUser()), true))) throw $this->createAccessDeniedException();
         $request->getSession()->set('kflow_company_id', $company->getId());
         return $this->redirect((string) $request->request->get('redirect', $this->generateUrl('kflow_dashboard')));
+    }
+
+    #[Route('/companies/cnpj/{document}', name: 'kflow_company_cnpj', methods: ['GET'])]
+    public function companyByCnpj(string $document): JsonResponse
+    {
+        $this->requirePlatformAdmin();
+        $document = preg_replace('/\D+/', '', $document) ?? '';
+        if (14 !== strlen($document)) return $this->json(['ok' => false, 'message' => 'Informe um CNPJ com 14 dígitos.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        try {
+            $payload = $this->httpClient->request('GET', 'https://brasilapi.com.br/api/cnpj/v1/'.$document, ['timeout' => 3])->toArray(false);
+            if (!isset($payload['razao_social'])) throw new \RuntimeException();
+            return $this->json(['ok' => true, 'legalName' => $payload['razao_social'] ?? '', 'name' => $payload['nome_fantasia'] ?: ($payload['razao_social'] ?? ''), 'address' => trim(implode(', ', array_filter([$payload['logradouro'] ?? '', $payload['numero'] ?? '', $payload['bairro'] ?? '', $payload['municipio'] ?? '', $payload['uf'] ?? '']))), 'phone' => $payload['ddd_telefone_1'] ?? '', 'email' => $payload['email'] ?? '']);
+        } catch (\Throwable) { return $this->json(['ok' => false, 'message' => 'Consulta indisponível. Você pode informar os dados manualmente.'], Response::HTTP_BAD_GATEWAY); }
+    }
+
+    #[Route('/users', name: 'kflow_users', methods: ['GET'])]
+    public function users(): Response
+    {
+        $this->requirePlatformAdmin();
+        return $this->render('kflow/users.html.twig', ['users' => $this->entityManager->getRepository(User::class)->findBy([], ['username' => 'ASC']), 'companies' => $this->access->companies($this->currentUser()), 'menuOptions' => $this->access->menuOptions()]);
+    }
+
+    #[Route('/users', name: 'kflow_users_save', methods: ['POST'])]
+    public function saveUser(Request $request): Response
+    {
+        $this->requirePlatformAdmin();
+        if (!$this->isCsrfTokenValid('save-platform-user', (string) $request->request->get('_token'))) throw $this->createAccessDeniedException();
+        $username = mb_strtolower(mb_substr(trim((string) $request->request->get('username')), 0, 50));
+        $email = mb_substr(trim((string) $request->request->get('email')), 0, 180);
+        $name = mb_substr(trim((string) $request->request->get('full_name')), 0, 191);
+        if ('' === $username || '' === $email || '' === $name) { $this->addFlash('warning', 'Preencha usuário, nome e e-mail.'); return $this->redirectToRoute('kflow_users'); }
+        $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
+        if (!$user instanceof User) { $user = new User(); $user->setUsername($username); $this->entityManager->persist($user); }
+        $user->setFullName($name); $user->setEmail($email); $user->setRoles([User::ROLE_USER]);
+        $password = (string) $request->request->get('password');
+        if ('' !== $password) { if (mb_strlen($password) < 8) { $this->addFlash('warning', 'A senha deve ter ao menos 8 caracteres.'); return $this->redirectToRoute('kflow_users'); } $user->setPassword($this->passwordHasher->hashPassword($user, $password)); }
+        $companyIds = array_map('intval', is_array($request->request->all('companies')) ? $request->request->all('companies') : []);
+        $permissions = array_values(array_intersect(array_keys($this->access->menuOptions()), array_map('strval', is_array($request->request->all('permissions')) ? $request->request->all('permissions') : [])));
+        foreach ($this->access->companies($this->currentUser()) as $company) {
+            $membership = $this->entityManager->getRepository(CompanyMembership::class)->findOneBy(['company' => $company, 'user' => $user]);
+            if (in_array($company->getId(), $companyIds, true)) { if (!$membership instanceof CompanyMembership) { $membership = new CompanyMembership($company, $user); $this->entityManager->persist($membership); } $membership->setAccessOrigin('platform')->setMenuPermissions($permissions)->setIsActive(true); }
+            elseif ($membership instanceof CompanyMembership && 'platform' === $membership->getAccessOrigin()) $membership->setIsActive(false);
+        }
+        $this->entityManager->flush(); $this->addFlash('success', 'Usuário e permissões salvos.'); return $this->redirectToRoute('kflow_users');
     }
 
     #[Route('/erp', name: 'kflow_erp_index', methods: ['GET'])]
@@ -270,10 +316,6 @@ final class KFlowController extends AbstractController
         }
 
         $company = $this->currentCompany();
-        foreach ($this->entityManager->getRepository(ErpConnection::class)->findBy(['company' => $company]) as $existingConnection) {
-            $existingConnection->setIsActive(false);
-        }
-
         $connection = $this->connectionFor($erp);
         if (!$connection instanceof ErpConnection) {
             $connection = new ErpConnection($company, $erp);
@@ -401,10 +443,6 @@ final class KFlowController extends AbstractController
         }
 
         $company = $this->currentCompany();
-        foreach ($this->entityManager->getRepository(ErpConnection::class)->findBy(['company' => $company]) as $existingConnection) {
-            $existingConnection->setIsActive(false);
-        }
-
         $connection = $this->connectionFor($erp);
         if (!$connection instanceof ErpConnection) {
             $connection = new ErpConnection($company, $erp);
@@ -567,7 +605,7 @@ final class KFlowController extends AbstractController
             }
             $membership = $this->entityManager->getRepository(CompanyMembership::class)->findOneBy(['company' => $company, 'user' => $user]);
             if (!$membership instanceof CompanyMembership) { $membership = new CompanyMembership($company, $user); $this->entityManager->persist($membership); }
-            $membership->setErpIdentity($erpUser['identifier'], $erpUser['name'], $erpUser['email'])->setMenuPermissions($permissions)->setIsActive(true);
+            $membership->setErpIdentity($erpUser['identifier'], $erpUser['name'], $erpUser['email'])->setAccessOrigin('erp')->setMenuPermissions($permissions)->setIsActive(true);
         }
         $this->entityManager->flush();
         $this->addFlash('success', sprintf('Acesso atualizado para %d usuário(s). %d conta(s) KFlow criada(s).', count($selectedUsers), $created));
@@ -710,12 +748,14 @@ final class KFlowController extends AbstractController
 
     private function activeErp(): ?string
     {
-        return $this->activeConnection()?->getErpName();
+        return $this->access->activeErp($this->currentUser());
     }
 
     private function activeConnection(): ?ErpConnection
     {
-        $connection = $this->entityManager->getRepository(ErpConnection::class)->findOneBy(['company' => $this->currentCompany(), 'isActive' => true]);
+        $erp = $this->activeErp();
+        if (null === $erp) return null;
+        $connection = $this->entityManager->getRepository(ErpConnection::class)->findOneBy(['company' => $this->currentCompany(), 'erpName' => $erp, 'isActive' => true]);
 
         return $connection instanceof ErpConnection ? $connection : null;
     }
@@ -788,6 +828,21 @@ final class KFlowController extends AbstractController
         if ('' === $table || [] === $columns) return [];
         $rows = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured() ? $this->seniorProductCatalog->rowsForTable($table, $columns)['rows'] : $this->databaseSchemaInspector->rows($settings, $table, $columns)['rows'];
         return $this->normalizeErpUsers($rows, $access);
+    }
+
+    /** @return array<string, mixed> */
+    private function cachedResult(string $type, int $page, ?ErpConnection $connection = null): array
+    {
+        $companyId = $this->currentCompany()->getId() ?? 0;
+        $key = sprintf('kflow.%s.%d.%d', $type, $companyId, $page);
+        if (null === $connection) {
+            $item = $this->cache->getItem($key);
+            return $item->isHit() ? (array) $item->get() : ($type === 'products' ? ['recordCount' => 0, 'products' => []] : ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0]);
+        }
+        return $this->cache->get($key, function (ItemInterface $item) use ($type, $page, $connection): array {
+            $item->expiresAfter(45);
+            return 'products' === $type ? $this->seniorProductCatalog->listProducts($this->effectiveMapping($connection), $page) : $this->seniorCustomerCatalog->listCustomers($this->customerBinding($connection), $page);
+        });
     }
 
     /** @return array<string, string> */

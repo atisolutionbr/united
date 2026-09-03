@@ -24,6 +24,9 @@ class Company
     #[ORM\Column(length: 24, nullable: true)]
     private ?string $document = null;
 
+    #[ORM\Column(name: 'holding_name', length: 160, nullable: true)]
+    private ?string $holdingName = null;
+
     #[ORM\Column(name: 'is_active')]
     private bool $isActive = true;
 
@@ -52,6 +55,8 @@ class Company
     public function setLegalName(?string $legalName): static { $this->legalName = $legalName; return $this; }
     public function getDocument(): ?string { return $this->document; }
     public function setDocument(?string $document): static { $this->document = $document; return $this; }
+    public function getHoldingName(): ?string { return $this->holdingName; }
+    public function setHoldingName(?string $holdingName): static { $this->holdingName = $holdingName; return $this; }
     public function isActive(): bool { return $this->isActive; }
     public function setIsActive(bool $isActive): static { $this->isActive = $isActive; return $this; }
 }

@@ -33,6 +33,9 @@ class CompanyMembership
     #[ORM\Column(name: 'erp_email', length: 180, nullable: true)]
     private ?string $erpEmail = null;
 
+    #[ORM\Column(name: 'access_origin', length: 24)]
+    private string $accessOrigin = 'platform';
+
     /** @var list<string> */
     #[ORM\Column(name: 'menu_permissions', type: Types::JSON)]
     private array $menuPermissions = [];
@@ -62,4 +65,6 @@ class CompanyMembership
     /** @return list<string> */ public function getMenuPermissions(): array { return $this->menuPermissions; }
     /** @param list<string> $permissions */ public function setMenuPermissions(array $permissions): static { $this->menuPermissions = array_values(array_unique($permissions)); return $this; }
     public function setErpIdentity(?string $identifier, ?string $name, ?string $email): static { $this->erpIdentifier = $identifier; $this->erpDisplayName = $name; $this->erpEmail = $email; return $this; }
+    public function getAccessOrigin(): string { return $this->accessOrigin; }
+    public function setAccessOrigin(string $accessOrigin): static { $this->accessOrigin = in_array($accessOrigin, ['platform', 'erp'], true) ? $accessOrigin : 'platform'; return $this; }
 }

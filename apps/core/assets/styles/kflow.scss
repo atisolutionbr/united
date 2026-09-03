@@ -62,6 +62,11 @@ body.kflow-body {
   width: 272px;
   z-index: 1040;
 }
+.kflow-body.sidebar-is-collapsed .kflow-sidebar { padding-left: 0.45rem; padding-right: 0.45rem; width: 4.4rem; }
+.kflow-body.sidebar-is-collapsed .kflow-app { margin-left: 4.4rem; }
+.kflow-body.sidebar-is-collapsed .kflow-brand { justify-content: center; margin-left: 0; margin-right: 0; }
+.kflow-body.sidebar-is-collapsed .kflow-brand__name, .kflow-body.sidebar-is-collapsed .kflow-release, .kflow-body.sidebar-is-collapsed .kflow-nav__link span, .kflow-body.sidebar-is-collapsed .kflow-nav__group-toggle > span > span, .kflow-body.sidebar-is-collapsed .kflow-nav__group-toggle > .bi-chevron-down, .kflow-body.sidebar-is-collapsed .kflow-nav__submenu { display: none; }
+.kflow-body.sidebar-is-collapsed .kflow-nav__link, .kflow-body.sidebar-is-collapsed .kflow-nav__group-toggle { justify-content: center; padding-left: 0; padding-right: 0; }
 .kflow-sidebar::before { background: #2aa89d; content: ''; height: 4px; left: 0.75rem; position: absolute; right: 0.75rem; top: 0; }
 
 .kflow-brand { align-items: center; color: inherit; display: flex; gap: 0.75rem; margin: 0.15rem 0.35rem 1.4rem; min-width: 0; text-decoration: none; }
@@ -156,7 +161,7 @@ body.kflow-body {
 .kflow-erp-card.is-selected { box-shadow: 0 0 0 3px #7ee2d7, 0 14px 24px rgba(0, 74, 124, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
 .kflow-erp-card__top { align-items: center; display: flex; justify-content: space-between; position: relative; z-index: 1; }
 .kflow-erp-card__mark { align-items: center; background: rgba(255, 255, 255, 0.94); border-radius: 6px; color: #004a7c; display: inline-flex; font-size: 0.78rem; font-weight: 800; height: 3.25rem; justify-content: center; overflow: hidden; padding: 0.25rem; width: 4.7rem; }
-.kflow-erp-card__mark img { display: block; height: 100%; object-fit: contain; width: 100%; }
+.kflow-erp-card__mark img { display: block; height: 100%; max-height: 2.7rem; max-width: 4rem; object-fit: contain; width: 100%; }
 .kflow-erp-card[data-erp="rm"] .kflow-erp-card__mark img { transform: scale(1.72); }
 .kflow-erp-card[data-erp="protheus"] .kflow-erp-card__mark img { transform: scale(1.55); }
 .kflow-erp-card[data-erp="winthor"] .kflow-erp-card__mark img { transform: scale(1.7); }
@@ -222,6 +227,8 @@ body.kflow-body {
 .kflow-company-layout__action { align-self: end; }
 .kflow-company-list { display: grid; gap: 0.65rem; }
 .kflow-company-list form { align-items: center; background: #f7fafb; border: 1px solid #d7e5e9; border-radius: 6px; display: flex; gap: 1rem; justify-content: space-between; padding: 0.8rem; }
+.kflow-company-list > div { align-items: center; background: #f7fafb; border: 1px solid #d7e5e9; border-radius: 6px; display: flex; gap: 1rem; justify-content: space-between; padding: 0.8rem; }
+.kflow-context-pill { align-items: center; background: linear-gradient(135deg, #e4f5f3, #eef7fb); border: 1px solid #a8d9d5; border-radius: 6px; color: #08716f; display: inline-flex; font-size: 0.78rem; font-weight: 700; gap: 0.35rem; padding: 0.42rem 0.6rem; }
 .kflow-company-list form.is-active { border-color: #2aa89d; box-shadow: inset 3px 0 #2aa89d; }
 .kflow-company-list strong, .kflow-company-list small { display: block; }
 .kflow-company-list small { color: var(--kflow-muted); margin-top: 0.15rem; }

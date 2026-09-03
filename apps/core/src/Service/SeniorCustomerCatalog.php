@@ -29,7 +29,7 @@ final class SeniorCustomerCatalog
         }
 
         try {
-            $pdo = new \PDO($this->databaseDsn, $this->databaseUser, $this->databasePassword, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
+            $pdo = new \PDO($this->databaseDsn, $this->databaseUser, $this->databasePassword, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION, \PDO::ATTR_TIMEOUT => 4]);
             $columns = $this->columns($pdo, $table);
             if ([] === $columns) {
                 return [...$this->emptyResult(true, $table), 'error' => sprintf('A tabela %s não possui campos disponíveis para consulta.', $table)];

@@ -47,7 +47,6 @@
             </button>
             <div class="kflow-nav__submenu">
                 <a href="{{ path('kflow_erp_index') }}" class="{{ route starts with 'kflow_erp_' ? 'is-active' }}">Conectar ERP{% if selectedErp %}<small>{{ selectedErp }}</small>{% endif %}</a>
-                {% if app.user.userIdentifier|lower == 'kadmin' %}<a href="{{ path('kflow_companies') }}" class="{{ route starts with 'kflow_compan' ? 'is-active' }}">Empresas</a>{% endif %}
             </div>
         </div>{% endif %}
 
@@ -63,6 +62,7 @@
                 {% if kflow_can('operations') %}<a href="{{ path('app_admin_operations_hub') }}">Operações</a>{% endif %}
                 {% if kflow_can('governance') %}<a href="{{ path('app_admin_governance_hub') }}">Governança</a>{% endif %}
                 {% if kflow_can('platform') %}<a href="{{ path('app_admin_platform_hub') }}">Plataforma</a>{% endif %}
+                {% if app.user.userIdentifier|lower == 'kadmin' %}<a href="{{ path('kflow_companies') }}" class="{{ route starts with 'kflow_compan' ? 'is-active' }}">Empresas</a><a href="{{ path('kflow_users') }}" class="{{ route starts with 'kflow_users' ? 'is-active' }}">Usuários</a>{% endif %}
             </div>
         </div>{% endif %}
     </nav>

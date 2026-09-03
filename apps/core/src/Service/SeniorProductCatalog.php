@@ -237,6 +237,7 @@ final class SeniorProductCatalog
     {
         return new \PDO($this->databaseDsn, $this->databaseUser, $this->databasePassword, [
             \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            \PDO::ATTR_TIMEOUT => 4,
         ]);
     }
 
