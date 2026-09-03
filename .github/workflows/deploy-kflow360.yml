@@ -48,7 +48,8 @@ jobs:
             test -f apps/core/.env || touch apps/core/.env
             docker compose up -d --build
             docker compose exec -T php php bin/console sass:build
-            docker compose exec -T --user root php sh -c 'mkdir -p public/assets && chown -R www-data:www-data public/assets'
+            docker compose exec -T --user root php php bin/console importmap:install --env=prod
+            docker compose exec -T --user root php sh -c 'mkdir -p public/assets && chown -R www-data:www-data assets/vendor public/assets'
             docker compose exec -T php php bin/console asset-map:compile --env=prod
             docker compose exec -T php php bin/console cache:clear --env=prod --no-warmup
             docker image prune -f
