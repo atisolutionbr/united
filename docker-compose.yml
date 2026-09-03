@@ -122,7 +122,7 @@ services:
       - "${METABASE_PORT:-3000}:3000"
     environment:
       MB_DB_TYPE: postgres
-      MB_DB_DBNAME: ${METABASE_DB_NAME:-metabase}
+      MB_DB_DBNAME: ${METABASE_DB_NAME:-plataforma360}
       MB_DB_PORT: 5432
       MB_DB_HOST: postgres
       MB_DB_USER: ${POSTGRES_USER:-plataforma360}
