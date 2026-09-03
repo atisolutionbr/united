@@ -26,6 +26,18 @@
                         <strong>{% block page_title %}Central de operações{% endblock %}</strong>
                     </div>
                     <div class="kflow-topbar__account">
+                        {% set activeCompany = kflow_active_company() %}
+                        {% set companies = kflow_companies() %}
+                        {% if activeCompany and companies|length > 0 %}
+                        <form action="{{ path('kflow_company_select', {company: activeCompany.id}) }}" method="post" class="kflow-company-select">
+                            <input type="hidden" name="_token" value="{{ csrf_token('select-company-'~activeCompany.id) }}">
+                            <input type="hidden" name="redirect" value="{{ app.request.uri }}">
+                            <label for="company-switch">Empresa</label>
+                            <select id="company-switch" onchange="this.form.action=this.options[this.selectedIndex].dataset.action; this.form.submit()">
+                                {% for company in companies %}<option value="{{ company.id }}" data-action="{{ path('kflow_company_select', {company: company.id}) }}" {{ company.id == activeCompany.id ? 'selected' }}>{{ company.name }}</option>{% endfor %}
+                            </select>
+                        </form>
+                        {% endif %}
                         <span class="d-none d-sm-inline">{{ app.user.fullName is not empty ? app.user.fullName : app.user.userIdentifier }}</span>
                     <form action="{{ path('_logout_main') }}" method="post">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">

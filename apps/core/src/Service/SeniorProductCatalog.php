@@ -136,6 +136,23 @@ final class SeniorProductCatalog
         }
     }
 
+    /** @return array{rows: list<array<string, mixed>>, error: string|null} */
+    public function rowsForTable(string $table, array $columns, int $limit = 30): array
+    {
+        [$schema, $tableName] = $this->splitTable($table);
+        $columns = array_values(array_filter($columns, static fn (mixed $column): bool => is_string($column) && preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $column) === 1));
+        if ('' === $tableName || [] === $columns) return ['rows' => [], 'error' => 'Selecione a tabela e os campos de usuários.'];
+        try {
+            $quotedColumns = implode(', ', array_map(static fn (string $column): string => sprintf('[%s]', $column), $columns));
+            $qualifiedTable = '' === $schema ? sprintf('[%s]', $tableName) : sprintf('[%s].[%s]', $schema, $tableName);
+            $rows = $this->connection()->query(sprintf('SELECT TOP %d %s FROM %s', max(1, min(100, $limit)), $quotedColumns, $qualifiedTable))->fetchAll(\PDO::FETCH_ASSOC);
+            return ['rows' => $rows, 'error' => null];
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Unable to inspect Senior users.', ['exception' => $exception]);
+            return ['rows' => [], 'error' => 'Não foi possível consultar os usuários da base Senior.'];
+        }
+    }
+
     /**
      * @param array<string, string> $mapping
      * @return array{configured: bool, products: list<array<string, mixed>>, error: string|null, sourceTable: string, recordCount: int, page: int, perPage: int, pageCount: int, ncmUpdateAvailable: bool}

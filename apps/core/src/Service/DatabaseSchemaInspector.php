@@ -61,6 +61,22 @@ final class DatabaseSchemaInspector
         }
     }
 
+    /** @return array{rows: list<array<string, mixed>>, error: string|null} */
+    public function rows(array $settings, string $table, array $columns, int $limit = 30): array
+    {
+        [$schema, $tableName] = $this->splitTable($table);
+        $columns = array_values(array_filter($columns, static fn (mixed $column): bool => is_string($column) && preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $column) === 1));
+        if ('' === $tableName || [] === $columns) return ['rows' => [], 'error' => 'Selecione a tabela e os campos de usuários.'];
+        try {
+            $quotedColumns = implode(', ', array_map(static fn (string $column): string => sprintf('[%s]', $column), $columns));
+            $qualifiedTable = '' === $schema ? sprintf('[%s]', $tableName) : sprintf('[%s].[%s]', $schema, $tableName);
+            $statement = $this->connection($settings)->query(sprintf('SELECT TOP %d %s FROM %s', max(1, min(100, $limit)), $quotedColumns, $qualifiedTable));
+            return ['rows' => $statement->fetchAll(\PDO::FETCH_ASSOC), 'error' => null];
+        } catch (\Throwable $exception) {
+            return ['rows' => [], 'error' => 'Não foi possível consultar os usuários da origem selecionada.'];
+        }
+    }
+
     /** @param array<string, mixed> $settings */
     private function connection(array $settings): \PDO
     {

@@ -19,7 +19,11 @@ class ErpConnection
     #[ORM\Column(type: Types::INTEGER)]
     private ?int $id = null;
 
-    #[ORM\Column(name: 'erp_name', length: 64, unique: true)]
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'company_id', nullable: false, onDelete: 'CASCADE')]
+    private Company $company;
+
+    #[ORM\Column(name: 'erp_name', length: 64)]
     private string $erpName;
 
     #[ORM\Column(name: 'is_active')]
@@ -45,8 +49,9 @@ class ErpConnection
     #[ORM\Column(name: 'updated_at', nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
-    public function __construct(string $erpName)
+    public function __construct(Company $company, string $erpName)
     {
+        $this->company = $company;
         $this->erpName = $erpName;
         $this->createdAt = new \DateTimeImmutable();
     }
@@ -65,6 +70,11 @@ class ErpConnection
     public function getErpName(): string
     {
         return $this->erpName;
+    }
+
+    public function getCompany(): Company
+    {
+        return $this->company;
     }
 
     public function isActive(): bool

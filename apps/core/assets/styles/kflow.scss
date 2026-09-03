@@ -97,6 +97,9 @@ body.kflow-body {
 .kflow-topbar__eyebrow, .kflow-eyebrow { color: var(--kflow-muted); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .kflow-topbar__account { align-items: center; color: var(--kflow-muted); display: flex; font-size: 0.875rem; gap: 0.5rem; margin-left: auto; }
 .kflow-topbar__account form { margin: 0; }
+.kflow-company-select { align-items: center; display: flex; gap: 0.35rem; max-width: 16rem; }
+.kflow-company-select label { color: var(--kflow-muted); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+.kflow-company-select select { background: #f4f9fa; border: 1px solid #bcd5dd; border-radius: 5px; color: var(--kflow-primary); font-size: 0.78rem; font-weight: 700; max-width: 11rem; padding: 0.32rem 1.7rem 0.32rem 0.55rem; }
 .kflow-icon-button { align-items: center; background: transparent; border: 1px solid var(--kflow-line); border-radius: 6px; color: var(--kflow-ink); display: inline-flex; height: 2.5rem; justify-content: center; padding: 0; width: 2.5rem; }
 .kflow-icon-button:hover, .kflow-icon-button:focus { background: #e8f6f5; border-color: #91d8d0; color: #08716f; }
 .kflow-main { margin: 0 auto; max-width: 1560px; padding: 2rem; }
@@ -205,6 +208,23 @@ body.kflow-body {
 .kflow-connection-actions small { color: var(--kflow-muted); font-size: 0.76rem; }
 .kflow-connection-actions [data-connection-loading] { align-items: center; gap: 0.45rem; }
 .kflow-connection-actions [data-connection-loading]:not([hidden]) { display: inline-flex; }
+.kflow-permission-panel { background: #f3f8fa; border: 1px solid #d1e2e7; border-radius: 7px; margin-top: 1.4rem; padding: 1rem; }
+.kflow-permission-panel h2 { font-size: 1rem; margin: 0.2rem 0; }
+.kflow-permission-panel p { color: var(--kflow-muted); font-size: 0.82rem; margin: 0; }
+.kflow-permission-options { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.9rem; }
+.kflow-permission-options label { align-items: center; background: #fff; border: 1px solid #cfe0e5; border-radius: 5px; display: flex; font-size: 0.78rem; gap: 0.42rem; padding: 0.42rem 0.55rem; }
+.kflow-existing-users { border-top: 1px solid var(--kflow-line); margin-top: 1.25rem; padding-top: 1rem; }
+.kflow-existing-users > div { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.55rem; }
+.kflow-existing-users span:not(.kflow-eyebrow) { background: #e7f4f2; border-radius: 999px; color: #136b68; font-size: 0.78rem; padding: 0.35rem 0.55rem; }
+.kflow-existing-users i { margin-right: 0.3rem; }
+.kflow-company-layout { display: grid; gap: 1rem; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); max-width: 1100px; }
+.kflow-company-layout h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+.kflow-company-layout__action { align-self: end; }
+.kflow-company-list { display: grid; gap: 0.65rem; }
+.kflow-company-list form { align-items: center; background: #f7fafb; border: 1px solid #d7e5e9; border-radius: 6px; display: flex; gap: 1rem; justify-content: space-between; padding: 0.8rem; }
+.kflow-company-list form.is-active { border-color: #2aa89d; box-shadow: inset 3px 0 #2aa89d; }
+.kflow-company-list strong, .kflow-company-list small { display: block; }
+.kflow-company-list small { color: var(--kflow-muted); margin-top: 0.15rem; }
 .kflow-ws-test-bar { align-items: center; background: #f7fafb; border: 1px solid #dfe8eb; border-radius: 6px; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: 1.25rem; padding: 0.8rem 1rem; }
 .kflow-ws-test-bar > div { display: grid; gap: 0.2rem; }
 .kflow-ws-test-bar small, .kflow-input-help { color: var(--kflow-muted); font-size: 0.75rem; }
@@ -399,6 +419,9 @@ body.sidebar-is-collapsed .kflow-nav__link, body.sidebar-is-collapsed .kflow-nav
   .kflow-topbar__identity { min-width: 0; }
   .kflow-topbar__identity strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .kflow-topbar__account { margin-left: auto; }
+  .kflow-company-select label { display: none; }
+  .kflow-company-select { max-width: 9rem; }
+  .kflow-company-layout { grid-template-columns: 1fr; }
   .kflow-login__form-wrap { padding: 1.25rem; }
 }
 

@@ -14,55 +14,56 @@
     </div>
 
     <nav class="kflow-nav">
-        <a class="kflow-nav__link {{ route == 'kflow_dashboard' ? 'is-active' }}" href="{{ path('kflow_dashboard') }}">
+        {% if kflow_can('dashboard') %}<a class="kflow-nav__link {{ route == 'kflow_dashboard' ? 'is-active' }}" href="{{ path('kflow_dashboard') }}">
             <i class="bi bi-grid-1x2"></i><span>Visão Geral</span>
-        </a>
+        </a>{% endif %}
 
         <div class="kflow-nav__separator"></div>
 
-        <div class="kflow-nav__group is-open">
+        {% if kflow_can('products') or kflow_can('clients') or kflow_can('suppliers') or kflow_can('carriers') %}<div class="kflow-nav__group is-open">
             <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="true">
                 <span><i class="bi bi-box-seam"></i><span>Kadastro360</span></span><i class="bi bi-chevron-down"></i>
             </button>
             <div class="kflow-nav__submenu">
-                <a href="{{ path('kflow_products') }}" class="{{ route == 'kflow_products' ? 'is-active' }}">Produtos</a>
-                <a href="{{ path('kflow_clients') }}" class="{{ route == 'kflow_clients' ? 'is-active' }}">Clientes</a>
-                <a href="{{ path('kflow_module', {module: 'fornecedor'}) }}" class="{{ pathInfo ends with '/fornecedor' ? 'is-active' }}">Fornecedor</a>
-                <a href="{{ path('kflow_module', {module: 'transportador'}) }}" class="{{ pathInfo ends with '/transportador' ? 'is-active' }}">Transportador</a>
+                {% if kflow_can('products') %}<a href="{{ path('kflow_products') }}" class="{{ route == 'kflow_products' ? 'is-active' }}">Produtos</a>{% endif %}
+                {% if kflow_can('clients') %}<a href="{{ path('kflow_clients') }}" class="{{ route == 'kflow_clients' ? 'is-active' }}">Clientes</a>{% endif %}
+                {% if kflow_can('suppliers') %}<a href="{{ path('kflow_module', {module: 'fornecedor'}) }}" class="{{ pathInfo ends with '/fornecedor' ? 'is-active' }}">Fornecedor</a>{% endif %}
+                {% if kflow_can('carriers') %}<a href="{{ path('kflow_module', {module: 'transportador'}) }}" class="{{ pathInfo ends with '/transportador' ? 'is-active' }}">Transportador</a>{% endif %}
             </div>
-        </div>
+        </div>{% endif %}
 
-        <a class="kflow-nav__link {{ pathInfo ends with '/requisicao' ? 'is-active' }}" href="{{ path('kflow_module', {module: 'requisicao'}) }}">
+        {% if kflow_can('requisition') %}<a class="kflow-nav__link {{ pathInfo ends with '/requisicao' ? 'is-active' }}" href="{{ path('kflow_module', {module: 'requisicao'}) }}">
             <i class="bi bi-clipboard2-plus"></i><span>Requisição</span>
-        </a>
-        <a class="kflow-nav__link {{ pathInfo ends with '/aprovacao' ? 'is-active' }}" href="{{ path('kflow_module', {module: 'aprovacao'}) }}">
+        </a>{% endif %}
+        {% if kflow_can('approval') %}<a class="kflow-nav__link {{ pathInfo ends with '/aprovacao' ? 'is-active' }}" href="{{ path('kflow_module', {module: 'aprovacao'}) }}">
             <i class="bi bi-check2-square"></i><span>Aprovação</span>
-        </a>
+        </a>{% endif %}
 
         <div class="kflow-nav__separator"></div>
 
-        <div class="kflow-nav__group is-open">
+        {% if kflow_can('connections') %}<div class="kflow-nav__group is-open">
             <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="true">
                 <span><i class="bi bi-hdd-network"></i><span>Configurações de Conexão</span></span><i class="bi bi-chevron-down"></i>
             </button>
             <div class="kflow-nav__submenu">
                 <a href="{{ path('kflow_erp_index') }}" class="{{ route starts with 'kflow_erp_' ? 'is-active' }}">Conectar ERP{% if selectedErp %}<small>{{ selectedErp }}</small>{% endif %}</a>
+                {% if app.user.userIdentifier|lower == 'kadmin' %}<a href="{{ path('kflow_companies') }}" class="{{ route starts with 'kflow_compan' ? 'is-active' }}">Empresas</a>{% endif %}
             </div>
-        </div>
+        </div>{% endif %}
 
-        <div class="kflow-nav__group">
+        {% if kflow_can('intelligence') or kflow_can('data') or kflow_can('integrations') or kflow_can('ai') or kflow_can('operations') or kflow_can('governance') or kflow_can('platform') %}<div class="kflow-nav__group">
             <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="false">
                 <span><i class="bi bi-sliders2"></i><span>Configurações Kflow360</span></span><i class="bi bi-chevron-down"></i>
             </button>
             <div class="kflow-nav__submenu">
-                <a href="{{ path('app_admin_intelligence_hub') }}">Inteligência</a>
-                <a href="{{ path('app_admin_data_hub') }}">Dados</a>
-                <a href="{{ path('app_admin_integrations_hub') }}">Integrações</a>
-                <a href="{{ path('app_admin_ai_hub') }}">IA</a>
-                <a href="{{ path('app_admin_operations_hub') }}">Operações</a>
-                <a href="{{ path('app_admin_governance_hub') }}">Governança</a>
-                <a href="{{ path('app_admin_platform_hub') }}">Plataforma</a>
+                {% if kflow_can('intelligence') %}<a href="{{ path('app_admin_intelligence_hub') }}">Inteligência</a>{% endif %}
+                {% if kflow_can('data') %}<a href="{{ path('app_admin_data_hub') }}">Dados</a>{% endif %}
+                {% if kflow_can('integrations') %}<a href="{{ path('app_admin_integrations_hub') }}">Integrações</a>{% endif %}
+                {% if kflow_can('ai') %}<a href="{{ path('app_admin_ai_hub') }}">IA</a>{% endif %}
+                {% if kflow_can('operations') %}<a href="{{ path('app_admin_operations_hub') }}">Operações</a>{% endif %}
+                {% if kflow_can('governance') %}<a href="{{ path('app_admin_governance_hub') }}">Governança</a>{% endif %}
+                {% if kflow_can('platform') %}<a href="{{ path('app_admin_platform_hub') }}">Plataforma</a>{% endif %}
             </div>
-        </div>
+        </div>{% endif %}
     </nav>
 </aside>

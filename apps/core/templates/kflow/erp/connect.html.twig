@@ -33,16 +33,43 @@
             </form>
         {% endif %}
 
-        <form method="post" action="{{ method == 'database' and databaseStep != 'connection' ? path('kflow_erp_database_binding', {erp: erp}) : (method != 'database' and integrationStep == 'mapping' ? path('kflow_erp_payload_mapping', {erp: erp}) : path('kflow_erp_connect_save', {erp: erp})) }}" class="kflow-connection-form" data-connection-form>
-            <input type="hidden" name="_token" value="{{ csrf_token(method == 'database' and databaseStep != 'connection' ? 'database-binding-'~erp : (method != 'database' and integrationStep == 'mapping' ? 'payload-mapping-'~erp~'-'~method : 'configure-erp-'~erp)) }}">
+        {% set isUsersStep = (method == 'database' and databaseStep == 'users') or (method != 'database' and integrationStep == 'users') %}
+        <form method="post" action="{{ isUsersStep ? path('kflow_erp_users_save', {erp: erp}) : (method == 'database' and databaseStep != 'connection' ? path('kflow_erp_database_binding', {erp: erp}) : (method != 'database' and integrationStep == 'mapping' ? path('kflow_erp_payload_mapping', {erp: erp}) : path('kflow_erp_connect_save', {erp: erp}))) }}" class="kflow-connection-form" data-connection-form>
+            <input type="hidden" name="_token" value="{{ csrf_token(isUsersStep ? 'erp-users-'~erp~'-'~method : (method == 'database' and databaseStep != 'connection' ? 'database-binding-'~erp : (method != 'database' and integrationStep == 'mapping' ? 'payload-mapping-'~erp~'-'~method : 'configure-erp-'~erp))) }}">
             {% if method != 'database' or databaseStep == 'connection' %}<input type="hidden" name="method" value="{{ method }}">{% endif %}
 
-            {% if method == 'database' %}
+            {% if isUsersStep %}
+                <input type="hidden" name="method" value="{{ method }}">
+                <div class="kflow-binding-context"><span><i class="bi bi-people"></i></span><div><strong>Usuários e acessos da empresa</strong><p>Vincule a origem de usuários do {{ erp }}, libere quem acessa o KFlow360 e escolha os menus permitidos.</p></div></div>
+                {% if method == 'database' %}
+                    <div class="kflow-form-grid">
+                        <div><label class="form-label" for="user-table">Tabela de usuários</label><select class="form-select" id="user-table" name="user_access[table]"><option value="">Selecione uma tabela</option>{% for table in userTables %}<option value="{{ table }}" {{ userAccess.table|default('') == table ? 'selected' }}>{{ table }}</option>{% endfor %}</select><small class="kflow-input-help">Salve a tabela para carregar as colunas e os usuários.</small></div>
+                        <div><label class="form-label" for="user-identifier">Campo de usuário</label><select class="form-select" id="user-identifier" name="user_access[mapping][identifier]"><option value="">Selecione o identificador</option>{% for column in userColumns %}<option value="{{ column }}" {{ userAccess.mapping.identifier|default('') == column ? 'selected' }}>{{ column }}</option>{% endfor %}</select></div>
+                        <div><label class="form-label" for="user-name">Campo de nome</label><select class="form-select" id="user-name" name="user_access[mapping][name]"><option value="">Opcional</option>{% for column in userColumns %}<option value="{{ column }}" {{ userAccess.mapping.name|default('') == column ? 'selected' }}>{{ column }}</option>{% endfor %}</select></div>
+                        <div><label class="form-label" for="user-email">Campo de e-mail</label><select class="form-select" id="user-email" name="user_access[mapping][email]"><option value="">Opcional</option>{% for column in userColumns %}<option value="{{ column }}" {{ userAccess.mapping.email|default('') == column ? 'selected' }}>{{ column }}</option>{% endfor %}</select></div>
+                    </div>
+                    {% if userColumnsError %}<div class="alert alert-warning kflow-alert">{{ userColumnsError }}</div>{% endif %}
+                {% else %}
+                    <div class="kflow-form-grid"><div class="kflow-form-grid__wide"><label class="form-label" for="user-endpoint">Rota de usuários</label><input class="form-control" id="user-endpoint" name="user_access[endpoint]" value="{{ userAccess.endpoint|default('') }}" placeholder="/users ou UsuariosService.listar"><small class="kflow-input-help">Defina a rota/serviço que devolverá usuários para a API ou WebService.</small></div><div><label class="form-label" for="user-identifier">Caminho do usuário</label><input class="form-control" id="user-identifier" name="user_access[mapping][identifier]" value="{{ userAccess.mapping.identifier|default('') }}" placeholder="data.username"></div><div><label class="form-label" for="user-name">Caminho do nome</label><input class="form-control" id="user-name" name="user_access[mapping][name]" value="{{ userAccess.mapping.name|default('') }}" placeholder="data.name"></div><div><label class="form-label" for="user-email">Caminho do e-mail</label><input class="form-control" id="user-email" name="user_access[mapping][email]" value="{{ userAccess.mapping.email|default('') }}" placeholder="data.email"></div></div>
+                    <p class="kflow-inline-note">Após validar a integração, o KFlow360 utilizará esse vínculo para sincronizar a lista de usuários.</p>
+                {% endif %}
+                <div class="kflow-permission-panel"><div><span class="kflow-eyebrow">Permissões</span><h2>Menus liberados</h2><p>O usuário terá acesso somente aos itens marcados para esta empresa.</p></div><div class="kflow-permission-options">{% for key, label in menuOptions %}<label><input type="checkbox" name="permissions[]" value="{{ key }}" {{ key in ['dashboard', 'products', 'clients'] ? 'checked' }}><span>{{ label }}</span></label>{% endfor %}</div></div>
+                {% if erpUsers is not empty %}
+                    <div class="kflow-mapping-heading"><div><span class="kflow-eyebrow">Origem {{ erp }}</span><h2>Usuários encontrados</h2><p>Selecione quem poderá entrar na empresa atual.</p></div><span>{{ erpUsers|length }} encontrados</span></div>
+                    <div class="table-responsive"><table class="table kflow-table"><thead><tr><th></th><th>Usuário ERP</th><th>Nome</th><th>E-mail</th></tr></thead><tbody>{% for user in erpUsers %}<tr><td><input class="form-check-input" type="checkbox" name="erp_users[]" value="{{ user.identifier }}"></td><td><strong>{{ user.identifier }}</strong></td><td>{{ user.name ?: '-' }}</td><td>{{ user.email ?: '-' }}</td></tr>{% endfor %}</tbody></table></div>
+                    <div class="kflow-form-grid"><div><label class="form-label" for="initial-password">Senha inicial para novas contas</label><input class="form-control" id="initial-password" name="initial_password" type="password" minlength="8" autocomplete="new-password"><small class="kflow-input-help">Obrigatória somente quando o usuário ainda não existe no KFlow360.</small></div></div>
+                {% elseif method == 'database' and userAccess.table|default('') %}
+                    <div class="alert alert-info kflow-alert">Salve os campos de usuário para carregar os registros desta tabela.</div>
+                {% endif %}
+                {% if companyMemberships is not empty %}<div class="kflow-existing-users"><span class="kflow-eyebrow">Acessos atuais</span><div>{% for membership in companyMemberships %}<span><i class="bi bi-person-check"></i>{{ membership.user.userIdentifier }}</span>{% endfor %}</div></div>{% endif %}
+                <div class="kflow-connection-actions"><small><i class="bi bi-shield-lock"></i> As permissões são exclusivas da empresa selecionada.</small><button class="btn btn-primary" type="submit"><i class="bi bi-person-check"></i>Salvar usuários e acessos</button></div>
+            {% elseif method == 'database' %}
                 <div class="kflow-connection-copy"><div><i class="bi bi-database-check"></i><strong>Vínculo via banco de dados</strong><p>Configure o acesso uma vez e conecte qualquer formulário à tabela e aos campos correspondentes.</p></div><span class="kflow-status-dot {{ settings.credentials_configured|default(false) ? 'is-ready' }}">{{ settings.credentials_configured|default(false) ? 'Credencial protegida' : 'Aguardando credencial' }}</span></div>
                 <nav class="kflow-binding-steps" aria-label="Etapas do vínculo por banco">
                     <a class="{{ databaseStep == 'connection' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'connection'}) }}"><b>1</b>Conexão</a>
                     <a class="{{ databaseStep == 'table' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'table', form: selectedForm}) }}"><b>2</b>Formulário e tabela</a>
                     <a class="{{ databaseStep == 'mapping' ? 'is-active' }} {{ selectedTable ? '' : 'is-disabled' }}" href="{{ selectedTable ? path('kflow_erp_connect', {erp: erp, method: method, step: 'mapping', form: selectedForm}) : '#' }}"><b>3</b>De/Para de campos</a>
+                    <a class="{{ databaseStep == 'users' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'users'}) }}"><b>4</b>Usuários</a>
                 </nav>
 
                 {% if databaseStep == 'connection' %}
@@ -77,7 +104,7 @@
                     </div>
                 {% endif %}
             {% elseif method == 'api' %}
-                <nav class="kflow-binding-steps kflow-binding-steps--integration" aria-label="Etapas da integração API"><a class="{{ integrationStep == 'connection' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'connection'}) }}"><b>1</b>Conexão API</a><a class="{{ integrationStep == 'mapping' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'mapping', form: selectedForm}) }}"><b>2</b>Formulários e campos</a></nav>
+                <nav class="kflow-binding-steps kflow-binding-steps--integration" aria-label="Etapas da integração API"><a class="{{ integrationStep == 'connection' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'connection'}) }}"><b>1</b>Conexão API</a><a class="{{ integrationStep == 'mapping' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'mapping', form: selectedForm}) }}"><b>2</b>Formulários e campos</a><a class="{{ integrationStep == 'users' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'users'}) }}"><b>3</b>Usuários</a></nav>
                 {% if integrationStep == 'mapping' %}
                     <input type="hidden" name="method" value="{{ method }}">
                     <div class="kflow-binding-context"><span><i class="bi bi-braces-asterisk"></i></span><div><strong>De/Para do payload da API</strong><p>Informe o caminho de origem de cada informação, por exemplo: <code>data.product.code</code>.</p></div></div>
@@ -97,7 +124,7 @@
                 </div>
                 {% endif %}
             {% else %}
-                <nav class="kflow-binding-steps kflow-binding-steps--integration" aria-label="Etapas da integração WebService"><a class="{{ integrationStep == 'connection' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'connection'}) }}"><b>1</b>Conexão WebService</a><a class="{{ integrationStep == 'mapping' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'mapping', form: selectedForm}) }}"><b>2</b>Formulários e campos</a></nav>
+                <nav class="kflow-binding-steps kflow-binding-steps--integration" aria-label="Etapas da integração WebService"><a class="{{ integrationStep == 'connection' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'connection'}) }}"><b>1</b>Conexão WebService</a><a class="{{ integrationStep == 'mapping' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'mapping', form: selectedForm}) }}"><b>2</b>Formulários e campos</a><a class="{{ integrationStep == 'users' ? 'is-active' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: 'users'}) }}"><b>3</b>Usuários</a></nav>
                 {% if integrationStep == 'mapping' %}
                     <input type="hidden" name="method" value="{{ method }}">
                     <div class="kflow-binding-context"><span><i class="bi bi-diagram-3"></i></span><div><strong>De/Para da mensagem WebService</strong><p>Informe a propriedade de origem da mensagem SOAP/XML, por exemplo: <code>produto.codigo</code>.</p></div></div>
@@ -134,7 +161,7 @@
                 {% endif %}
             {% endif %}
 
-            {% if method != 'database' or databaseStep == 'connection' %}<div class="kflow-connection-actions"><small><i class="bi bi-shield-lock"></i> Senhas, tokens e secrets não são exibidos após o envio.</small><button class="btn btn-primary" type="submit" data-connection-submit><i class="bi bi-check2-circle"></i><span data-connection-label>Salvar vínculo</span><span data-connection-loading hidden><span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Salvando</span></button></div>{% endif %}
+            {% if not isUsersStep and (method != 'database' or databaseStep == 'connection') %}<div class="kflow-connection-actions"><small><i class="bi bi-shield-lock"></i> Senhas, tokens e secrets não são exibidos após o envio.</small><button class="btn btn-primary" type="submit" data-connection-submit><i class="bi bi-check2-circle"></i><span data-connection-label>Salvar vínculo</span><span data-connection-loading hidden><span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Salvando</span></button></div>{% endif %}
         </form>
 
         {% if method == 'webservice' and webServiceLogs is not empty %}

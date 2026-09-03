@@ -4,10 +4,13 @@ namespace App\Controller;
 
 use App\Entity\ErpConnection;
 use App\Entity\ErpConnectionLog;
+use App\Entity\Company;
+use App\Entity\CompanyMembership;
 use App\Entity\User;
 use App\Service\ErpCatalog;
 use App\Service\ErpConnectionProfile;
 use App\Service\DatabaseSchemaInspector;
+use App\Service\KFlowAccess;
 use App\Service\ProductFiscalIntelligence;
 use App\Service\ProductSanitizationService;
 use App\Service\SeniorCustomerCatalog;
@@ -23,6 +26,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 #[Route('/kflow')]
 #[IsGranted(User::ROLE_USER)]
@@ -58,6 +62,8 @@ final class KFlowController extends AbstractController
         private readonly SeniorWebServiceManager $seniorWebServiceManager,
         private readonly ProductFiscalIntelligence $fiscalIntelligence,
         private readonly ProductSanitizationService $sanitizationService,
+        private readonly KFlowAccess $access,
+        private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly CsrfTokenManagerInterface $csrfTokenManager,
         #[Autowire('%env(METABASE_URL)%')]
         private readonly string $metabaseUrl,
@@ -67,6 +73,7 @@ final class KFlowController extends AbstractController
     #[Route('', name: 'kflow_dashboard', methods: ['GET'])]
     public function dashboard(): Response
     {
+        $this->requireMenu('dashboard');
         $connection = $this->activeConnection();
         $activeErp = $connection?->getErpName();
         $products = ['recordCount' => 0, 'products' => []];
@@ -100,6 +107,7 @@ final class KFlowController extends AbstractController
         if (!isset(self::MODULES[$module])) {
             throw $this->createNotFoundException();
         }
+        $this->requireMenu($this->menuForModule($module));
 
         return $this->render('kflow/module.html.twig', self::MODULES[$module]);
     }
@@ -107,6 +115,7 @@ final class KFlowController extends AbstractController
     #[Route('/products', name: 'kflow_products', methods: ['GET'])]
     public function products(Request $request): Response
     {
+        $this->requireMenu('products');
         $connection = $this->activeConnection();
         $activeErp = $connection?->getErpName();
         $productData = [
@@ -158,6 +167,7 @@ final class KFlowController extends AbstractController
     #[Route('/clients', name: 'kflow_clients', methods: ['GET'])]
     public function clients(Request $request): Response
     {
+        $this->requireMenu('clients');
         $connection = $this->activeConnection();
         $activeErp = $connection?->getErpName();
         $customerData = [
@@ -185,6 +195,7 @@ final class KFlowController extends AbstractController
     #[Route('/products/senior/fiscal', name: 'kflow_senior_product_fiscal', methods: ['POST'])]
     public function updateSeniorProductFiscal(Request $request): Response
     {
+        $this->requireMenu('products');
         $connection = $this->activeConnection();
         if ('Senior' !== $connection?->getErpName() || !$this->isCsrfTokenValid('senior-product-fiscal', (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException();
@@ -210,9 +221,40 @@ final class KFlowController extends AbstractController
         return $this->redirectToRoute('kflow_products');
     }
 
+    #[Route('/companies', name: 'kflow_companies', methods: ['GET'])]
+    public function companies(): Response
+    {
+        $this->requirePlatformAdmin();
+        return $this->render('kflow/companies.html.twig', ['companies' => $this->access->companies($this->currentUser()), 'activeCompany' => $this->currentCompany()]);
+    }
+
+    #[Route('/companies', name: 'kflow_companies_create', methods: ['POST'])]
+    public function createCompany(Request $request): Response
+    {
+        $this->requirePlatformAdmin();
+        if (!$this->isCsrfTokenValid('create-company', (string) $request->request->get('_token'))) throw $this->createAccessDeniedException();
+        $name = mb_substr(trim((string) $request->request->get('name')), 0, 160);
+        if ('' === $name) { $this->addFlash('warning', 'Informe o nome da empresa.'); return $this->redirectToRoute('kflow_companies'); }
+        $company = (new Company($name))->setLegalName(mb_substr(trim((string) $request->request->get('legal_name')), 0, 220) ?: null)->setDocument(mb_substr(trim((string) $request->request->get('document')), 0, 24) ?: null);
+        $this->entityManager->persist($company);
+        $this->entityManager->flush();
+        $request->getSession()->set('kflow_company_id', $company->getId());
+        $this->addFlash('success', sprintf('%s criada e selecionada.', $company->getName()));
+        return $this->redirectToRoute('kflow_erp_index');
+    }
+
+    #[Route('/companies/{company}/select', name: 'kflow_company_select', methods: ['POST'])]
+    public function selectCompany(Company $company, Request $request): Response
+    {
+        if (!$this->isCsrfTokenValid('select-company-'.$company->getId(), (string) $request->request->get('_token')) || (!$this->access->isPlatformAdmin($this->currentUser()) && !in_array($company, $this->access->companies($this->currentUser()), true))) throw $this->createAccessDeniedException();
+        $request->getSession()->set('kflow_company_id', $company->getId());
+        return $this->redirect((string) $request->request->get('redirect', $this->generateUrl('kflow_dashboard')));
+    }
+
     #[Route('/erp', name: 'kflow_erp_index', methods: ['GET'])]
     public function erps(): Response
     {
+        $this->requireMenu('connections');
         return $this->render('kflow/erp/index.html.twig', [
             'erps' => $this->erpCatalog->all(),
             'activeErp' => $this->activeErp(),
@@ -222,17 +264,19 @@ final class KFlowController extends AbstractController
     #[Route('/erp/{erp}/select', name: 'kflow_erp_select', methods: ['POST'])]
     public function selectErp(string $erp, Request $request): Response
     {
+        $this->requireMenu('connections');
         if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('select-erp-'.$erp, (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException();
         }
 
-        foreach ($this->entityManager->getRepository(ErpConnection::class)->findAll() as $existingConnection) {
+        $company = $this->currentCompany();
+        foreach ($this->entityManager->getRepository(ErpConnection::class)->findBy(['company' => $company]) as $existingConnection) {
             $existingConnection->setIsActive(false);
         }
 
         $connection = $this->connectionFor($erp);
         if (!$connection instanceof ErpConnection) {
-            $connection = new ErpConnection($erp);
+            $connection = new ErpConnection($company, $erp);
             $this->entityManager->persist($connection);
         }
 
@@ -253,6 +297,7 @@ final class KFlowController extends AbstractController
     #[Route('/erp/{erp}/connect', name: 'kflow_erp_connect', methods: ['GET'])]
     public function connectErp(string $erp, Request $request): Response
     {
+        $this->requireMenu('connections');
         if (!$this->erpCatalog->supports($erp)) {
             throw $this->createNotFoundException();
         }
@@ -269,9 +314,9 @@ final class KFlowController extends AbstractController
         }
         $mapping = array_replace($this->connectionProfile->defaultProductMapping($erp), $connection?->getProductMapping() ?? []);
         $databaseStep = (string) $request->query->get('step', 'connection');
-        $databaseStep = in_array($databaseStep, ['connection', 'table', 'mapping'], true) ? $databaseStep : 'connection';
+        $databaseStep = in_array($databaseStep, ['connection', 'table', 'mapping', 'users'], true) ? $databaseStep : 'connection';
         $integrationStep = (string) $request->query->get('step', 'connection');
-        $integrationStep = in_array($integrationStep, ['connection', 'mapping'], true) ? $integrationStep : 'connection';
+        $integrationStep = in_array($integrationStep, ['connection', 'mapping', 'users'], true) ? $integrationStep : 'connection';
         $databaseForms = $this->connectionProfile->databaseForms();
         $configuredForms = $this->configuredForms($settings, $databaseForms);
         $selectedForm = (string) $request->query->get('form', $configuredForms[0]['id']);
@@ -287,11 +332,20 @@ final class KFlowController extends AbstractController
             $tables = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured()
                 ? $this->seniorProductCatalog->availableTables()
                 : $this->databaseSchemaInspector->tables($settings);
-            if ('mapping' === $databaseStep && '' !== $selectedTable) {
+            if (in_array($databaseStep, ['mapping', 'users'], true) && '' !== $selectedTable) {
                 $columns = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured()
                     ? $this->seniorProductCatalog->columnsForTable($selectedTable)
                     : $this->databaseSchemaInspector->columns($settings, $selectedTable);
             }
+        }
+        $userAccess = is_array($settings['user_access'] ?? null) ? $settings['user_access'] : [];
+        $userTable = (string) ($userAccess['table'] ?? '');
+        $userColumns = ['columns' => [], 'error' => null];
+        $userRows = ['rows' => [], 'error' => null];
+        if (ErpConnection::METHOD_DATABASE === $method && 'users' === $databaseStep && '' !== $userTable) {
+            $userColumns = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured() ? $this->seniorProductCatalog->columnsForTable($userTable) : $this->databaseSchemaInspector->columns($settings, $userTable);
+            $configuredUserColumns = array_values(array_filter(array_map('strval', $userAccess['mapping'] ?? [])));
+            if ([] !== $configuredUserColumns) $userRows = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured() ? $this->seniorProductCatalog->rowsForTable($userTable, $configuredUserColumns) : $this->databaseSchemaInspector->rows($settings, $userTable, $configuredUserColumns);
         }
 
         return $this->render('kflow/erp/connect.html.twig', [
@@ -322,12 +376,21 @@ final class KFlowController extends AbstractController
             'webServiceLogs' => $connection instanceof ErpConnection
                 ? $this->entityManager->getRepository(ErpConnectionLog::class)->findBy(['connection' => $connection], ['createdAt' => 'DESC'], 6)
                 : [],
+            'userAccess' => $userAccess,
+            'userTables' => ErpConnection::METHOD_DATABASE === $method ? $tables['tables'] : [],
+            'userColumns' => $userColumns['columns'],
+            'userColumnsError' => $userColumns['error'],
+            'erpUsers' => $this->normalizeErpUsers($userRows['rows'], $userAccess),
+            'erpUsersError' => $userRows['error'],
+            'companyMemberships' => $this->membershipsForCompany(),
+            'menuOptions' => $this->access->menuOptions(),
         ]);
     }
 
     #[Route('/erp/{erp}/connect', name: 'kflow_erp_connect_save', methods: ['POST'])]
     public function saveErpConnection(string $erp, Request $request): Response
     {
+        $this->requireMenu('connections');
         if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('configure-erp-'.$erp, (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException();
         }
@@ -337,13 +400,14 @@ final class KFlowController extends AbstractController
             throw $this->createNotFoundException();
         }
 
-        foreach ($this->entityManager->getRepository(ErpConnection::class)->findAll() as $existingConnection) {
+        $company = $this->currentCompany();
+        foreach ($this->entityManager->getRepository(ErpConnection::class)->findBy(['company' => $company]) as $existingConnection) {
             $existingConnection->setIsActive(false);
         }
 
         $connection = $this->connectionFor($erp);
         if (!$connection instanceof ErpConnection) {
-            $connection = new ErpConnection($erp);
+            $connection = new ErpConnection($company, $erp);
             $this->entityManager->persist($connection);
         }
 
@@ -385,6 +449,7 @@ final class KFlowController extends AbstractController
     #[Route('/erp/{erp}/database/binding', name: 'kflow_erp_database_binding', methods: ['POST'])]
     public function saveDatabaseBinding(string $erp, Request $request): Response
     {
+        $this->requireMenu('connections');
         if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('database-binding-'.$erp, (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException();
         }
@@ -425,6 +490,7 @@ final class KFlowController extends AbstractController
     #[Route('/erp/{erp}/payload-mapping', name: 'kflow_erp_payload_mapping', methods: ['POST'])]
     public function savePayloadMapping(string $erp, Request $request): Response
     {
+        $this->requireMenu('connections');
         $method = (string) $request->request->get('method');
         if (!$this->erpCatalog->supports($erp)
             || !in_array($method, [ErpConnection::METHOD_API, ErpConnection::METHOD_WEBSERVICE], true)
@@ -461,9 +527,57 @@ final class KFlowController extends AbstractController
         return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'mapping', 'form' => $form]);
     }
 
+    #[Route('/erp/{erp}/users', name: 'kflow_erp_users_save', methods: ['POST'])]
+    public function saveErpUsers(string $erp, Request $request): Response
+    {
+        $this->requireMenu('connections');
+        $method = (string) $request->request->get('method');
+        if (!$this->erpCatalog->supports($erp) || !array_key_exists($method, $this->connectionProfile->connectionMethods()) || !$this->isCsrfTokenValid('erp-users-'.$erp.'-'.$method, (string) $request->request->get('_token'))) throw $this->createAccessDeniedException();
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) { $this->addFlash('warning', 'Salve a conexão antes de vincular usuários.'); return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method]); }
+        $settings = $connection->getSettingsForMethod($method);
+        $accessInput = $request->request->all('user_access');
+        $accessInput = is_array($accessInput) ? $accessInput : [];
+        $mapping = [];
+        foreach (['identifier', 'name', 'email'] as $field) $mapping[$field] = preg_match('/^[A-Za-z_][A-Za-z0-9_.$\[\]-]{0,159}$/', (string) ($accessInput['mapping'][$field] ?? '')) ? (string) $accessInput['mapping'][$field] : '';
+        $settings['user_access'] = [
+            'table' => preg_match('/^[A-Za-z_][A-Za-z0-9_.]*$/', (string) ($accessInput['table'] ?? '')) ? (string) $accessInput['table'] : '',
+            'endpoint' => mb_substr(trim((string) ($accessInput['endpoint'] ?? '')), 0, 240),
+            'mapping' => $mapping,
+        ];
+        $connection->setSettingsForMethod($method, $settings);
+        $selected = array_values(array_filter(array_map('strval', is_array($request->request->all('erp_users')) ? $request->request->all('erp_users') : [])));
+        $permissions = array_values(array_intersect(array_keys($this->access->menuOptions()), array_map('strval', is_array($request->request->all('permissions')) ? $request->request->all('permissions') : [])));
+        $directory = $this->erpUserDirectory($erp, $method, $settings);
+        $selectedUsers = array_filter($directory, static fn (array $user): bool => in_array($user['identifier'], $selected, true));
+        $initialPassword = (string) $request->request->get('initial_password');
+        $company = $this->currentCompany();
+        $created = 0;
+        foreach ($selectedUsers as $erpUser) {
+            $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $erpUser['identifier']]);
+            if (!$user instanceof User) {
+                if (mb_strlen($initialPassword) < 8) continue;
+                $user = new User();
+                $user->setUsername($erpUser['identifier']);
+                $user->setFullName($erpUser['name'] ?: $erpUser['identifier']);
+                $user->setEmail($erpUser['email'] ?: sprintf('%s@kflow.local', strtolower(preg_replace('/[^a-z0-9]+/i', '.', $erpUser['identifier']) ?: 'usuario')));
+                $user->setPassword($this->passwordHasher->hashPassword($user, $initialPassword));
+                $this->entityManager->persist($user);
+                ++$created;
+            }
+            $membership = $this->entityManager->getRepository(CompanyMembership::class)->findOneBy(['company' => $company, 'user' => $user]);
+            if (!$membership instanceof CompanyMembership) { $membership = new CompanyMembership($company, $user); $this->entityManager->persist($membership); }
+            $membership->setErpIdentity($erpUser['identifier'], $erpUser['name'], $erpUser['email'])->setMenuPermissions($permissions)->setIsActive(true);
+        }
+        $this->entityManager->flush();
+        $this->addFlash('success', sprintf('Acesso atualizado para %d usuário(s). %d conta(s) KFlow criada(s).', count($selectedUsers), $created));
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'users']);
+    }
+
     #[Route('/erp/{erp}/forms', name: 'kflow_erp_forms_create', methods: ['POST'])]
     public function createIntegrationForm(string $erp, Request $request): JsonResponse
     {
+        $this->requireMenu('connections');
         $method = (string) $request->request->get('method');
         if (!$this->erpCatalog->supports($erp)
             || !array_key_exists($method, $this->connectionProfile->connectionMethods())
@@ -505,6 +619,7 @@ final class KFlowController extends AbstractController
     #[Route('/erp/{erp}/forms/{form}', name: 'kflow_erp_forms_delete', methods: ['POST'])]
     public function deleteIntegrationForm(string $erp, string $form, Request $request): JsonResponse
     {
+        $this->requireMenu('connections');
         $method = (string) $request->request->get('method');
         if (!$this->erpCatalog->supports($erp)
             || !array_key_exists($method, $this->connectionProfile->connectionMethods())
@@ -540,6 +655,7 @@ final class KFlowController extends AbstractController
     #[Route('/erp/{erp}/webservice/test', name: 'kflow_erp_webservice_test', methods: ['POST'])]
     public function testErpWebService(string $erp, Request $request): Response
     {
+        $this->requireMenu('connections');
         if ('Senior' !== $erp || !$this->isCsrfTokenValid('test-erp-webservice-'.$erp, (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException();
         }
@@ -560,6 +676,7 @@ final class KFlowController extends AbstractController
     #[Route('/erp/database', name: 'kflow_erp_database', methods: ['GET'])]
     public function database(): Response
     {
+        $this->requireMenu('connections');
         $activeErp = $this->activeErp();
 
         return null === $activeErp
@@ -570,12 +687,14 @@ final class KFlowController extends AbstractController
     #[Route('/metabase', name: 'kflow_metabase', methods: ['GET'])]
     public function metabase(): Response
     {
+        $this->requireMenu('connections');
         return $this->redirect($this->metabaseUrl);
     }
 
     #[Route('/erp/{erp}/{area}', name: 'kflow_erp_area', methods: ['GET'], requirements: ['area' => 'integration|users'])]
     public function erpArea(string $erp, string $area): Response
     {
+        $this->requireMenu('connections');
         if (!$this->erpCatalog->supports($erp)) {
             throw $this->createNotFoundException();
         }
@@ -596,16 +715,79 @@ final class KFlowController extends AbstractController
 
     private function activeConnection(): ?ErpConnection
     {
-        $connection = $this->entityManager->getRepository(ErpConnection::class)->findOneBy(['isActive' => true]);
+        $connection = $this->entityManager->getRepository(ErpConnection::class)->findOneBy(['company' => $this->currentCompany(), 'isActive' => true]);
 
         return $connection instanceof ErpConnection ? $connection : null;
     }
 
     private function connectionFor(string $erp): ?ErpConnection
     {
-        $connection = $this->entityManager->getRepository(ErpConnection::class)->findOneBy(['erpName' => $erp]);
+        $connection = $this->entityManager->getRepository(ErpConnection::class)->findOneBy(['company' => $this->currentCompany(), 'erpName' => $erp]);
 
         return $connection instanceof ErpConnection ? $connection : null;
+    }
+
+    private function currentUser(): User
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) throw $this->createAccessDeniedException();
+        return $user;
+    }
+
+    private function currentCompany(): Company
+    {
+        $company = $this->access->activeCompany($this->currentUser());
+        if (!$company instanceof Company) throw $this->createAccessDeniedException('Nenhuma empresa está disponível para este usuário.');
+        return $company;
+    }
+
+    private function requirePlatformAdmin(): void
+    {
+        if (!$this->access->isPlatformAdmin($this->currentUser())) throw $this->createAccessDeniedException();
+    }
+
+    private function requireMenu(string $menu): void
+    {
+        if (!$this->access->can($this->currentUser(), $menu)) throw $this->createAccessDeniedException('Você não tem acesso a este menu nesta empresa.');
+    }
+
+    private function menuForModule(string $module): string
+    {
+        return match ($module) { 'cliente' => 'clients', 'fornecedor' => 'suppliers', 'transportador' => 'carriers', 'requisicao' => 'requisition', 'aprovacao', 'aprovacao-requisicao' => 'approval', default => 'dashboard' };
+    }
+
+    /** @return list<CompanyMembership> */
+    private function membershipsForCompany(): array
+    {
+        return $this->entityManager->getRepository(CompanyMembership::class)->findBy(['company' => $this->currentCompany()], ['id' => 'ASC']);
+    }
+
+    /** @param list<array<string, mixed>> $rows
+     *  @param array<string, mixed> $access
+     *  @return list<array{identifier: string, name: string, email: string}>
+     */
+    private function normalizeErpUsers(array $rows, array $access): array
+    {
+        $mapping = is_array($access['mapping'] ?? null) ? $access['mapping'] : [];
+        $users = [];
+        foreach ($rows as $row) {
+            $identifier = trim((string) ($row[$mapping['identifier'] ?? ''] ?? ''));
+            if ('' === $identifier) continue;
+            $users[] = ['identifier' => $identifier, 'name' => trim((string) ($row[$mapping['name'] ?? ''] ?? '')), 'email' => trim((string) ($row[$mapping['email'] ?? ''] ?? ''))];
+        }
+        return $users;
+    }
+
+    /** @return list<array{identifier: string, name: string, email: string}> */
+    private function erpUserDirectory(string $erp, string $method, array $settings): array
+    {
+        if (ErpConnection::METHOD_DATABASE !== $method) return [];
+        $access = is_array($settings['user_access'] ?? null) ? $settings['user_access'] : [];
+        $table = (string) ($access['table'] ?? '');
+        $columns = array_values(array_filter(array_map('strval', $access['mapping'] ?? [])));
+        if ('' === $table || [] === $columns) return [];
+        $rows = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured() ? $this->seniorProductCatalog->rowsForTable($table, $columns)['rows'] : $this->databaseSchemaInspector->rows($settings, $table, $columns)['rows'];
+        return $this->normalizeErpUsers($rows, $access);
     }
 
     /** @return array<string, string> */
