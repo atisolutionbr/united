@@ -30,7 +30,10 @@ services:
       APP_SECRET: ${APP_SECRET:-change-me-local-secret}
       APP_DEBUG: ${APP_DEBUG:-1}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Recife}
+      DEFAULT_URI: ${DEFAULT_URI:-http://localhost:8080}
       DATABASE_URL: ${DATABASE_URL:-postgresql://plataforma360:plataforma360@postgres:5432/plataforma360?serverVersion=16&charset=utf8}
+      MAILER_DSN: ${MAILER_DSN:-null://null}
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:-^https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?$}
       RAW_STORAGE_DIR: ${RAW_STORAGE_DIR:-/var/storage/raw}
       CKAN_RESOURCE_TIMEOUT: ${CKAN_RESOURCE_TIMEOUT:-90}
       METABASE_API_URL: ${METABASE_API_URL:-http://metabase:3000}
