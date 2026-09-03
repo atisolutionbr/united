@@ -17,12 +17,6 @@
     </head>
     <body id="{% block body_id %}{% endblock %}" class="kflow-body {{ app.user ? 'kflow-shell' : 'kflow-login-shell' }}{% block body_class %}{% endblock %}">
         {% if app.user %}
-            <div class="kflow-splash" data-kflow-splash hidden aria-live="polite" aria-label="Preparando a plataforma">
-                <div class="kflow-splash__mark"><img src="/images/kflow360-logo.png" alt=""></div>
-                <strong>Preparando o KFlow360</strong>
-            </div>
-        {% endif %}
-        {% if app.user %}
             {% include 'components/_sidebar.html.twig' %}
         {% endif %}
 

@@ -26,20 +26,9 @@ document.querySelector('[data-login-form]')?.addEventListener('submit', (event) 
     const button = form.querySelector('[data-login-submit]');
     if (!(button instanceof HTMLButtonElement) || button.disabled) return event.preventDefault();
     button.disabled = true;
-    sessionStorage.setItem('kflow-show-splash', '1');
     form.querySelector('[data-login-label]')?.setAttribute('hidden', 'hidden');
     form.querySelector('[data-login-loading]')?.removeAttribute('hidden');
 });
-
-const splash = document.querySelector('[data-kflow-splash]');
-if (splash && sessionStorage.getItem('kflow-show-splash') === '1') {
-    sessionStorage.removeItem('kflow-show-splash');
-    splash.hidden = false;
-    window.setTimeout(() => {
-        splash.classList.add('is-leaving');
-        window.setTimeout(() => splash.remove(), 220);
-    }, 3000);
-}
 
 const layoutKey = (name) => `kflow-layout-${name}`;
 const cards = (grid) => [...grid.querySelectorAll(':scope > [data-layout-card]')];
@@ -84,6 +73,26 @@ document.addEventListener('click', async (event) => {
     current.replaceWith(next); history.pushState({}, '', link.href);
 });
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js'));
+
+document.querySelector('[data-diagnostic-copy]')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    const source = document.querySelector('[data-diagnostic-base]');
+    if (!(button instanceof HTMLButtonElement) || !(source instanceof HTMLElement)) return;
+    const details = [
+        source.textContent?.trim() || 'Diagnóstico — KFlow360',
+        `Online: ${navigator.onLine ? 'sim' : 'não'}`,
+        `Idioma: ${navigator.language}`,
+        `Tela: ${window.screen.width}x${window.screen.height}`,
+        `User-Agent: ${navigator.userAgent}`,
+    ].join('\n');
+    try {
+        await navigator.clipboard.writeText(details);
+        button.innerHTML = '<i class="bi bi-check2"></i>Informações copiadas';
+        window.setTimeout(() => button.innerHTML = '<i class="bi bi-copy"></i>Copiar informações de diagnóstico', 2200);
+    } catch {
+        window.prompt('Copie as informações de diagnóstico:', details);
+    }
+});
 
 document.querySelector('[data-company-form]')?.addEventListener('change', async (event) => {
     if (!(event.target instanceof HTMLInputElement) || !event.target.matches('[data-company-cnpj]')) return;

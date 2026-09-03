@@ -151,6 +151,19 @@ body.kflow-body {
 .kflow-development-state__icon { align-items: center; background: #eef4f7; border-radius: 6px; color: var(--kflow-primary); display: inline-flex; flex: 0 0 auto; font-size: 1.35rem; height: 3rem; justify-content: center; width: 3rem; }
 .kflow-development-state h2 { margin: 0.3rem 0 0.5rem; }
 .kflow-development-state p { color: var(--kflow-muted); }
+.kflow-about-layout { display: grid; gap: 1.15rem; grid-template-columns: minmax(0, 38rem); }
+.kflow-about-card { display: grid; gap: 1rem; }
+.kflow-about-version { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kflow-about-version div, .kflow-about-contact div { display: grid; gap: 0.2rem; }
+.kflow-about-version small, .kflow-about-contact small { color: var(--kflow-muted); font-size: 0.75rem; }
+.kflow-about-version strong { font-size: 1.1rem; }
+.kflow-about-copy { background: linear-gradient(135deg, #19385c, #004a7c); border: 0; box-shadow: 0 6px 12px rgba(0, 74, 124, 0.22); color: #fff; width: 100%; }
+.kflow-about-copy:hover, .kflow-about-copy:focus { background: linear-gradient(135deg, #004a7c, #0076a3); color: #fff; }
+.kflow-about-card > .kflow-input-help { margin: -0.35rem 0 0; text-align: center; }
+.kflow-about-contact { align-items: center; border: 1px solid #d7e3e8; border-radius: 7px; display: grid; gap: 0.85rem; grid-template-columns: 2rem minmax(0, 1fr); min-height: 4.45rem; padding: 0.7rem 0.85rem; }
+.kflow-about-contact > i { color: var(--kflow-ink); font-size: 1.3rem; text-align: center; }
+.kflow-about-contact strong, .kflow-about-contact a { color: var(--kflow-ink); font-size: 0.95rem; font-weight: 700; overflow-wrap: anywhere; text-decoration: none; }
+.kflow-about-contact a:hover { color: var(--kflow-primary); text-decoration: underline; }
 
 .kflow-erp-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
 .kflow-erp-card { background: linear-gradient(135deg, #004a7c 0%, #0076a3 68%, #168f98 100%); border: 0; box-shadow: 0 10px 18px rgba(0, 74, 124, 0.23), inset 0 1px 0 rgba(255, 255, 255, 0.23); color: #fff; display: flex; flex-direction: column; min-height: 18.5rem; overflow: hidden; padding: 1.15rem; position: relative; }
@@ -373,12 +386,6 @@ body.kflow-body {
 .kflow-topbar__account > form:last-child .kflow-icon-button { background: linear-gradient(145deg, #0076a3 0%, #2aa89d 100%); border-color: transparent; box-shadow: 0 5px 11px rgba(0, 74, 124, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25); color: #fff; }
 .kflow-topbar__account > form:last-child .kflow-icon-button:hover { box-shadow: 0 7px 14px rgba(0, 74, 124, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.25); transform: translateY(-1px); }
 
-.kflow-splash { align-items: center; backdrop-filter: blur(5px); background: linear-gradient(145deg, rgba(0, 74, 124, 0.97), rgba(0, 118, 163, 0.95) 55%, rgba(42, 168, 157, 0.94)); color: #fff; display: flex; flex-direction: column; gap: 1rem; inset: 0; justify-content: center; position: fixed; transition: opacity 220ms ease, visibility 220ms ease; z-index: 3000; }
-.kflow-splash.is-leaving { opacity: 0; visibility: hidden; }
-.kflow-splash__mark { align-items: center; animation: kflow-splash-float 1.25s ease-in-out infinite alternate; background: #fff; border-radius: 18px; box-shadow: 0 16px 32px rgba(0, 35, 65, 0.35); display: flex; height: 7.25rem; justify-content: center; padding: 0.7rem; transform-origin: center; width: 7.25rem; }
-.kflow-splash__mark img { height: 100%; object-fit: contain; width: 100%; }
-.kflow-splash strong { font-size: 1rem; letter-spacing: 0; }
-@keyframes kflow-splash-float { from { transform: translateY(-5px) rotate(-4deg); } to { transform: translateY(5px) rotate(4deg); } }
 
 body.sidebar-is-collapsed .kflow-sidebar { width: 72px; }
 body.sidebar-is-collapsed .kflow-shell .kflow-app { margin-left: 72px; }
@@ -426,6 +433,7 @@ body.sidebar-is-collapsed .kflow-nav__link, body.sidebar-is-collapsed .kflow-nav
   .kflow-product-detail .mb-3 { margin-bottom: 0.85rem !important; }
   .kflow-form-grid, .kflow-mapping-grid, .kflow-product-insights { grid-template-columns: 1fr; }
   .kflow-customer-detail { grid-template-columns: 1fr; }
+  .kflow-about-layout { grid-template-columns: 1fr; }
   .kflow-pagination { align-items: flex-start; flex-direction: column; }
   .kflow-mapping-heading, .kflow-connection-actions { align-items: flex-start; flex-direction: column; }
   .kflow-connection-actions .btn { width: 100%; }
@@ -445,5 +453,4 @@ body.sidebar-is-collapsed .kflow-nav__link, body.sidebar-is-collapsed .kflow-nav
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
-  .kflow-splash__mark { animation: none; }
 }

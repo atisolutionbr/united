@@ -1,0 +1,45 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}KFlow360 · Sobre{% endblock %}
+{% block page_title %}Sobre{% endblock %}
+
+{% block main %}
+    <section class="kflow-page-heading kflow-page-heading--compact">
+        <div><span class="kflow-eyebrow">KFlow360</span><h1>Informações da plataforma</h1><p>Versão, diagnóstico técnico e canais da Ati Solution.</p></div>
+    </section>
+
+    <div class="kflow-about-layout">
+        <section class="kflow-surface kflow-about-card">
+            <span class="kflow-eyebrow">Versão</span>
+            <div class="kflow-about-version"><div><small>Versão</small><strong>{{ release.version }}</strong></div><div><small>Build</small><strong>{{ release.build }}</strong></div></div>
+            <button class="btn kflow-about-copy" type="button" data-diagnostic-copy><i class="bi bi-copy"></i>Copiar informações de diagnóstico</button>
+            <p class="kflow-input-help">Inclui versão, build, empresa, ERP, sessão, navegador e tamanho da tela.</p>
+            <pre class="visually-hidden" data-diagnostic-base>Diagnóstico — KFlow360
+Gerado em: {{ 'now'|date('d/m/Y, H:i:s') }}
+App: Versão {{ release.version }} - Build {{ release.build }}
+Versão: {{ release.version }}
+Build: {{ release.build }}
+URL: https://atisolution.com.br
+--- Perfil ativo ---
+Empresa: {{ activeCompany ? activeCompany.name : 'Nenhuma empresa selecionada' }}
+ERP: {{ activeErp ?: 'Nenhum ERP selecionado' }}
+--- Sessão ---
+Usuário: {{ app.user.userIdentifier }} · Perfil: {{ isPlatformAdmin ? 'administrador da plataforma' : 'usuário da plataforma' }}
+--- Histórico ---
+Pedidos no histórico local: 0
+--- Ati Solution ---
+Site: www.atisolution.com.br
+Telefone: (27) 3535-0168
+E-mail: contato@atisolution.com.br
+CNPJ: 55.044.004/0001-63</pre>
+        </section>
+
+        <section class="kflow-surface kflow-about-card">
+            <span class="kflow-eyebrow">Ati Solution</span>
+            <div class="kflow-about-contact"><i class="bi bi-globe2"></i><div><small>Site</small><a href="https://atisolution.com.br" target="_blank" rel="noopener">www.atisolution.com.br</a></div></div>
+            <div class="kflow-about-contact"><i class="bi bi-telephone"></i><div><small>Contato</small><strong>(27) 3535-0168</strong></div></div>
+            <div class="kflow-about-contact"><i class="bi bi-envelope"></i><div><small>E-mail</small><a href="mailto:contato@atisolution.com.br">contato@atisolution.com.br</a></div></div>
+            <div class="kflow-about-contact"><i class="bi bi-buildings"></i><div><small>CNPJ</small><strong>55.044.004/0001-63</strong></div></div>
+        </section>
+    </div>
+{% endblock %}

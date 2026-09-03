@@ -50,11 +50,12 @@
             </div>
         </div>{% endif %}
 
-        {% if kflow_can('intelligence') or kflow_can('data') or kflow_can('integrations') or kflow_can('ai') or kflow_can('operations') or kflow_can('governance') or kflow_can('platform') %}<div class="kflow-nav__group">
+        {% if app.user.userIdentifier|lower == 'kadmin' or kflow_can('intelligence') or kflow_can('data') or kflow_can('integrations') or kflow_can('ai') or kflow_can('operations') or kflow_can('governance') or kflow_can('platform') %}<div class="kflow-nav__group">
             <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="false">
                 <span><i class="bi bi-sliders2"></i><span>Configurações Kflow360</span></span><i class="bi bi-chevron-down"></i>
             </button>
             <div class="kflow-nav__submenu">
+                {% if app.user.userIdentifier|lower == 'kadmin' %}<a href="{{ path('kflow_companies') }}" class="{{ route starts with 'kflow_compan' ? 'is-active' }}">Empresas</a><a href="{{ path('kflow_users') }}" class="{{ route starts with 'kflow_users' ? 'is-active' }}">Usuários</a>{% endif %}
                 {% if kflow_can('intelligence') %}<a href="{{ path('app_admin_intelligence_hub') }}">Inteligência</a>{% endif %}
                 {% if kflow_can('data') %}<a href="{{ path('app_admin_data_hub') }}">Dados</a>{% endif %}
                 {% if kflow_can('integrations') %}<a href="{{ path('app_admin_integrations_hub') }}">Integrações</a>{% endif %}
@@ -62,8 +63,10 @@
                 {% if kflow_can('operations') %}<a href="{{ path('app_admin_operations_hub') }}">Operações</a>{% endif %}
                 {% if kflow_can('governance') %}<a href="{{ path('app_admin_governance_hub') }}">Governança</a>{% endif %}
                 {% if kflow_can('platform') %}<a href="{{ path('app_admin_platform_hub') }}">Plataforma</a>{% endif %}
-                {% if app.user.userIdentifier|lower == 'kadmin' %}<a href="{{ path('kflow_companies') }}" class="{{ route starts with 'kflow_compan' ? 'is-active' }}">Empresas</a><a href="{{ path('kflow_users') }}" class="{{ route starts with 'kflow_users' ? 'is-active' }}">Usuários</a>{% endif %}
             </div>
         </div>{% endif %}
+
+        <div class="kflow-nav__separator"></div>
+        <a class="kflow-nav__link {{ route == 'kflow_about' ? 'is-active' }}" href="{{ path('kflow_about') }}"><i class="bi bi-info-circle"></i><span>Sobre</span></a>
     </nav>
 </aside>

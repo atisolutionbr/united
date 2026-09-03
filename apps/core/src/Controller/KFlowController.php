@@ -11,6 +11,7 @@ use App\Service\ErpCatalog;
 use App\Service\ErpConnectionProfile;
 use App\Service\DatabaseSchemaInspector;
 use App\Service\KFlowAccess;
+use App\Service\KFlowRelease;
 use App\Service\ProductFiscalIntelligence;
 use App\Service\ProductSanitizationService;
 use App\Service\SeniorCustomerCatalog;
@@ -66,6 +67,7 @@ final class KFlowController extends AbstractController
         private readonly ProductFiscalIntelligence $fiscalIntelligence,
         private readonly ProductSanitizationService $sanitizationService,
         private readonly KFlowAccess $access,
+        private readonly KFlowRelease $release,
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly HttpClientInterface $httpClient,
         private readonly CacheInterface $cache,
@@ -100,6 +102,20 @@ final class KFlowController extends AbstractController
                 'suppliersMissingAddress' => 0,
                 'suppliersStale' => 0,
             ],
+        ]);
+    }
+
+    #[Route('/about', name: 'kflow_about', methods: ['GET'])]
+    public function about(): Response
+    {
+        $user = $this->currentUser();
+        $company = $this->access->activeCompany($user);
+
+        return $this->render('kflow/about.html.twig', [
+            'release' => $this->release->current(),
+            'activeCompany' => $company,
+            'activeErp' => $this->activeErp(),
+            'isPlatformAdmin' => $this->access->isPlatformAdmin($user),
         ]);
     }
 
@@ -350,10 +366,7 @@ final class KFlowController extends AbstractController
             $method = ErpConnection::METHOD_DATABASE;
         }
 
-        $settings = $this->connectionProfile->defaultSettings($erp, $method);
-        if ($connection instanceof ErpConnection) {
-            $settings = array_replace($settings, $connection->getSettingsForMethod($method));
-        }
+        $settings = $this->settingsForConnection($erp, $method, $connection);
         $mapping = array_replace($this->connectionProfile->defaultProductMapping($erp), $connection?->getProductMapping() ?? []);
         $databaseStep = (string) $request->query->get('step', 'connection');
         $databaseStep = in_array($databaseStep, ['connection', 'table', 'mapping', 'users'], true) ? $databaseStep : 'connection';
@@ -450,10 +463,7 @@ final class KFlowController extends AbstractController
         }
 
         $settingsInput = $request->request->all('settings');
-        $existingSettings = array_replace(
-            $this->connectionProfile->defaultSettings($erp, $method),
-            $connection->getSettingsForMethod($method),
-        );
+        $existingSettings = $this->settingsForConnection($erp, $method, $connection);
         $settings = $this->connectionProfile->settingsFromInput(
             $method,
             is_array($settingsInput) ? $settingsInput : [],
@@ -765,6 +775,36 @@ final class KFlowController extends AbstractController
         $connection = $this->entityManager->getRepository(ErpConnection::class)->findOneBy(['company' => $this->currentCompany(), 'erpName' => $erp]);
 
         return $connection instanceof ErpConnection ? $connection : null;
+    }
+
+    /**
+     * Keeps a partially saved Senior profile usable when the secure local runtime
+     * already supplies its host, database and service account. Empty form fields
+     * must never erase that operational fallback.
+     *
+     * @return array<string, mixed>
+     */
+    private function settingsForConnection(string $erp, string $method, ?ErpConnection $connection): array
+    {
+        $defaults = $this->connectionProfile->defaultSettings($erp, $method);
+        $stored = $connection?->getSettingsForMethod($method) ?? [];
+        $settings = array_replace($defaults, $stored);
+
+        if ('Senior' !== $erp || ErpConnection::METHOD_DATABASE !== $method) {
+            return $settings;
+        }
+
+        foreach (['driver', 'host', 'port', 'database', 'username', 'table'] as $key) {
+            if ('' === trim((string) ($settings[$key] ?? '')) && '' !== trim((string) ($defaults[$key] ?? ''))) {
+                $settings[$key] = $defaults[$key];
+            }
+        }
+
+        if ((bool) ($defaults['credentials_configured'] ?? false)) {
+            $settings['credentials_configured'] = true;
+        }
+
+        return $settings;
     }
 
     private function currentUser(): User
