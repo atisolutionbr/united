@@ -107,7 +107,7 @@ final class SeniorProductCatalog
         } catch (\Throwable $exception) {
             $this->logger->warning('Unable to inspect Senior tables.', ['exception' => $exception]);
 
-            return ['tables' => [], 'error' => 'Não foi possível listar as tabelas da base Senior.'];
+            return ['tables' => [], 'error' => 'Não foi possível conectar à base Senior. Confirme o servidor/IP, a porta, o usuário e a senha em Editar conexão; verifique também se o SQL Server está ativo e acessível pela rede.'];
         }
     }
 

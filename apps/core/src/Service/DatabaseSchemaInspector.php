@@ -95,7 +95,10 @@ final class DatabaseSchemaInspector
             ? sprintf('pgsql:host=%s;port=%s;dbname=%s', $host, '' !== $port ? $port : '5432', $database)
             : sprintf('dblib:host=%s%s;dbname=%s', $host, '' !== $port ? ':'.$port : '', $database);
 
-        return new \PDO($dsn, $username, $password, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
+        return new \PDO($dsn, $username, $password, [
+            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            \PDO::ATTR_TIMEOUT => 4,
+        ]);
     }
 
     /** @return array{0: string, 1: string} */

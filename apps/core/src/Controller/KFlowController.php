@@ -381,14 +381,15 @@ final class KFlowController extends AbstractController
         $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
         $binding = is_array($bindings[$selectedForm] ?? null) ? $bindings[$selectedForm] : [];
         $selectedTable = (string) ($binding['table'] ?? $settings['table'] ?? '');
+        $useSeniorRuntimeConnection = 'Senior' === $erp && !$this->hasStoredDatabaseCredentials($connection) && $this->seniorProductCatalog->isConfigured();
         $tables = ['tables' => [], 'error' => null];
         $columns = ['columns' => [], 'error' => null];
         if (ErpConnection::METHOD_DATABASE === $method && 'connection' !== $databaseStep) {
-            $tables = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured()
+            $tables = $useSeniorRuntimeConnection
                 ? $this->seniorProductCatalog->availableTables()
                 : $this->databaseSchemaInspector->tables($settings);
             if (in_array($databaseStep, ['mapping', 'users'], true) && '' !== $selectedTable) {
-                $columns = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured()
+                $columns = $useSeniorRuntimeConnection
                     ? $this->seniorProductCatalog->columnsForTable($selectedTable)
                     : $this->databaseSchemaInspector->columns($settings, $selectedTable);
             }
@@ -398,9 +399,9 @@ final class KFlowController extends AbstractController
         $userColumns = ['columns' => [], 'error' => null];
         $userRows = ['rows' => [], 'error' => null];
         if (ErpConnection::METHOD_DATABASE === $method && 'users' === $databaseStep && '' !== $userTable) {
-            $userColumns = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured() ? $this->seniorProductCatalog->columnsForTable($userTable) : $this->databaseSchemaInspector->columns($settings, $userTable);
+            $userColumns = $useSeniorRuntimeConnection ? $this->seniorProductCatalog->columnsForTable($userTable) : $this->databaseSchemaInspector->columns($settings, $userTable);
             $configuredUserColumns = array_values(array_filter(array_map('strval', $userAccess['mapping'] ?? [])));
-            if ([] !== $configuredUserColumns) $userRows = 'Senior' === $erp && $this->seniorProductCatalog->isConfigured() ? $this->seniorProductCatalog->rowsForTable($userTable, $configuredUserColumns) : $this->databaseSchemaInspector->rows($settings, $userTable, $configuredUserColumns);
+            if ([] !== $configuredUserColumns) $userRows = $useSeniorRuntimeConnection ? $this->seniorProductCatalog->rowsForTable($userTable, $configuredUserColumns) : $this->databaseSchemaInspector->rows($settings, $userTable, $configuredUserColumns);
         }
 
         return $this->render('kflow/erp/connect.html.twig', [
@@ -426,7 +427,7 @@ final class KFlowController extends AbstractController
             'integrationStep' => $integrationStep,
             'payloadMapping' => is_array(($settings['form_mappings'][$selectedForm] ?? null)) ? $settings['form_mappings'][$selectedForm] : [],
             'isActive' => $connection?->isActive() ?? false,
-            'seniorDatabaseAvailable' => 'Senior' === $erp && $this->seniorProductCatalog->isConfigured(),
+            'seniorDatabaseAvailable' => $useSeniorRuntimeConnection || $this->hasStoredDatabaseCredentials($connection),
             'seniorWebServices' => 'Senior' === $erp ? $this->seniorWebServiceCatalog->all() : [],
             'webServiceLogs' => $connection instanceof ErpConnection
                 ? $this->entityManager->getRepository(ErpConnectionLog::class)->findBy(['connection' => $connection], ['createdAt' => 'DESC'], 6)
@@ -805,6 +806,17 @@ final class KFlowController extends AbstractController
         }
 
         return $settings;
+    }
+
+    private function hasStoredDatabaseCredentials(?ErpConnection $connection): bool
+    {
+        if (!$connection instanceof ErpConnection) {
+            return false;
+        }
+
+        $settings = $connection->getSettingsForMethod(ErpConnection::METHOD_DATABASE);
+
+        return '' !== trim((string) ($settings['password_encrypted'] ?? ''));
     }
 
     private function currentUser(): User
