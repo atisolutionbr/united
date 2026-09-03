@@ -18,6 +18,21 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Obter código da versão publicada
+        uses: actions/checkout@v4
+
+      - name: Enviar pacote para a VPS
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          source: "."
+          target: ${{ secrets.DEPLOY_PATH }}
+          overwrite: true
+          exclude: ".git,.env,apps/core/var,apps/core/vendor,apps/core/node_modules,apps/core/public/assets,storage"
+
       - name: Atualizar aplicação por SSH
         uses: appleboy/ssh-action@v1.2.1
         with:
@@ -29,9 +44,7 @@ jobs:
           script: |
             set -eu
             cd "${{ secrets.DEPLOY_PATH }}"
-            git fetch origin kflow360
-            git checkout kflow360
-            git pull --ff-only origin kflow360
+            test -f .env
             docker compose up -d --build --remove-orphans
             docker compose exec -T php php bin/console sass:build
             docker compose exec -T php php bin/console asset-map:compile --env=prod
