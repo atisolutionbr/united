@@ -154,6 +154,12 @@ body.kflow-body {
 .kflow-erp-card__top { align-items: center; display: flex; justify-content: space-between; position: relative; z-index: 1; }
 .kflow-erp-card__mark { align-items: center; background: rgba(255, 255, 255, 0.94); border-radius: 6px; color: #004a7c; display: inline-flex; font-size: 0.78rem; font-weight: 800; height: 3.25rem; justify-content: center; overflow: hidden; padding: 0.25rem; width: 4.7rem; }
 .kflow-erp-card__mark img { display: block; height: 100%; object-fit: contain; width: 100%; }
+.kflow-erp-card[data-erp="rm"] .kflow-erp-card__mark img { transform: scale(1.72); }
+.kflow-erp-card[data-erp="protheus"] .kflow-erp-card__mark img { transform: scale(1.55); }
+.kflow-erp-card[data-erp="winthor"] .kflow-erp-card__mark img { transform: scale(1.7); }
+.kflow-erp-card[data-erp="sankhya"] .kflow-erp-card__mark { background: #263e58; }
+.kflow-erp-card[data-erp="sankhya"] .kflow-erp-card__mark img { transform: scale(1.14); }
+.kflow-erp-card[data-erp="powerlogic"] .kflow-erp-card__mark img { transform: scale(1.3); }
 .kflow-erp-card__mark:not(.has-logo) { background: rgba(255, 255, 255, 0.18); color: #fff; width: 3.25rem; }
 .kflow-erp-card__status { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 999px; color: #fff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.55rem; }
 .kflow-erp-card h2 { color: #fff; font-size: 1.15rem; margin: 1rem 0 0.4rem; position: relative; z-index: 1; }

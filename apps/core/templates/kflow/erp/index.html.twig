@@ -10,13 +10,15 @@
     <section class="kflow-erp-grid">
         {% set erpLogos = {
             'Senior': 'images/erp/senior.png',
+            'Sankhya': 'images/erp/sankhya.png',
             'RM': 'images/erp/rm.png',
             'Protheus': 'images/erp/protheus.png',
             'Cigam': 'images/erp/cigam.webp',
-            'Winthor': 'images/erp/winthor.png'
+            'Winthor': 'images/erp/winthor.png',
+            'PowerLogic': 'images/erp/powerlogic.png'
         } %}
         {% for erp in erps %}
-            <article class="kflow-erp-card {{ erp == activeErp ? 'is-selected' }}">
+            <article class="kflow-erp-card {{ erp == activeErp ? 'is-selected' }}" data-erp="{{ erp|lower }}">
                 <div class="kflow-erp-card__top">
                     <span class="kflow-erp-card__mark {{ erp in erpLogos|keys ? 'has-logo' }}">
                         {% if erp in erpLogos|keys %}<img src="{{ asset(erpLogos[erp]) }}" alt="{{ erp }}">{% else %}<span>{{ erp|slice(0, 2)|upper }}</span>{% endif %}
