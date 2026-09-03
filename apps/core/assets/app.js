@@ -123,6 +123,7 @@ function initializeKFlowShell() {
 	});
 
 	const layoutStorageKey = (layout) => `kflow-layout-${layout}`;
+	const editingLayouts = new Map();
 	const readLayout = (layout) => {
 		try {
 			return JSON.parse(window.localStorage.getItem(layoutStorageKey(layout)) ?? '{"order":[],"hidden":[]}');
@@ -131,11 +132,12 @@ function initializeKFlowShell() {
 		}
 	};
 	const saveLayout = (layout, settings) => window.localStorage.setItem(layoutStorageKey(layout), JSON.stringify(settings));
+	const cardsFor = (grid) => [...grid.querySelectorAll(':scope > [data-layout-card]')];
 	const applyLayout = (grid) => {
 		const layout = grid.dataset.layoutGrid;
 		if (!layout) return;
 		const settings = readLayout(layout);
-		const cards = [...grid.querySelectorAll(':scope > [data-layout-card]')];
+		const cards = cardsFor(grid);
 		settings.order.forEach((id) => {
 			const card = cards.find((item) => item.dataset.layoutCard === id);
 			if (card) grid.append(card);
@@ -143,6 +145,15 @@ function initializeKFlowShell() {
 		cards.forEach((card) => card.classList.toggle('is-layout-hidden', settings.hidden.includes(card.dataset.layoutCard)));
 		const recovery = document.querySelector(`[data-layout-recovery="${layout}"]`);
 		if (recovery) recovery.hidden = settings.hidden.length === 0;
+	};
+	const scopeGrids = (scope) => [...document.querySelectorAll('[data-layout-grid]')].filter((grid) => grid.dataset.layoutGrid === scope || grid.dataset.layoutGrid?.startsWith(`${scope}-`));
+	const setEditing = (scope, editing) => {
+		scopeGrids(scope).forEach((grid) => {
+			grid.classList.toggle('is-layout-editing', editing);
+			cardsFor(grid).forEach((card) => { card.draggable = editing; });
+		});
+		document.querySelector(`[data-layout-customize="${scope}"]`)?.classList.toggle('active', editing);
+		document.querySelector(`[data-layout-cancel="${scope}"]`)?.toggleAttribute('hidden', !editing);
 	};
 
 	document.querySelectorAll('[data-layout-grid]').forEach((grid) => {
@@ -160,8 +171,6 @@ function initializeKFlowShell() {
 			card.addEventListener('dragend', () => {
 				card.classList.remove('is-dragging');
 				draggedCard = null;
-				const layout = grid.dataset.layoutGrid;
-				if (layout) saveLayout(layout, { ...readLayout(layout), order: [...grid.querySelectorAll(':scope > [data-layout-card]')].map((item) => item.dataset.layoutCard) });
 			});
 		});
 		grid.addEventListener('dragover', (event) => {
@@ -177,12 +186,29 @@ function initializeKFlowShell() {
 
 	document.querySelectorAll('[data-layout-customize]').forEach((button) => {
 		button.addEventListener('click', () => {
-			const grid = document.querySelector(`[data-layout-grid="${button.dataset.layoutCustomize}"]`);
-			if (!grid) return;
-			const editing = grid.classList.toggle('is-layout-editing');
-			grid.querySelectorAll(':scope > [data-layout-card]').forEach((card) => { card.draggable = editing; });
-			button.classList.toggle('active', editing);
-			button.innerHTML = editing ? '<i class="bi bi-check2"></i>Concluir organização' : '<i class="bi bi-sliders"></i>Organizar tela';
+			const scope = button.dataset.layoutCustomize;
+			if (!scope || scopeGrids(scope).length === 0) return;
+			if (!editingLayouts.has(scope)) {
+				editingLayouts.set(scope, scopeGrids(scope).map((grid) => ({
+					grid,
+					order: cardsFor(grid).map((card) => card.dataset.layoutCard),
+					hidden: cardsFor(grid).filter((card) => card.classList.contains('is-layout-hidden')).map((card) => card.dataset.layoutCard),
+				})));
+				setEditing(scope, true);
+				button.innerHTML = '<i class="bi bi-floppy"></i>Salvar layout';
+				return;
+			}
+
+			scopeGrids(scope).forEach((grid) => {
+				const layout = grid.dataset.layoutGrid;
+				if (layout) saveLayout(layout, {
+					order: cardsFor(grid).map((card) => card.dataset.layoutCard),
+					hidden: cardsFor(grid).filter((card) => card.classList.contains('is-layout-hidden')).map((card) => card.dataset.layoutCard),
+				});
+			});
+			editingLayouts.delete(scope);
+			setEditing(scope, false);
+			button.innerHTML = '<i class="bi bi-sliders"></i>Personalizar';
 		});
 	});
 
@@ -192,10 +218,29 @@ function initializeKFlowShell() {
 			const grid = button.closest('[data-layout-grid]');
 			const layout = grid?.dataset.layoutGrid;
 			if (!card || !layout) return;
-			const settings = readLayout(layout);
-			if (!settings.hidden.includes(card.dataset.layoutCard)) settings.hidden.push(card.dataset.layoutCard);
-			saveLayout(layout, settings);
-			applyLayout(grid);
+			if (!grid.classList.contains('is-layout-editing')) return;
+			card.classList.add('is-layout-hidden');
+			const recovery = document.querySelector(`[data-layout-recovery="${layout}"]`);
+			if (recovery) recovery.hidden = false;
+		});
+	});
+
+	document.querySelectorAll('[data-layout-cancel]').forEach((button) => {
+		button.addEventListener('click', () => {
+			const scope = button.dataset.layoutCancel;
+			const snapshot = scope ? editingLayouts.get(scope) : null;
+			if (!scope || !snapshot) return;
+			snapshot.forEach(({ grid, order, hidden }) => {
+				order.forEach((id) => {
+					const card = cardsFor(grid).find((item) => item.dataset.layoutCard === id);
+					if (card) grid.append(card);
+				});
+				cardsFor(grid).forEach((card) => card.classList.toggle('is-layout-hidden', hidden.includes(card.dataset.layoutCard)));
+			});
+			editingLayouts.delete(scope);
+			setEditing(scope, false);
+			const customize = document.querySelector(`[data-layout-customize="${scope}"]`);
+			if (customize) customize.innerHTML = '<i class="bi bi-sliders"></i>Personalizar';
 		});
 	});
 
