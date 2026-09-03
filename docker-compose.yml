@@ -43,6 +43,8 @@ services:
       TZ: America/Recife
     volumes:
       - ./apps/core:/var/www/html
+      # Symfony needs its environment file at the application root at runtime.
+      - ./.env:/var/www/html/.env:ro
       - ./data:/var/data
       - ./storage:/var/storage
       - ./infra/php/performance.ini:/usr/local/etc/php/conf.d/zz-performance.ini:ro
