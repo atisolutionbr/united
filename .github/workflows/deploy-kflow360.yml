@@ -24,26 +24,26 @@ jobs:
       - name: Enviar pacote para a VPS
         uses: appleboy/scp-action@v1.0.0
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT }}
+          port: ${{ vars.DEPLOY_PORT }}
           source: "."
-          target: ${{ secrets.DEPLOY_PATH }}
+          target: ${{ vars.DEPLOY_PATH }}
           overwrite: true
           exclude: ".git,.env,apps/core/var,apps/core/vendor,apps/core/node_modules,apps/core/public/assets,storage"
 
       - name: Atualizar aplicação por SSH
         uses: appleboy/ssh-action@v1.2.1
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT }}
+          port: ${{ vars.DEPLOY_PORT }}
           script_stop: true
           script: |
             set -eu
-            cd "${{ secrets.DEPLOY_PATH }}"
+            cd "${{ vars.DEPLOY_PATH }}"
             test -f .env
             test -f apps/core/.env || touch apps/core/.env
             docker compose up -d --build
