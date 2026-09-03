@@ -26,9 +26,20 @@ document.querySelector('[data-login-form]')?.addEventListener('submit', (event) 
     const button = form.querySelector('[data-login-submit]');
     if (!(button instanceof HTMLButtonElement) || button.disabled) return event.preventDefault();
     button.disabled = true;
+    sessionStorage.setItem('kflow-show-splash', '1');
     form.querySelector('[data-login-label]')?.setAttribute('hidden', 'hidden');
     form.querySelector('[data-login-loading]')?.removeAttribute('hidden');
 });
+
+const splash = document.querySelector('[data-kflow-splash]');
+if (splash && sessionStorage.getItem('kflow-show-splash') === '1') {
+    sessionStorage.removeItem('kflow-show-splash');
+    splash.hidden = false;
+    window.setTimeout(() => {
+        splash.classList.add('is-leaving');
+        window.setTimeout(() => splash.remove(), 220);
+    }, 3000);
+}
 
 const layoutKey = (name) => `kflow-layout-${name}`;
 const cards = (grid) => [...grid.querySelectorAll(':scope > [data-layout-card]')];

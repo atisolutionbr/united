@@ -9,13 +9,19 @@
         <meta name="theme-color" content="#004a7c">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
-        <link rel="apple-touch-icon" href="{{ asset('images/kflow360-logo.png') }}">
-        <link href="{{ asset('vendor/bootstrap.min.css') }}" rel="stylesheet">
-        <link href="{{ asset('vendor/bootstrap-icons.min.css') }}" rel="stylesheet">
+        <link rel="apple-touch-icon" href="/images/kflow360-logo.png">
+        <link href="/vendor/bootstrap.min.css" rel="stylesheet">
+        <link href="/vendor/bootstrap-icons.min.css" rel="stylesheet">
         <link href="{{ asset('kflow.css') }}" rel="stylesheet">
         {% block stylesheets %}{% endblock %}
     </head>
     <body id="{% block body_id %}{% endblock %}" class="kflow-body {{ app.user ? 'kflow-shell' : 'kflow-login-shell' }}{% block body_class %}{% endblock %}">
+        {% if app.user %}
+            <div class="kflow-splash" data-kflow-splash hidden aria-live="polite" aria-label="Preparando a plataforma">
+                <div class="kflow-splash__mark"><img src="/images/kflow360-logo.png" alt=""></div>
+                <strong>Preparando o KFlow360</strong>
+            </div>
+        {% endif %}
         {% if app.user %}
             {% include 'components/_sidebar.html.twig' %}
         {% endif %}

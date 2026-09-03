@@ -14864,6 +14864,78 @@ body.kflow-body {
   opacity: 0.82;
 }
 
+.kflow-topbar > .kflow-icon-button {
+  background: linear-gradient(145deg, #ffffff 0%, #e2f4f2 100%);
+  border-color: #b9ddda;
+  box-shadow: 0 4px 10px rgba(0, 74, 124, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  color: var(--kflow-deep);
+}
+
+.kflow-topbar__account > form:last-child .kflow-icon-button {
+  background: linear-gradient(145deg, #0076a3 0%, #2aa89d 100%);
+  border-color: transparent;
+  box-shadow: 0 5px 11px rgba(0, 74, 124, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.kflow-topbar__account > form:last-child .kflow-icon-button:hover {
+  box-shadow: 0 7px 14px rgba(0, 74, 124, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.kflow-splash {
+  align-items: center;
+  backdrop-filter: blur(5px);
+  background: linear-gradient(145deg, rgba(0, 74, 124, 0.97), rgba(0, 118, 163, 0.95) 55%, rgba(42, 168, 157, 0.94));
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  transition: opacity 220ms ease, visibility 220ms ease;
+  z-index: 3000;
+}
+
+.kflow-splash.is-leaving {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.kflow-splash__mark {
+  align-items: center;
+  animation: kflow-splash-float 1.25s ease-in-out infinite alternate;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 16px 32px rgba(0, 35, 65, 0.35);
+  display: flex;
+  height: 7.25rem;
+  justify-content: center;
+  padding: 0.7rem;
+  transform-origin: center;
+  width: 7.25rem;
+}
+
+.kflow-splash__mark img {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.kflow-splash strong {
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+@keyframes kflow-splash-float {
+  from {
+    transform: translateY(-5px) rotate(-4deg);
+  }
+  to {
+    transform: translateY(5px) rotate(4deg);
+  }
+}
 body.sidebar-is-collapsed .kflow-sidebar {
   width: 72px;
 }
@@ -15052,6 +15124,9 @@ body.sidebar-is-collapsed .kflow-nav__link, body.sidebar-is-collapsed .kflow-nav
   *, *::before, *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+  .kflow-splash__mark {
+    animation: none;
   }
 }
 
