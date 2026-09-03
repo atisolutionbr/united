@@ -8,9 +8,21 @@
         <div><span class="kflow-eyebrow">Configurações de Conexão</span><h1>Conectar ERP</h1><p>Escolha o ERP que orientará os fluxos e consultas do Kadastro360.</p></div>
     </section>
     <section class="kflow-erp-grid">
+        {% set erpLogos = {
+            'Senior': 'images/erp/senior.png',
+            'RM': 'images/erp/rm.png',
+            'Protheus': 'images/erp/protheus.png',
+            'Cigam': 'images/erp/cigam.webp',
+            'Winthor': 'images/erp/winthor.png'
+        } %}
         {% for erp in erps %}
             <article class="kflow-erp-card {{ erp == activeErp ? 'is-selected' }}">
-                <div class="kflow-erp-card__top"><span class="kflow-erp-card__mark">{{ erp|slice(0, 1) }}</span>{% if erp == activeErp %}<span class="badge text-bg-success">Ativo</span>{% endif %}</div>
+                <div class="kflow-erp-card__top">
+                    <span class="kflow-erp-card__mark {{ erp in erpLogos|keys ? 'has-logo' }}">
+                        {% if erp in erpLogos|keys %}<img src="{{ asset(erpLogos[erp]) }}" alt="{{ erp }}">{% else %}<span>{{ erp|slice(0, 2)|upper }}</span>{% endif %}
+                    </span>
+                    {% if erp == activeErp %}<span class="kflow-erp-card__status">Ativo</span>{% endif %}
+                </div>
                 <h2>{{ erp }}</h2>
                 <p>Conecte seu ERP e conheça o que o Kflow360 poderá fazer por você! Automatize seus processos, tenha segurança e venha ser Kflow360... Onde tudo flui com rapidez em todos os angulos.</p>
                 <form method="post" action="{{ path('kflow_erp_select', {erp: erp}) }}"><input type="hidden" name="_token" value="{{ csrf_token('select-erp-'~erp) }}"><button class="btn {{ erp == activeErp ? 'btn-outline-primary' : 'btn-primary' }} w-100" type="submit"><i class="bi bi-plug"></i>{{ erp == activeErp ? 'Configurar conexão' : 'Conectar '~erp }}</button></form>

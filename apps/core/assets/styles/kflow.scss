@@ -144,14 +144,25 @@ body.kflow-body {
 .kflow-development-state h2 { margin: 0.3rem 0 0.5rem; }
 .kflow-development-state p { color: var(--kflow-muted); }
 
-.kflow-erp-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); }
-.kflow-erp-card { display: flex; flex-direction: column; padding: 1rem; }
-.kflow-erp-card.is-selected { border-color: #36bcb1; box-shadow: 0 0 0 1px #36bcb1, 0 8px 22px rgba(11, 40, 80, 0.09); }
-.kflow-erp-card__top { align-items: center; display: flex; justify-content: space-between; }
-.kflow-erp-card__mark { align-items: center; background: var(--kflow-primary-soft); border-radius: 6px; color: var(--kflow-primary); display: inline-flex; font-weight: 750; height: 2.4rem; justify-content: center; width: 2.4rem; }
-.kflow-erp-card h2 { font-size: 1rem; margin: 1rem 0 0.4rem; }
-.kflow-erp-card p { color: var(--kflow-muted); font-size: 0.82rem; line-height: 1.45; min-height: 8.4rem; }
-.kflow-erp-card form { margin-top: auto; padding-top: 1rem; }
+.kflow-erp-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
+.kflow-erp-card { background: linear-gradient(135deg, #004a7c 0%, #0076a3 68%, #168f98 100%); border: 0; box-shadow: 0 10px 18px rgba(0, 74, 124, 0.23), inset 0 1px 0 rgba(255, 255, 255, 0.23); color: #fff; display: flex; flex-direction: column; min-height: 18.5rem; overflow: hidden; padding: 1.15rem; position: relative; }
+.kflow-erp-card::after { background: linear-gradient(125deg, rgba(255, 255, 255, 0.16), transparent 42%); content: ''; inset: 0; pointer-events: none; position: absolute; }
+.kflow-erp-card:nth-child(3n + 2) { background: linear-gradient(135deg, #0076a3 0%, #138f9b 62%, #2aa89d 100%); }
+.kflow-erp-card:nth-child(3n) { background: linear-gradient(135deg, #19385c 0%, #004a7c 58%, #2aa89d 125%); }
+.kflow-erp-card:hover { box-shadow: 0 14px 24px rgba(0, 74, 124, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25); transform: translateY(-2px); }
+.kflow-erp-card.is-selected { box-shadow: 0 0 0 3px #7ee2d7, 0 14px 24px rgba(0, 74, 124, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.kflow-erp-card__top { align-items: center; display: flex; justify-content: space-between; position: relative; z-index: 1; }
+.kflow-erp-card__mark { align-items: center; background: rgba(255, 255, 255, 0.94); border-radius: 6px; color: #004a7c; display: inline-flex; font-size: 0.78rem; font-weight: 800; height: 3.25rem; justify-content: center; overflow: hidden; padding: 0.25rem; width: 4.7rem; }
+.kflow-erp-card__mark img { display: block; height: 100%; object-fit: contain; width: 100%; }
+.kflow-erp-card__mark:not(.has-logo) { background: rgba(255, 255, 255, 0.18); color: #fff; width: 3.25rem; }
+.kflow-erp-card__status { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 999px; color: #fff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.55rem; }
+.kflow-erp-card h2 { color: #fff; font-size: 1.15rem; margin: 1rem 0 0.4rem; position: relative; z-index: 1; }
+.kflow-erp-card p { color: rgba(255, 255, 255, 0.88); font-size: 0.82rem; line-height: 1.5; margin-bottom: 0; position: relative; z-index: 1; }
+.kflow-erp-card form { margin-top: auto; padding-top: 1rem; position: relative; z-index: 1; }
+.kflow-erp-card .btn { background: rgba(255, 255, 255, 0.96); border-color: rgba(255, 255, 255, 0.96); color: #075e6c; }
+.kflow-erp-card .btn:hover { background: #fff; border-color: #fff; color: #004a7c; }
+.kflow-erp-card .btn-outline-primary { background: transparent; border-color: rgba(255, 255, 255, 0.78); color: #fff; }
+.kflow-erp-card .btn-outline-primary:hover { background: #fff; border-color: #fff; color: #004a7c; }
 
 .kflow-connection-panel { border-top: 4px solid #2bb8ac; max-width: 1180px; }
 .kflow-connection-panel__header { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; }
