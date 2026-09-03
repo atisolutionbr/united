@@ -9,11 +9,11 @@
         <div class="kflow-login__intro">
             <a class="kflow-brand kflow-brand--login" href="{{ path('homepage') }}"><span class="kflow-brand__mark"><img class="kflow-brand__logo" src="{{ asset('images/kflow360-logo.png') }}" alt=""></span><span class="kflow-brand__name">KFlow360<small>Integration Platform</small></span></a>
             <div class="kflow-login__intro-copy">
-                <span class="kflow-eyebrow">Kadastro360</span>
+                <span class="kflow-eyebrow">KFlow360</span>
                 <h1>Integrações que fazem tudo fluir.</h1>
                 <p>Conecte seus ERPs, saneie cadastros e conduza aprovações em uma plataforma única, rápida e segura.</p>
             </div>
-            <div class="kflow-login__footer">KFlow360 · v{{ release.version }} · build {{ release.build }} · Ambiente local</div>
+            <div class="kflow-login__footer">KFlow360 · v{{ release.version }} · build {{ release.build }} · {{ app.environment == 'prod' ? 'Ambiente Produção' : 'Ambiente local' }}</div>
         </div>
 
         <div class="kflow-login__form-wrap">

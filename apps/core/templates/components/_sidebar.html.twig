@@ -26,7 +26,7 @@
             </button>
             <div class="kflow-nav__submenu">
                 <a href="{{ path('kflow_products') }}" class="{{ route == 'kflow_products' ? 'is-active' }}">Produtos</a>
-                <a href="{{ path('kflow_module', {module: 'cliente'}) }}" class="{{ pathInfo ends with '/cliente' ? 'is-active' }}">Cliente</a>
+                <a href="{{ path('kflow_clients') }}" class="{{ route == 'kflow_clients' ? 'is-active' }}">Clientes</a>
                 <a href="{{ path('kflow_module', {module: 'fornecedor'}) }}" class="{{ pathInfo ends with '/fornecedor' ? 'is-active' }}">Fornecedor</a>
                 <a href="{{ path('kflow_module', {module: 'transportador'}) }}" class="{{ pathInfo ends with '/transportador' ? 'is-active' }}">Transportador</a>
             </div>

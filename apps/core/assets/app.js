@@ -111,6 +111,104 @@ function initializeKFlowShell() {
 		});
 	});
 
+	document.querySelectorAll('[data-customer-select]').forEach((button) => {
+		button.addEventListener('click', () => {
+			const customer = JSON.parse(button.dataset.customer ?? '{}');
+			document.querySelectorAll('[data-customer-row]').forEach((row) => row.classList.remove('is-selected'));
+			button.closest('[data-customer-row]')?.classList.add('is-selected');
+			document.querySelectorAll('[data-customer-field]').forEach((field) => {
+			field.textContent = customer[field.dataset.customerField] || 'Não informado';
+		});
+		});
+	});
+
+	const layoutStorageKey = (layout) => `kflow-layout-${layout}`;
+	const readLayout = (layout) => {
+		try {
+			return JSON.parse(window.localStorage.getItem(layoutStorageKey(layout)) ?? '{"order":[],"hidden":[]}');
+		} catch {
+			return { order: [], hidden: [] };
+		}
+	};
+	const saveLayout = (layout, settings) => window.localStorage.setItem(layoutStorageKey(layout), JSON.stringify(settings));
+	const applyLayout = (grid) => {
+		const layout = grid.dataset.layoutGrid;
+		if (!layout) return;
+		const settings = readLayout(layout);
+		const cards = [...grid.querySelectorAll(':scope > [data-layout-card]')];
+		settings.order.forEach((id) => {
+			const card = cards.find((item) => item.dataset.layoutCard === id);
+			if (card) grid.append(card);
+		});
+		cards.forEach((card) => card.classList.toggle('is-layout-hidden', settings.hidden.includes(card.dataset.layoutCard)));
+		const recovery = document.querySelector(`[data-layout-recovery="${layout}"]`);
+		if (recovery) recovery.hidden = settings.hidden.length === 0;
+	};
+
+	document.querySelectorAll('[data-layout-grid]').forEach((grid) => {
+		applyLayout(grid);
+		let draggedCard = null;
+		grid.querySelectorAll(':scope > [data-layout-card]').forEach((card) => {
+			card.addEventListener('dragstart', (event) => {
+				if (!grid.classList.contains('is-layout-editing')) {
+					event.preventDefault();
+					return;
+				}
+				draggedCard = card;
+				card.classList.add('is-dragging');
+			});
+			card.addEventListener('dragend', () => {
+				card.classList.remove('is-dragging');
+				draggedCard = null;
+				const layout = grid.dataset.layoutGrid;
+				if (layout) saveLayout(layout, { ...readLayout(layout), order: [...grid.querySelectorAll(':scope > [data-layout-card]')].map((item) => item.dataset.layoutCard) });
+			});
+		});
+		grid.addEventListener('dragover', (event) => {
+			if (!draggedCard || !grid.classList.contains('is-layout-editing')) return;
+			event.preventDefault();
+			const after = [...grid.querySelectorAll(':scope > [data-layout-card]:not(.is-dragging)')].find((card) => {
+				const rect = card.getBoundingClientRect();
+				return event.clientY < rect.top + rect.height / 2;
+			});
+			if (after) grid.insertBefore(draggedCard, after); else grid.append(draggedCard);
+		});
+	});
+
+	document.querySelectorAll('[data-layout-customize]').forEach((button) => {
+		button.addEventListener('click', () => {
+			const grid = document.querySelector(`[data-layout-grid="${button.dataset.layoutCustomize}"]`);
+			if (!grid) return;
+			const editing = grid.classList.toggle('is-layout-editing');
+			grid.querySelectorAll(':scope > [data-layout-card]').forEach((card) => { card.draggable = editing; });
+			button.classList.toggle('active', editing);
+			button.innerHTML = editing ? '<i class="bi bi-check2"></i>Concluir organização' : '<i class="bi bi-sliders"></i>Organizar tela';
+		});
+	});
+
+	document.querySelectorAll('[data-layout-hide]').forEach((button) => {
+		button.addEventListener('click', () => {
+			const card = button.closest('[data-layout-card]');
+			const grid = button.closest('[data-layout-grid]');
+			const layout = grid?.dataset.layoutGrid;
+			if (!card || !layout) return;
+			const settings = readLayout(layout);
+			if (!settings.hidden.includes(card.dataset.layoutCard)) settings.hidden.push(card.dataset.layoutCard);
+			saveLayout(layout, settings);
+			applyLayout(grid);
+		});
+	});
+
+	document.querySelectorAll('[data-layout-reset]').forEach((button) => {
+		button.addEventListener('click', () => {
+			const layout = button.dataset.layoutReset;
+			if (!layout) return;
+			window.localStorage.removeItem(layoutStorageKey(layout));
+			const grid = document.querySelector(`[data-layout-grid="${layout}"]`);
+			if (grid) window.location.reload();
+		});
+	});
+
 	const connectionForm = document.querySelector('[data-connection-form]');
 	connectionForm?.addEventListener('submit', () => {
 		const submitButton = connectionForm.querySelector('[data-connection-submit]');

@@ -269,6 +269,28 @@ body.kflow-body {
 .kflow-sanitization li span { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kflow-sanitization li small { color: var(--kflow-muted); font-size: 0.72rem; }
 
+.kflow-page-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 0.65rem; }
+.kflow-layout-grid { position: relative; }
+.kflow-layout-card { position: relative; transition: opacity 160ms ease, transform 160ms ease; }
+.kflow-layout-card.is-layout-hidden { display: none; }
+.kflow-layout-card__hide { align-items: center; background: var(--kflow-surface); border: 1px solid var(--kflow-line); border-radius: 4px; color: var(--kflow-muted); display: none; height: 1.8rem; justify-content: center; position: absolute; right: 0.6rem; top: 0.6rem; width: 1.8rem; z-index: 3; }
+.kflow-layout-card__hide:hover { border-color: var(--kflow-primary); color: var(--kflow-primary); }
+.is-layout-editing > .kflow-layout-card { box-shadow: 0 0 0 2px rgba(42, 168, 157, 0.28), 0 10px 24px rgba(0, 74, 124, 0.12); cursor: grab; }
+.is-layout-editing > .kflow-layout-card::before { color: var(--kflow-primary); content: '\2630'; font-size: 1rem; left: 0.6rem; position: absolute; top: 0.58rem; z-index: 3; }
+.is-layout-editing > .kflow-layout-card .kflow-layout-card__hide { display: inline-flex; }
+.is-layout-editing > .kflow-layout-card.is-dragging { opacity: 0.48; transform: scale(0.98); }
+.kflow-layout-recovery { align-items: center; color: var(--kflow-muted); display: flex; font-size: 0.82rem; gap: 0.75rem; justify-content: flex-end; margin: -0.3rem 0 1rem; }
+.kflow-stat__link { align-items: center; color: inherit; display: flex; gap: 0.75rem; min-height: 4rem; text-decoration: none; }
+.kflow-stat__link:hover { color: inherit; }
+.kflow-stat__link small { display: block; max-width: 15rem; }
+.kflow-pagination { align-items: center; border-top: 1px solid var(--kflow-line); color: var(--kflow-muted); display: flex; font-size: 0.78rem; gap: 0.75rem; justify-content: space-between; margin-top: 0.7rem; padding-top: 0.75rem; }
+.kflow-pagination > div { display: flex; gap: 0.45rem; }
+.kflow-pagination .btn { align-items: center; display: inline-flex; gap: 0.25rem; }
+.kflow-customer-detail { display: grid; gap: 0.8rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0.5rem; }
+.kflow-customer-detail div { border-bottom: 1px solid var(--kflow-line); display: grid; gap: 0.18rem; padding-bottom: 0.55rem; }
+.kflow-customer-detail small { color: var(--kflow-muted); font-size: 0.72rem; font-weight: 700; }
+.kflow-customer-detail strong { font-size: 0.85rem; overflow-wrap: anywhere; }
+
 .kflow-login-shell .kflow-app { min-height: 100vh; }
 .kflow-login-shell .kflow-main { max-width: none; min-height: 100vh; padding: 0; }
 .kflow-login { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(24rem, 0.85fr); min-height: 100vh; }
@@ -315,6 +337,7 @@ body.sidebar-is-collapsed .kflow-nav__link, body.sidebar-is-collapsed .kflow-nav
   .kflow-main { padding: 1.25rem; }
   .kflow-topbar { padding-left: 1.25rem; padding-right: 1.25rem; }
   .kflow-page-heading { align-items: flex-start; flex-direction: column; }
+  .kflow-page-actions { width: 100%; }
   .kflow-metabase-callout { align-items: stretch; flex-direction: column; }
   .kflow-connection-copy { align-items: stretch; flex-direction: column; }
   .kflow-ws-test-bar { align-items: stretch; flex-direction: column; }
@@ -336,6 +359,8 @@ body.sidebar-is-collapsed .kflow-nav__link, body.sidebar-is-collapsed .kflow-nav
   .kflow-product-detail, .kflow-product-detail form { display: block; }
   .kflow-product-detail .mb-3 { margin-bottom: 0.85rem !important; }
   .kflow-form-grid, .kflow-mapping-grid, .kflow-product-insights { grid-template-columns: 1fr; }
+  .kflow-customer-detail { grid-template-columns: 1fr; }
+  .kflow-pagination { align-items: flex-start; flex-direction: column; }
   .kflow-mapping-heading, .kflow-connection-actions { align-items: flex-start; flex-direction: column; }
   .kflow-connection-actions .btn { width: 100%; }
   .kflow-development-state, .kflow-empty-state { align-items: flex-start; flex-direction: column; }

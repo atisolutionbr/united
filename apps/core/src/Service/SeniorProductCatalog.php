@@ -138,9 +138,9 @@ final class SeniorProductCatalog
 
     /**
      * @param array<string, string> $mapping
-     * @return array{configured: bool, products: list<array<string, mixed>>, error: string|null, sourceTable: string, recordCount: int, ncmUpdateAvailable: bool}
+     * @return array{configured: bool, products: list<array<string, mixed>>, error: string|null, sourceTable: string, recordCount: int, page: int, perPage: int, pageCount: int, ncmUpdateAvailable: bool}
      */
-    public function listProducts(array $mapping = []): array
+    public function listProducts(array $mapping = [], int $page = 1, int $perPage = 10): array
     {
         if (!$this->isConfigured()) {
             return $this->emptyResult(false);
@@ -175,9 +175,18 @@ final class SeniorProductCatalog
 
             $selects = array_values(array_unique(array_filter($selects)));
             $connection = $this->connection();
-            $statement = $connection->query(sprintf('SELECT TOP 100 %s FROM [E075PRO] ORDER BY [CodPro]', implode(', ', $selects)));
-            $products = $statement->fetchAll(\PDO::FETCH_ASSOC);
             $recordCount = (int) $connection->query('SELECT COUNT(*) FROM [E075PRO]')->fetchColumn();
+            $perPage = max(1, min(50, $perPage));
+            $pageCount = max(1, (int) ceil($recordCount / $perPage));
+            $page = max(1, min($page, $pageCount));
+            $offset = ($page - 1) * $perPage;
+            $statement = $connection->query(sprintf(
+                'SELECT %s FROM [E075PRO] ORDER BY [CodPro] OFFSET %d ROWS FETCH NEXT %d ROWS ONLY',
+                implode(', ', $selects),
+                $offset,
+                $perPage,
+            ));
+            $products = $statement->fetchAll(\PDO::FETCH_ASSOC);
 
             foreach ($products as &$product) {
                 foreach (['Ncm', 'CstPis', 'CstCofins', 'CstIcms'] as $field) {
@@ -192,6 +201,9 @@ final class SeniorProductCatalog
                 'error' => null,
                 'sourceTable' => 'E075PRO',
                 'recordCount' => $recordCount,
+                'page' => $page,
+                'perPage' => $perPage,
+                'pageCount' => $pageCount,
                 'ncmUpdateAvailable' => $this->mappedColumn($mapping, 'ncm', $columns) !== null,
             ];
         } catch (\Throwable $exception) {
@@ -251,7 +263,7 @@ final class SeniorProductCatalog
         return isset($columns[strtolower($source)]) ? $columns[strtolower($source)] : null;
     }
 
-    /** @return array{configured: bool, products: list<array<string, mixed>>, error: string|null, sourceTable: string, recordCount: int, ncmUpdateAvailable: bool} */
+    /** @return array{configured: bool, products: list<array<string, mixed>>, error: string|null, sourceTable: string, recordCount: int, page: int, perPage: int, pageCount: int, ncmUpdateAvailable: bool} */
     private function emptyResult(bool $configured): array
     {
         return [
@@ -260,6 +272,9 @@ final class SeniorProductCatalog
             'error' => null,
             'sourceTable' => 'E075PRO',
             'recordCount' => 0,
+            'page' => 1,
+            'perPage' => 10,
+            'pageCount' => 1,
             'ncmUpdateAvailable' => false,
         ];
     }

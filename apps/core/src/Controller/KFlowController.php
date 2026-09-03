@@ -10,6 +10,7 @@ use App\Service\ErpConnectionProfile;
 use App\Service\DatabaseSchemaInspector;
 use App\Service\ProductFiscalIntelligence;
 use App\Service\ProductSanitizationService;
+use App\Service\SeniorCustomerCatalog;
 use App\Service\SeniorProductCatalog;
 use App\Service\SeniorWebServiceCatalog;
 use App\Service\SeniorWebServiceManager;
@@ -52,6 +53,7 @@ final class KFlowController extends AbstractController
         private readonly ErpConnectionProfile $connectionProfile,
         private readonly DatabaseSchemaInspector $databaseSchemaInspector,
         private readonly SeniorProductCatalog $seniorProductCatalog,
+        private readonly SeniorCustomerCatalog $seniorCustomerCatalog,
         private readonly SeniorWebServiceCatalog $seniorWebServiceCatalog,
         private readonly SeniorWebServiceManager $seniorWebServiceManager,
         private readonly ProductFiscalIntelligence $fiscalIntelligence,
@@ -65,9 +67,30 @@ final class KFlowController extends AbstractController
     #[Route('', name: 'kflow_dashboard', methods: ['GET'])]
     public function dashboard(): Response
     {
+        $connection = $this->activeConnection();
+        $activeErp = $connection?->getErpName();
+        $products = ['recordCount' => 0, 'products' => []];
+        $customers = ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0];
+        if ('Senior' === $activeErp) {
+            $products = $this->seniorProductCatalog->listProducts($this->effectiveMapping($connection), 1, 50);
+            $customers = $this->seniorCustomerCatalog->listCustomers($this->customerBinding($connection), 1, 10);
+        }
+        $productSample = $products['products'] ?? [];
+        $sanitization = $this->sanitizationService->analyze($productSample);
+        $fiscalPending = count(array_filter($productSample, static fn (array $product): bool => '' === trim((string) ($product['Ncm'] ?? ''))));
+
         return $this->render('kflow/dashboard.html.twig', [
-            'activeErp' => $this->activeErp(),
+            'activeErp' => $activeErp,
             'erpCount' => count($this->erpCatalog->all()),
+            'metrics' => [
+                'duplicates' => count($sanitization['duplicates']),
+                'fiscalPending' => $fiscalPending,
+                'products' => (int) ($products['recordCount'] ?? 0),
+                'clientsMissingAddress' => (int) ($customers['missingAddressCount'] ?? 0),
+                'clientsStale' => (int) ($customers['staleCount'] ?? 0),
+                'suppliersMissingAddress' => 0,
+                'suppliersStale' => 0,
+            ],
         ]);
     }
 
@@ -82,7 +105,7 @@ final class KFlowController extends AbstractController
     }
 
     #[Route('/products', name: 'kflow_products', methods: ['GET'])]
-    public function products(): Response
+    public function products(Request $request): Response
     {
         $connection = $this->activeConnection();
         $activeErp = $connection?->getErpName();
@@ -92,13 +115,16 @@ final class KFlowController extends AbstractController
             'error' => null,
             'sourceTable' => 'E075PRO',
             'recordCount' => 0,
+            'page' => 1,
+            'perPage' => 10,
+            'pageCount' => 1,
             'ncmUpdateAvailable' => false,
         ];
         $mapping = [];
 
         if ('Senior' === $activeErp) {
             $mapping = $this->effectiveMapping($connection);
-            $productData = $this->seniorProductCatalog->listProducts($mapping);
+            $productData = $this->seniorProductCatalog->listProducts($mapping, max(1, $request->query->getInt('page', 1)));
         }
 
         $products = $productData['products'];
@@ -126,6 +152,33 @@ final class KFlowController extends AbstractController
             ],
             'mapping' => $mapping,
             'fiscalWriteAvailable' => $connection instanceof ErpConnection && $this->seniorWebServiceManager->isProductUpdateAvailable($connection),
+        ]);
+    }
+
+    #[Route('/clients', name: 'kflow_clients', methods: ['GET'])]
+    public function clients(Request $request): Response
+    {
+        $connection = $this->activeConnection();
+        $activeErp = $connection?->getErpName();
+        $customerData = [
+            'configured' => false,
+            'customers' => [],
+            'error' => null,
+            'sourceTable' => 'E085CLI',
+            'recordCount' => 0,
+            'page' => 1,
+            'perPage' => 10,
+            'pageCount' => 1,
+            'missingAddressCount' => 0,
+            'staleCount' => 0,
+        ];
+        if ('Senior' === $activeErp) {
+            $customerData = $this->seniorCustomerCatalog->listCustomers($this->customerBinding($connection), max(1, $request->query->getInt('page', 1)));
+        }
+
+        return $this->render('kflow/clients.html.twig', [
+            'activeErp' => $activeErp,
+            'customerData' => $customerData,
         ]);
     }
 
@@ -562,6 +615,15 @@ final class KFlowController extends AbstractController
             $this->connectionProfile->defaultProductMapping('Senior'),
             $connection?->getProductMapping() ?? [],
         );
+    }
+
+    /** @return array<string, mixed> */
+    private function customerBinding(?ErpConnection $connection): array
+    {
+        $settings = $connection?->getSettingsForMethod(ErpConnection::METHOD_DATABASE) ?? [];
+        $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
+
+        return is_array($bindings['customers'] ?? null) ? $bindings['customers'] : [];
     }
 
     /** @param array<string, mixed> $settings

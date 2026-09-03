@@ -10,23 +10,35 @@
             <h1>Cadastros confiáveis, conectados e em movimento</h1>
             <p>Conecte ERPs, saneie dados, mantenha uma base mestre e conduza cada aprovação até a operação.</p>
         </div>
-        <a class="btn btn-primary" href="{{ path('kflow_erp_index') }}"><i class="bi bi-plus-lg"></i>Conectar ERP</a>
+        <div class="kflow-page-actions">
+            <button class="btn btn-outline-primary" type="button" data-layout-customize="dashboard"><i class="bi bi-sliders"></i>Personalizar painel</button>
+            <a class="btn btn-primary" href="{{ path('kflow_erp_index') }}"><i class="bi bi-plus-lg"></i>Conectar ERP</a>
+        </div>
     </section>
 
-    <section class="kflow-stat-grid" aria-label="Resumo operacional">
-        <article class="kflow-stat">
-            <span class="kflow-stat__icon kflow-tone-teal"><i class="bi bi-hdd-stack"></i></span>
-            <div><small>ERP ativo</small><strong>{{ activeErp ?: 'Nenhum selecionado' }}</strong></div>
-        </article>
-        <article class="kflow-stat">
-            <span class="kflow-stat__icon kflow-tone-blue"><i class="bi bi-diagram-3"></i></span>
-            <div><small>ERPs disponíveis</small><strong>{{ erpCount }}</strong></div>
-        </article>
-        <article class="kflow-stat">
-            <span class="kflow-stat__icon kflow-tone-amber"><i class="bi bi-clipboard2-check"></i></span>
-            <div><small>Camadas de integração</small><strong>5</strong></div>
-        </article>
+    <section class="kflow-stat-grid kflow-layout-grid" data-layout-grid="dashboard" aria-label="Resumo operacional">
+        {% set dashboardCards = [
+            {id: 'erp', label: 'ERP ativo', value: activeErp ?: 'Nenhum selecionado', icon: 'hdd-stack', tone: 'teal', href: path('kflow_erp_index')},
+            {id: 'erps', label: 'ERPs disponíveis', value: erpCount, icon: 'diagram-3', tone: 'blue', href: path('kflow_erp_index')},
+            {id: 'duplicates', label: 'Qtd de Produtos que podem estar duplicados', value: metrics.duplicates, icon: 'copy', tone: 'amber', href: path('kflow_products', {focus: 'sanitization'})},
+            {id: 'fiscal', label: 'Qtd produtos análise fiscal', value: metrics.fiscalPending, icon: 'shield-exclamation', tone: 'blue', href: path('kflow_products', {focus: 'fiscal'})},
+            {id: 'products', label: 'Qtd Produtos na base' ~ (activeErp ? ' (' ~ activeErp ~ ')' : ''), value: metrics.products, icon: 'box-seam', tone: 'teal', href: path('kflow_products')},
+            {id: 'clients-address', label: 'Qtd Clientes S/ Endereço', value: metrics.clientsMissingAddress, icon: 'geo-alt', tone: 'amber', href: path('kflow_clients', {focus: 'sanitization'})},
+            {id: 'clients-stale', label: 'Qtd Clientes Desatualizados', value: metrics.clientsStale, icon: 'person-exclamation', tone: 'blue', href: path('kflow_clients', {focus: 'fiscal'})},
+            {id: 'suppliers-address', label: 'Qtd Fornecedores S/ Endereço', value: metrics.suppliersMissingAddress, icon: 'truck', tone: 'teal', href: path('kflow_module', {module: 'fornecedor'})},
+            {id: 'suppliers-stale', label: 'Qtd Fornecedores Desatualizados', value: metrics.suppliersStale, icon: 'person-lines-fill', tone: 'amber', href: path('kflow_module', {module: 'fornecedor'})}
+        ] %}
+        {% for card in dashboardCards %}
+            <article class="kflow-stat kflow-layout-card" data-layout-card="{{ card.id }}" draggable="false">
+                <button class="kflow-layout-card__hide" type="button" data-layout-hide title="Ocultar card" aria-label="Ocultar {{ card.label }}"><i class="bi bi-eye-slash"></i></button>
+                <a href="{{ card.href }}" class="kflow-stat__link">
+                    <span class="kflow-stat__icon kflow-tone-{{ card.tone }}"><i class="bi bi-{{ card.icon }}"></i></span>
+                    <div><small>{{ card.label }}</small><strong>{{ card.value }}</strong></div>
+                </a>
+            </article>
+        {% endfor %}
     </section>
+    <div class="kflow-layout-recovery" data-layout-recovery="dashboard" hidden><span>Cards ocultos neste painel.</span><button class="btn btn-sm btn-outline-primary" type="button" data-layout-reset="dashboard"><i class="bi bi-arrow-counterclockwise"></i>Restaurar padrão</button></div>
 
     <section class="kflow-workspace-grid">
         <div class="kflow-surface kflow-surface--wide">
