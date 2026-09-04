@@ -12,7 +12,8 @@
         <link rel="apple-touch-icon" href="/images/kflow360-logo.png">
         <link href="/vendor/bootstrap.min.css" rel="stylesheet">
         <link href="/vendor/bootstrap-icons.min.css" rel="stylesheet">
-        <link href="{{ asset('kflow.css') }}" rel="stylesheet">
+        {% set release = kflow_release() %}
+        <link href="{{ asset('kflow.css') }}?v={{ release.build }}" rel="stylesheet">
         {% block stylesheets %}{% endblock %}
     </head>
     <body id="{% block body_id %}{% endblock %}" class="kflow-body {{ app.user ? 'kflow-shell' : 'kflow-login-shell' }}{% block body_class %}{% endblock %}">
@@ -67,7 +68,7 @@
             {% endblock %}
         </div>
 
-        {% if app.user or app.request.pathInfo starts with '/login' %}<script type="module" src="{{ asset('kflow.js') }}"></script>{% else %}{% block importmap %}{{ importmap('app') }}{% endblock %}{% endif %}
+        {% if app.user or app.request.pathInfo starts with '/login' %}<script type="module" src="{{ asset('kflow.js') }}?v={{ release.build }}"></script>{% else %}{% block importmap %}{{ importmap('app') }}{% endblock %}{% endif %}
         {% block javascripts %}{% endblock %}
     </body>
 </html>

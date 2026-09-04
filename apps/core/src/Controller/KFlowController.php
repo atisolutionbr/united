@@ -933,7 +933,7 @@ final class KFlowController extends AbstractController
         $companyId = $this->currentCompany()->getId() ?? 0;
         $erp = strtolower($connection?->getErpName() ?? 'none');
         $revision = $connection?->getUpdatedAt()?->getTimestamp() ?? $connection?->getConfiguredAt()?->getTimestamp() ?? 0;
-        $key = sprintf('kflow.v2.%s.%d.%s.%d.%d', $type, $companyId, $erp, $revision, $page);
+        $key = sprintf('kflow.v3.%s.%d.%s.%d.%d', $type, $companyId, $erp, $revision, $page);
         if (null === $connection || !$load) {
             $item = $this->cache->getItem($key);
             return $item->isHit() ? (array) $item->get() : $this->emptyCachedResult($type);
@@ -942,13 +942,13 @@ final class KFlowController extends AbstractController
             $settings = $this->settingsForConnection($connection->getErpName(), ErpConnection::METHOD_DATABASE, $connection);
 
             if ('products' === $type) {
-                $result = $this->seniorProductCatalog->listProducts($this->effectiveMapping($connection), $settings, $page);
+                $result = $this->seniorProductCatalog->listProducts($this->productBinding($connection), $settings, $page);
             } elseif ('customers' === $type) {
                 $result = $this->seniorCustomerCatalog->listCustomers($this->partyBinding($connection, 'customers'), $settings, $page);
             } else {
                 $result = $this->seniorPartyCatalog->list($type, $this->partyBinding($connection, $type), $settings, $page);
             }
-            $item->expiresAfter(null === ($result['error'] ?? null) ? 300 : 10);
+            $item->expiresAfter(null === ($result['error'] ?? null) ? 300 : 1);
 
             return $result;
         });
@@ -974,6 +974,15 @@ final class KFlowController extends AbstractController
             $this->connectionProfile->defaultProductMapping('Senior'),
             $connection?->getProductMapping() ?? [],
         );
+    }
+
+    /** @return array<string, mixed> */
+    private function productBinding(?ErpConnection $connection): array
+    {
+        $binding = $this->partyBinding($connection, 'products');
+        $binding['mapping'] = array_replace($this->effectiveMapping($connection), is_array($binding['mapping'] ?? null) ? $binding['mapping'] : []);
+
+        return $binding;
     }
 
     /** @return array<string, mixed> */

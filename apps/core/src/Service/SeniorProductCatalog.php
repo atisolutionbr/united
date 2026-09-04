@@ -9,20 +9,14 @@ final class SeniorProductCatalog
     public function __construct(private readonly DatabaseSchemaInspector $database, private readonly LoggerInterface $logger) {}
 
     /** @return list<string> */
-    public function availableProductColumns(array $settings): array
+    public function availableProductColumns(array $settings, string $table = 'E075PRO'): array
     {
         if (!$this->database->isConfigured($settings)) {
             return [];
         }
 
         try {
-            $statement = $this->database->open($settings)->query(<<<'SQL'
-                SELECT COLUMN_NAME
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = 'E075PRO'
-                ORDER BY ORDINAL_POSITION
-                SQL);
-            $columns = $statement->fetchAll(\PDO::FETCH_COLUMN);
+            $columns = $this->database->columns($settings, $table)['columns'];
 
             return array_values(array_filter(array_map('strval', $columns)));
         } catch (\Throwable $exception) {
@@ -36,14 +30,16 @@ final class SeniorProductCatalog
      * @param array<string, string> $mapping
      * @return array{configured: bool, products: list<array<string, mixed>>, error: string|null, sourceTable: string, recordCount: int, page: int, perPage: int, pageCount: int, ncmUpdateAvailable: bool}
      */
-    public function listProducts(array $mapping, array $settings, int $page = 1, int $perPage = 10): array
+    public function listProducts(array $binding, array $settings, int $page = 1, int $perPage = 10): array
     {
+        $table = $this->validTable((string) ($binding['table'] ?? '')) ?: 'E075PRO';
+        $mapping = is_array($binding['mapping'] ?? null) ? $binding['mapping'] : [];
         if (!$this->database->isConfigured($settings)) {
-            return $this->emptyResult(false);
+            return $this->emptyResult(false, $table);
         }
 
         try {
-            $columns = $this->columnLookup($settings);
+            $columns = $this->columnLookup($settings, $table);
             $selects = [
                 $this->selectColumn('CodEmp', 'CodEmp', $columns),
                 $this->selectColumn('CodPro', 'CodPro', $columns),
@@ -71,14 +67,15 @@ final class SeniorProductCatalog
 
             $selects = array_values(array_unique(array_filter($selects)));
             $connection = $this->database->open($settings);
-            $recordCount = (int) $connection->query('SELECT COUNT(*) FROM [E075PRO]')->fetchColumn();
+            $quotedTable = $this->quoteTable($table);
+            $recordCount = (int) $connection->query(sprintf('SELECT COUNT(*) FROM %s', $quotedTable))->fetchColumn();
             $perPage = max(1, min(50, $perPage));
             $pageCount = max(1, (int) ceil($recordCount / $perPage));
             $page = max(1, min($page, $pageCount));
             $offset = ($page - 1) * $perPage;
             $statement = $connection->query(sprintf(
-                'SELECT %s FROM [E075PRO] ORDER BY [CodPro] OFFSET %d ROWS FETCH NEXT %d ROWS ONLY',
-                implode(', ', $selects),
+                'SELECT %s FROM %s ORDER BY [CodPro] OFFSET %d ROWS FETCH NEXT %d ROWS ONLY',
+                implode(', ', $selects), $quotedTable,
                 $offset,
                 $perPage,
             ));
@@ -95,7 +92,7 @@ final class SeniorProductCatalog
                 'configured' => true,
                 'products' => $products,
                 'error' => null,
-                'sourceTable' => 'E075PRO',
+                'sourceTable' => $table,
                 'recordCount' => $recordCount,
                 'page' => $page,
                 'perPage' => $perPage,
@@ -106,7 +103,7 @@ final class SeniorProductCatalog
             $this->logger->warning('Unable to read products from the Senior ERP.', ['exception' => $exception]);
 
             return [
-                ...$this->emptyResult(true),
+                ...$this->emptyResult(true, $table),
                 'error' => 'Não foi possível consultar a base Senior. Verifique o vínculo de banco e o mapeamento de campos.',
             ];
         }
@@ -121,10 +118,10 @@ final class SeniorProductCatalog
     }
 
     /** @return array<string, string> */
-    private function columnLookup(array $settings): array
+    private function columnLookup(array $settings, string $table): array
     {
         $lookup = [];
-        foreach ($this->availableProductColumns($settings) as $column) {
+        foreach ($this->availableProductColumns($settings, $table) as $column) {
             $lookup[strtolower($column)] = $column;
         }
 
@@ -153,18 +150,28 @@ final class SeniorProductCatalog
     }
 
     /** @return array{configured: bool, products: list<array<string, mixed>>, error: string|null, sourceTable: string, recordCount: int, page: int, perPage: int, pageCount: int, ncmUpdateAvailable: bool} */
-    private function emptyResult(bool $configured): array
+    private function emptyResult(bool $configured, string $table): array
     {
         return [
             'configured' => $configured,
             'products' => [],
             'error' => null,
-            'sourceTable' => 'E075PRO',
+            'sourceTable' => $table,
             'recordCount' => 0,
             'page' => 1,
             'perPage' => 10,
             'pageCount' => 1,
             'ncmUpdateAvailable' => false,
         ];
+    }
+
+    private function validTable(string $table): ?string
+    {
+        return preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/', $table) === 1 ? $table : null;
+    }
+
+    private function quoteTable(string $table): string
+    {
+        return implode('.', array_map(static fn (string $part): string => sprintf('[%s]', $part), explode('.', $table)));
     }
 }
