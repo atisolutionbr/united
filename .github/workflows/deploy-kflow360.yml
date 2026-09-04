@@ -26,7 +26,11 @@ jobs:
           DEPLOY_SSH_KEY_BASE64: ${{ vars.DEPLOY_SSH_KEY }}
         run: |
           test -n "$DEPLOY_SSH_KEY_BASE64"
-          echo "$DEPLOY_SSH_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/kflow360_deploy"
+          {
+            echo '-----BEGIN OPENSSH PRIVATE KEY-----'
+            echo "$DEPLOY_SSH_KEY_BASE64" | fold -w 70
+            echo '-----END OPENSSH PRIVATE KEY-----'
+          } > "$RUNNER_TEMP/kflow360_deploy"
           chmod 600 "$RUNNER_TEMP/kflow360_deploy"
 
       - name: Enviar pacote para a VPS
