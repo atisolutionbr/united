@@ -36,6 +36,7 @@ security:
                 # Secure the login form against CSRF
                 # Reference: https://symfony.com/doc/current/security/csrf.html
                 enable_csrf: true
+                success_handler: App\Security\KFlowLoginSuccessHandler
                 # The page users are redirect to when there is no previous page stored in the
                 # session (for example when the users access directly to the login page).
                 always_use_default_target_path: true
