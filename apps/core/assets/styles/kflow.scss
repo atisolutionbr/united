@@ -379,6 +379,7 @@ body.kflow-body {
 .kflow-layout-grid { position: relative; }
 .kflow-layout-card { position: relative; transition: box-shadow 160ms ease, opacity 160ms ease, transform 160ms ease; }
 .kflow-layout-card.is-layout-hidden { display: none; }
+.kflow-stat-grid > .kflow-layout-card.is-layout-hidden { display: flex !important; }
 .kflow-layout-card__hide { align-items: center; background: #fff; border: 2px solid #19385c; border-radius: 50%; box-shadow: 0 3px 7px rgba(0, 74, 124, 0.18); color: #59616d; display: none; height: 2.15rem; justify-content: center; position: absolute; right: 2.9rem; top: -0.55rem; width: 2.15rem; z-index: 4; }
 .kflow-layout-card__hide:hover { border-color: #2aa89d; color: #0076a3; }
 .is-layout-editing > .kflow-layout-card { box-shadow: 0 0 0 2px rgba(42, 168, 157, 0.58), 0 12px 25px rgba(0, 74, 124, 0.2); cursor: grab; }

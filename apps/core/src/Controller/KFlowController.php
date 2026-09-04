@@ -701,25 +701,27 @@ final class KFlowController extends AbstractController
     }
 
     #[Route('/erp/{erp}/forms', name: 'kflow_erp_forms_create', methods: ['POST'])]
-    public function createIntegrationForm(string $erp, Request $request): JsonResponse
+    public function createIntegrationForm(string $erp, Request $request): Response
     {
         $this->requireMenu('connections');
         $method = (string) $request->request->get('method');
         if (!$this->erpCatalog->supports($erp)
             || !array_key_exists($method, $this->connectionProfile->connectionMethods())
             || !$this->isCsrfTokenValid('create-integration-form-'.$erp.'-'.$method, (string) $request->request->get('_token'))) {
-            return $this->json(['ok' => false, 'message' => 'Não foi possível criar o formulário.'], Response::HTTP_FORBIDDEN);
+            throw $this->createAccessDeniedException();
         }
 
         $template = (string) $request->request->get('template');
         $definitions = $this->connectionProfile->databaseForms();
         if (!isset($definitions[$template])) {
-            return $this->json(['ok' => false, 'message' => 'Modelo de formulário inválido.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $this->addFlash('warning', 'Modelo de formulário inválido.');
+            return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method]);
         }
 
         $connection = $this->connectionFor($erp);
         if (!$connection instanceof ErpConnection) {
-            return $this->json(['ok' => false, 'message' => 'Salve a conexão antes de criar formulários.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $this->addFlash('warning', 'Salve a conexão antes de criar formulários.');
+            return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method]);
         }
 
         $settings = $connection->getSettingsForMethod($method);
@@ -732,14 +734,8 @@ final class KFlowController extends AbstractController
         $connection->setSettingsForMethod($method, $settings);
         $this->entityManager->flush();
 
-        return $this->json([
-            'ok' => true,
-            'form' => $form,
-            'delete' => [
-                'url' => $this->generateUrl('kflow_erp_forms_delete', ['erp' => $erp, 'form' => $form['id']]),
-                'token' => $this->csrfTokenManager->getToken('delete-integration-form-'.$erp.'-'.$method.'-'.$form['id'])->getValue(),
-            ],
-        ]);
+        $this->addFlash('success', sprintf('Formulário %s criado. Selecione a tabela de origem.', $label));
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => ErpConnection::METHOD_DATABASE === $method ? 'table' : 'mapping', 'form' => $form['id']]);
     }
 
     #[Route('/erp/{erp}/forms/{form}', name: 'kflow_erp_forms_delete', methods: ['POST'])]
