@@ -15,6 +15,7 @@ use App\Service\KFlowRelease;
 use App\Service\ProductFiscalIntelligence;
 use App\Service\ProductSanitizationService;
 use App\Service\SeniorCustomerCatalog;
+use App\Service\SeniorPartyCatalog;
 use App\Service\SeniorProductCatalog;
 use App\Service\SeniorWebServiceCatalog;
 use App\Service\SeniorWebServiceManager;
@@ -62,6 +63,7 @@ final class KFlowController extends AbstractController
         private readonly DatabaseSchemaInspector $databaseSchemaInspector,
         private readonly SeniorProductCatalog $seniorProductCatalog,
         private readonly SeniorCustomerCatalog $seniorCustomerCatalog,
+        private readonly SeniorPartyCatalog $seniorPartyCatalog,
         private readonly SeniorWebServiceCatalog $seniorWebServiceCatalog,
         private readonly SeniorWebServiceManager $seniorWebServiceManager,
         private readonly ProductFiscalIntelligence $fiscalIntelligence,
@@ -208,6 +210,18 @@ final class KFlowController extends AbstractController
             'activeErp' => $activeErp,
             'customerData' => $customerData,
         ]);
+    }
+
+    #[Route('/suppliers', name: 'kflow_suppliers', methods: ['GET'])]
+    public function suppliers(Request $request): Response
+    {
+        return $this->partyPage($request, 'suppliers', 'Fornecedores', 'fornecedor', 'truck', 'Fornecedor');
+    }
+
+    #[Route('/carriers', name: 'kflow_carriers', methods: ['GET'])]
+    public function carriers(Request $request): Response
+    {
+        return $this->partyPage($request, 'carriers', 'Transportadoras', 'transportador', 'truck-flatbed', 'Transportadora');
     }
 
     #[Route('/products/senior/fiscal', name: 'kflow_senior_product_fiscal', methods: ['POST'])]
@@ -490,6 +504,26 @@ final class KFlowController extends AbstractController
         return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, ...(ErpConnection::METHOD_DATABASE === $method ? ['step' => 'table'] : ['step' => 'mapping'])]);
     }
 
+    #[Route('/erp/{erp}/database/test', name: 'kflow_erp_database_test', methods: ['POST'])]
+    public function testDatabaseConnection(string $erp, Request $request): JsonResponse
+    {
+        $this->requireMenu('connections');
+        if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('test-erp-database-'.$erp, (string) $request->request->get('_token'))) {
+            return $this->json(['ok' => false, 'message' => 'Não foi possível validar a solicitação.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $connection = $this->connectionFor($erp);
+        $input = $request->request->all('settings');
+        $settings = $this->connectionProfile->settingsFromInput(
+            ErpConnection::METHOD_DATABASE,
+            is_array($input) ? $input : [],
+            $this->settingsForConnection($erp, ErpConnection::METHOD_DATABASE, $connection),
+        );
+        $result = $this->databaseSchemaInspector->test($settings);
+
+        return $this->json(['ok' => $result['connected'], 'message' => $result['message']], $result['connected'] ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
     #[Route('/erp/{erp}/database/binding', name: 'kflow_erp_database_binding', methods: ['POST'])]
     public function saveDatabaseBinding(string $erp, Request $request): Response
     {
@@ -755,6 +789,38 @@ final class KFlowController extends AbstractController
         return $this->access->activeErp($this->currentUser());
     }
 
+    private function partyPage(Request $request, string $type, string $title, string $module, string $icon, string $singular): Response
+    {
+        $this->requireMenu($this->menuForModule($module));
+        $connection = $this->activeConnection();
+        $activeErp = $connection?->getErpName();
+        $partyData = [
+            'configured' => false,
+            'parties' => [],
+            'error' => null,
+            'sourceTable' => 'suppliers' === $type ? 'E095FOR' : 'E073TRA',
+            'recordCount' => 0,
+            'page' => 1,
+            'perPage' => 10,
+            'pageCount' => 1,
+            'missingAddressCount' => 0,
+            'staleCount' => 0,
+        ];
+        if ('Senior' === $activeErp) {
+            $partyData = $this->cachedResult($type, max(1, $request->query->getInt('page', 1)), $connection);
+        }
+
+        return $this->render('kflow/parties.html.twig', [
+            'activeErp' => $activeErp,
+            'partyData' => $partyData,
+            'partyType' => $type,
+            'title' => $title,
+            'singular' => $singular,
+            'icon' => $icon,
+            'module' => $module,
+        ]);
+    }
+
     private function activeConnection(): ?ErpConnection
     {
         $erp = $this->activeErp();
@@ -851,16 +917,34 @@ final class KFlowController extends AbstractController
         $key = sprintf('kflow.%s.%d.%s.%d', $type, $companyId, $erp, $page);
         if (null === $connection || !$load) {
             $item = $this->cache->getItem($key);
-            return $item->isHit() ? (array) $item->get() : ($type === 'products' ? ['recordCount' => 0, 'products' => []] : ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0]);
+            return $item->isHit() ? (array) $item->get() : $this->emptyCachedResult($type);
         }
         return $this->cache->get($key, function (ItemInterface $item) use ($type, $page, $connection): array {
             $item->expiresAfter(45);
             $settings = $this->settingsForConnection($connection->getErpName(), ErpConnection::METHOD_DATABASE, $connection);
 
-            return 'products' === $type
-                ? $this->seniorProductCatalog->listProducts($this->effectiveMapping($connection), $settings, $page)
-                : $this->seniorCustomerCatalog->listCustomers($this->customerBinding($connection), $settings, $page);
+            if ('products' === $type) {
+                return $this->seniorProductCatalog->listProducts($this->effectiveMapping($connection), $settings, $page);
+            }
+            if ('customers' === $type) {
+                return $this->seniorCustomerCatalog->listCustomers($this->partyBinding($connection, 'customers'), $settings, $page);
+            }
+
+            return $this->seniorPartyCatalog->list($type, $this->partyBinding($connection, $type), $settings, $page);
         });
+    }
+
+    /** @return array<string, mixed> */
+    private function emptyCachedResult(string $type): array
+    {
+        if ('products' === $type) {
+            return ['recordCount' => 0, 'products' => []];
+        }
+        if ('customers' === $type) {
+            return ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0];
+        }
+
+        return ['recordCount' => 0, 'parties' => [], 'missingAddressCount' => 0, 'staleCount' => 0];
     }
 
     /** @return array<string, string> */
@@ -873,12 +957,12 @@ final class KFlowController extends AbstractController
     }
 
     /** @return array<string, mixed> */
-    private function customerBinding(?ErpConnection $connection): array
+    private function partyBinding(?ErpConnection $connection, string $form): array
     {
         $settings = $connection?->getSettingsForMethod(ErpConnection::METHOD_DATABASE) ?? [];
         $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
 
-        return is_array($bindings['customers'] ?? null) ? $bindings['customers'] : [];
+        return is_array($bindings[$form] ?? null) ? $bindings[$form] : [];
     }
 
     /** @param array<string, mixed> $settings
@@ -888,8 +972,12 @@ final class KFlowController extends AbstractController
     private function configuredForms(array $settings, array $definitions): array
     {
         $forms = $settings['form_catalog'] ?? [];
+        $baseForms = [];
+        foreach ($definitions as $template => $definition) {
+            $baseForms[] = ['id' => $template, 'label' => $definition['label'], 'template' => $template];
+        }
         if (!is_array($forms) || [] === $forms) {
-            return [['id' => 'products', 'label' => $definitions['products']['label'], 'template' => 'products']];
+            return $baseForms;
         }
 
         $normalized = [];
@@ -904,7 +992,13 @@ final class KFlowController extends AbstractController
             $normalized[] = ['id' => $id, 'label' => (string) ($form['label'] ?? $definitions[$form['template']]['label']), 'template' => (string) $form['template']];
         }
 
-        return [] !== $normalized ? $normalized : [['id' => 'products', 'label' => $definitions['products']['label'], 'template' => 'products']];
+        foreach ($baseForms as $baseForm) {
+            if (!in_array($baseForm['id'], array_column($normalized, 'id'), true)) {
+                $normalized[] = $baseForm;
+            }
+        }
+
+        return [] !== $normalized ? $normalized : $baseForms;
     }
 
     /** @param list<array{id: string, label: string, template: string}> $forms

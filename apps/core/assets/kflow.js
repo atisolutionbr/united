@@ -110,3 +110,60 @@ document.querySelector('[data-company-form]')?.addEventListener('change', async 
         status.textContent = [data.address, data.phone, data.email].filter(Boolean).join(' · ') || 'Dados encontrados.';
     } catch (error) { status.textContent = error instanceof Error ? error.message : 'Consulta indisponível.'; }
 });
+
+document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-database-test]');
+    if (!(button instanceof HTMLButtonElement)) return;
+    const form = button.closest('form');
+    const status = form?.querySelector('[data-database-test-status]');
+    if (!(form instanceof HTMLFormElement) || !(status instanceof HTMLElement) || button.disabled) return;
+    if (!form.reportValidity()) return;
+
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Testando';
+    status.classList.remove('is-success', 'is-error');
+    status.innerHTML = '<span><i class="bi bi-arrow-repeat"></i>Conectando diretamente ao ERP...</span>';
+    try {
+        const payload = new FormData(form);
+        payload.set('_token', button.dataset.token || '');
+        const response = await fetch(button.dataset.url || '', {method: 'POST', body: payload, headers: {'X-Requested-With': 'XMLHttpRequest'}});
+        const data = await response.json();
+        status.classList.add(data.ok ? 'is-success' : 'is-error');
+        status.innerHTML = `<span><i class="bi bi-${data.ok ? 'check-circle-fill' : 'exclamation-triangle-fill'}"></i>${data.message || 'Não foi possível concluir o teste.'}</span>`;
+    } catch {
+        status.classList.add('is-error');
+        status.innerHTML = '<span><i class="bi bi-exclamation-triangle-fill"></i>Não foi possível concluir o teste de conexão.</span>';
+    } finally {
+        button.disabled = false;
+        button.innerHTML = original;
+    }
+});
+
+document.querySelectorAll('[data-company-picker]').forEach((picker) => {
+    const filter = picker.querySelector('[data-company-filter]');
+    const options = [...picker.querySelectorAll('[data-company-option]')];
+    const count = picker.querySelector('[data-company-selected-count]');
+    const selectVisible = picker.querySelector('[data-company-select-visible]');
+    const sync = () => {
+        const selected = options.filter((option) => option.querySelector('input')?.checked).length;
+        if (count) count.textContent = String(selected);
+    };
+    const applyFilter = () => {
+        const term = filter instanceof HTMLInputElement ? filter.value.trim().toLocaleLowerCase('pt-BR') : '';
+        options.forEach((option) => option.hidden = !option.textContent.toLocaleLowerCase('pt-BR').includes(term));
+    };
+    filter?.addEventListener('input', applyFilter);
+    picker.addEventListener('change', (event) => { if (event.target instanceof HTMLInputElement && event.target.type === 'checkbox') sync(); });
+    selectVisible?.addEventListener('click', () => { options.filter((option) => !option.hidden).forEach((option) => { const input = option.querySelector('input'); if (input instanceof HTMLInputElement) input.checked = true; }); sync(); });
+    sync();
+});
+
+document.querySelectorAll('[data-party-select]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const party = JSON.parse(button.dataset.party ?? '{}');
+        document.querySelectorAll('[data-party-row]').forEach((row) => row.classList.remove('is-selected'));
+        button.closest('[data-party-row]')?.classList.add('is-selected');
+        document.querySelectorAll('[data-party-field]').forEach((field) => field.textContent = party[field.dataset.partyField] || 'Não informado');
+    });
+});

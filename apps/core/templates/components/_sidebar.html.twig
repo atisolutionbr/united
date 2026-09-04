@@ -27,8 +27,8 @@
             <div class="kflow-nav__submenu">
                 {% if kflow_can('products') %}<a href="{{ path('kflow_products') }}" class="{{ route == 'kflow_products' ? 'is-active' }}">Produtos</a>{% endif %}
                 {% if kflow_can('clients') %}<a href="{{ path('kflow_clients') }}" class="{{ route == 'kflow_clients' ? 'is-active' }}">Clientes</a>{% endif %}
-                {% if kflow_can('suppliers') %}<a href="{{ path('kflow_module', {module: 'fornecedor'}) }}" class="{{ pathInfo ends with '/fornecedor' ? 'is-active' }}">Fornecedor</a>{% endif %}
-                {% if kflow_can('carriers') %}<a href="{{ path('kflow_module', {module: 'transportador'}) }}" class="{{ pathInfo ends with '/transportador' ? 'is-active' }}">Transportador</a>{% endif %}
+                {% if kflow_can('suppliers') %}<a href="{{ path('kflow_suppliers') }}" class="{{ route == 'kflow_suppliers' ? 'is-active' }}">Fornecedores</a>{% endif %}
+                {% if kflow_can('carriers') %}<a href="{{ path('kflow_carriers') }}" class="{{ route == 'kflow_carriers' ? 'is-active' }}">Transportadoras</a>{% endif %}
             </div>
         </div>{% endif %}
 

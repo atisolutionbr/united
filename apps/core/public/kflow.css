@@ -13493,35 +13493,114 @@ body.kflow-body {
   color: var(--kflow-muted);
 }
 
+.kflow-about-hero {
+  align-items: end;
+  border-bottom: 1px solid #c9dde4;
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+  margin: -0.25rem 0 1.5rem;
+  padding: 0.35rem 0 1.5rem;
+}
+
+.kflow-about-hero h1, .kflow-about-hero .h1 {
+  margin: 0.3rem 0 0.4rem;
+}
+
+.kflow-about-hero p {
+  color: var(--kflow-muted);
+  max-width: 42rem;
+}
+
+.kflow-about-release {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(8rem, 1fr));
+  min-width: 20rem;
+}
+
+.kflow-about-release > div {
+  align-items: center;
+  background: linear-gradient(135deg, #004a7c, #0076a3 68%, #2aa89d);
+  border-radius: 7px;
+  box-shadow: 0 7px 13px rgba(0, 74, 124, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  color: #fff;
+  display: flex;
+  gap: 0.65rem;
+  min-height: 4.7rem;
+  padding: 0.7rem;
+}
+
+.kflow-about-release > div:nth-child(2) {
+  background: linear-gradient(135deg, #19385c, #004a7c 58%, #2aa89d);
+}
+
+.kflow-about-release i {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.17);
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 1.2rem;
+  height: 2.35rem;
+  justify-content: center;
+  width: 2.35rem;
+}
+
+.kflow-about-release span, .kflow-about-release strong {
+  display: block;
+}
+
+.kflow-about-release span {
+  font-size: 0.72rem;
+  opacity: 0.86;
+}
+
+.kflow-about-release strong {
+  font-size: 1.05rem;
+  margin-top: 0.12rem;
+  opacity: 1;
+}
+
 .kflow-about-layout {
-  display: grid;
-  gap: 1.15rem;
-  grid-template-columns: minmax(0, 38rem);
-}
-
-.kflow-about-card {
-  display: grid;
-  gap: 1rem;
-}
-
-.kflow-about-version {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 72rem;
 }
 
-.kflow-about-version div, .kflow-about-contact div {
+.kflow-about-card {
+  align-content: start;
   display: grid;
-  gap: 0.2rem;
+  gap: 1rem;
+  min-height: 22rem;
 }
 
-.kflow-about-version small, .kflow-about-version .small, .kflow-about-contact small, .kflow-about-contact .small {
+.kflow-about-card__heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.8rem;
+}
+
+.kflow-about-card__heading h2, .kflow-about-card__heading .h2 {
+  margin: 0.15rem 0 0.25rem;
+}
+
+.kflow-about-card__heading p {
   color: var(--kflow-muted);
-  font-size: 0.75rem;
+  font-size: 0.86rem;
 }
 
-.kflow-about-version strong {
-  font-size: 1.1rem;
+.kflow-about-card__icon {
+  align-items: center;
+  background: #e3f4f2;
+  border-radius: 6px;
+  color: var(--kflow-primary);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 1.25rem;
+  height: 2.75rem;
+  justify-content: center;
+  width: 2.75rem;
 }
 
 .kflow-about-copy {
@@ -13570,6 +13649,137 @@ body.kflow-body {
 .kflow-about-contact a:hover {
   color: var(--kflow-primary);
   text-decoration: underline;
+}
+
+.kflow-company-picker {
+  border: 1px solid #c8dce3;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.kflow-company-picker__tabs {
+  background: #f4f8fa;
+  border-bottom: 1px solid #c8dce3;
+  padding: 0.35rem 0.45rem 0;
+}
+
+.kflow-company-picker__tabs button {
+  background: #fff;
+  border: 1px solid #b8d3dc;
+  border-bottom: 2px solid var(--kflow-primary);
+  border-radius: 6px 6px 0 0;
+  color: var(--kflow-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.kflow-company-picker__tabs button span {
+  background: var(--kflow-primary-soft);
+  border-radius: 10px;
+  color: #0d6863;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.38rem;
+}
+
+.kflow-company-picker__tools {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.65rem;
+}
+
+.kflow-company-picker__tools .input-group {
+  flex: 1;
+}
+
+.kflow-company-picker__tools .btn {
+  min-height: 2.35rem;
+  white-space: nowrap;
+}
+
+.kflow-company-picker__list {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 15rem;
+  overflow: auto;
+  padding: 0 0.65rem 0.65rem;
+}
+
+.kflow-company-picker__list label {
+  align-items: center;
+  border: 1px solid #d5e3e8;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  gap: 0.55rem;
+  margin: 0;
+  min-height: 3.3rem;
+  padding: 0.45rem 0.6rem;
+}
+
+.kflow-company-picker__list label:hover {
+  background: #f2fbfa;
+  border-color: #9ed6ce;
+}
+
+.kflow-company-picker__list label > span {
+  display: grid;
+  min-width: 0;
+}
+
+.kflow-company-picker__list strong {
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kflow-company-picker__list small, .kflow-company-picker__list .small {
+  color: var(--kflow-muted);
+  font-size: 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kflow-database-test {
+  align-items: center;
+  background: #f5fafb;
+  border: 1px solid #cde1e6;
+  border-radius: 6px;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding: 0.75rem;
+}
+
+.kflow-database-test > span {
+  align-items: center;
+  color: var(--kflow-muted);
+  display: inline-flex;
+  font-size: 0.78rem;
+  gap: 0.45rem;
+}
+
+.kflow-database-test.is-success {
+  background: #effaf7;
+  border-color: #9fd8cf;
+}
+
+.kflow-database-test.is-success > span {
+  color: #087269;
+}
+
+.kflow-database-test.is-error {
+  background: #fff6f3;
+  border-color: #edc1b5;
+}
+
+.kflow-database-test.is-error > span {
+  color: #a4442e;
 }
 
 .kflow-erp-grid {

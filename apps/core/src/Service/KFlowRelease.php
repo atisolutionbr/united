@@ -5,7 +5,7 @@ namespace App\Service;
 final class KFlowRelease
 {
     // Increment this number on every delivered change. The month/year rolls over automatically.
-    private const BUILD_SEQUENCE = 44;
+    private const BUILD_SEQUENCE = 45;
 
     /** @return array{version: string, build: string} */
     public function current(): array

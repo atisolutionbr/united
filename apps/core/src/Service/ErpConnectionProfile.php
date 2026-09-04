@@ -57,6 +57,12 @@ final class ErpConnectionProfile
                 'document' => ['label' => 'CPF / CNPJ', 'hint' => 'Documento fiscal do fornecedor.'],
                 'email' => ['label' => 'E-mail', 'hint' => 'E-mail principal de contato.'],
             ]],
+            'carriers' => ['label' => 'Transportadoras', 'fields' => [
+                'carrier_code' => ['label' => 'Código da transportadora', 'hint' => 'Identificador da transportadora no ERP.'],
+                'name' => ['label' => 'Nome / razão social', 'hint' => 'Nome principal da transportadora.'],
+                'document' => ['label' => 'CPF / CNPJ', 'hint' => 'Documento fiscal da transportadora.'],
+                'phone' => ['label' => 'Telefone', 'hint' => 'Telefone principal de contato.'],
+            ]],
         ];
     }
 

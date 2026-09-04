@@ -26,8 +26,8 @@
             {id: 'products', label: 'Qtd Produtos na base' ~ (activeErp ? ' (' ~ activeErp ~ ')' : ''), value: metrics.products, icon: 'box-seam', tone: 'teal', href: path('kflow_products')},
             {id: 'clients-address', label: 'Qtd Clientes S/ Endereço', value: metrics.clientsMissingAddress, icon: 'geo-alt', tone: 'amber', href: path('kflow_clients', {focus: 'sanitization'})},
             {id: 'clients-stale', label: 'Qtd Clientes Desatualizados', value: metrics.clientsStale, icon: 'person-exclamation', tone: 'blue', href: path('kflow_clients', {focus: 'fiscal'})},
-            {id: 'suppliers-address', label: 'Qtd Fornecedores S/ Endereço', value: metrics.suppliersMissingAddress, icon: 'truck', tone: 'teal', href: path('kflow_module', {module: 'fornecedor'})},
-            {id: 'suppliers-stale', label: 'Qtd Fornecedores Desatualizados', value: metrics.suppliersStale, icon: 'person-lines-fill', tone: 'amber', href: path('kflow_module', {module: 'fornecedor'})}
+            {id: 'suppliers-address', label: 'Qtd Fornecedores S/ Endereço', value: metrics.suppliersMissingAddress, icon: 'truck', tone: 'teal', href: path('kflow_suppliers')},
+            {id: 'suppliers-stale', label: 'Qtd Fornecedores Desatualizados', value: metrics.suppliersStale, icon: 'person-lines-fill', tone: 'amber', href: path('kflow_suppliers')}
         ] %}
         {% for card in dashboardCards %}
             <article class="kflow-stat kflow-layout-card" data-layout-card="{{ card.id }}" draggable="false">

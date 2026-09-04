@@ -86,6 +86,20 @@ final class DatabaseSchemaInspector
             && '' !== $this->secretCipher->decrypt((string) ($settings['password_encrypted'] ?? ''));
     }
 
+    /** @param array<string, mixed> $settings
+     *  @return array{connected: bool, message: string}
+     */
+    public function test(array $settings): array
+    {
+        try {
+            $this->open($settings)->query('SELECT 1')->fetchColumn();
+
+            return ['connected' => true, 'message' => 'Conexão estabelecida com sucesso.'];
+        } catch (\Throwable) {
+            return ['connected' => false, 'message' => 'Não foi possível conectar. Revise IP/DNS, porta, banco, usuário e senha.'];
+        }
+    }
+
     /** @param array<string, mixed> $settings */
     public function open(array $settings): \PDO
     {

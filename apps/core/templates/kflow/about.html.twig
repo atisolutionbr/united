@@ -4,14 +4,14 @@
 {% block page_title %}Sobre{% endblock %}
 
 {% block main %}
-    <section class="kflow-page-heading kflow-page-heading--compact">
-        <div><span class="kflow-eyebrow">KFlow360</span><h1>Informações da plataforma</h1><p>Versão, diagnóstico técnico e canais da Ati Solution.</p></div>
+    <section class="kflow-about-hero">
+        <div><span class="kflow-eyebrow">KFlow360 · Integration Platform</span><h1>Informações da plataforma</h1><p>Versão instalada, diagnóstico técnico e canais oficiais da Ati Solution.</p></div>
+        <div class="kflow-about-release"><div><i class="bi bi-box-seam"></i><span>Versão<strong>{{ release.version }}</strong></span></div><div><i class="bi bi-hash"></i><span>Build<strong>{{ release.build }}</strong></span></div></div>
     </section>
 
     <div class="kflow-about-layout">
-        <section class="kflow-surface kflow-about-card">
-            <span class="kflow-eyebrow">Versão</span>
-            <div class="kflow-about-version"><div><small>Versão</small><strong>{{ release.version }}</strong></div><div><small>Build</small><strong>{{ release.build }}</strong></div></div>
+        <section class="kflow-surface kflow-about-card kflow-about-card--diagnostic">
+            <div class="kflow-about-card__heading"><span class="kflow-about-card__icon"><i class="bi bi-clipboard2-pulse"></i></span><div><span class="kflow-eyebrow">Diagnóstico</span><h2>Informações para suporte</h2><p>Gere um resumo técnico da sessão atual para compartilhar com a equipe de atendimento.</p></div></div>
             <button class="btn kflow-about-copy" type="button" data-diagnostic-copy><i class="bi bi-copy"></i>Copiar informações de diagnóstico</button>
             <p class="kflow-input-help">Inclui versão, build, empresa, ERP, sessão, navegador e tamanho da tela.</p>
             <pre class="visually-hidden" data-diagnostic-base>Diagnóstico — KFlow360
@@ -34,8 +34,8 @@ E-mail: contato@atisolution.com.br
 CNPJ: 55.044.004/0001-63</pre>
         </section>
 
-        <section class="kflow-surface kflow-about-card">
-            <span class="kflow-eyebrow">Ati Solution</span>
+        <section class="kflow-surface kflow-about-card kflow-about-card--contact">
+            <div class="kflow-about-card__heading"><span class="kflow-about-card__icon"><i class="bi bi-headset"></i></span><div><span class="kflow-eyebrow">Ati Solution</span><h2>Canais de atendimento</h2><p>Fale com a nossa equipe comercial, técnica ou de implantação.</p></div></div>
             <div class="kflow-about-contact"><i class="bi bi-globe2"></i><div><small>Site</small><a href="https://atisolution.com.br" target="_blank" rel="noopener">www.atisolution.com.br</a></div></div>
             <div class="kflow-about-contact"><i class="bi bi-telephone"></i><div><small>Contato</small><strong>(27) 3535-0168</strong></div></div>
             <div class="kflow-about-contact"><i class="bi bi-envelope"></i><div><small>E-mail</small><a href="mailto:contato@atisolution.com.br">contato@atisolution.com.br</a></div></div>
