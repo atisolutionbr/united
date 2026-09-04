@@ -1,4 +1,4 @@
-const CACHE = 'kflow360-shell-v56';
+const CACHE = 'kflow360-shell-v57';
 const SHELL = ['/login', '/manifest.webmanifest', '/images/kflow360-logo.png'];
 self.addEventListener('install', (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (event) => event.waitUntil(

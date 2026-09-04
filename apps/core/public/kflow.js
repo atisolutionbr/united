@@ -30,13 +30,14 @@ document.querySelector('[data-login-form]')?.addEventListener('submit', (event) 
     form.querySelector('[data-login-loading]')?.removeAttribute('hidden');
 });
 
-const layoutKey = (name) => `kflow-layout-v6-${name}`;
+const layoutKey = (name) => `kflow-layout-v7-${name}`;
 const legacyLayoutKeys = (name) => [
     `kflow-layout-${name}`,
     `kflow-layout-v2-${name}`,
     `kflow-layout-v3-${name}`,
     `kflow-layout-v4-${name}`,
     `kflow-layout-v5-${name}`,
+    `kflow-layout-v6-${name}`,
 ];
 const cards = (grid) => [...grid.querySelectorAll(':scope > [data-layout-card]')];
 const syncLayoutRecovery = (grid) => {
@@ -48,6 +49,7 @@ document.querySelectorAll('[data-layout-grid]').forEach((grid) => {
     legacyLayoutKeys(name).forEach((key) => localStorage.removeItem(key));
     try {
         const saved = JSON.parse(localStorage.getItem(layoutKey(name)) || '{}');
+        if (Array.isArray(saved.order) || Array.isArray(saved.hidden)) grid.classList.add('has-saved-layout');
         saved.order?.forEach((id) => { const card = cards(grid).find((item) => item.dataset.layoutCard === id); if (card) grid.append(card); });
         const hidden = Array.isArray(saved.hidden) ? saved.hidden : [];
         if (hidden.length >= cards(grid).length) {
@@ -73,7 +75,14 @@ document.querySelectorAll('[data-layout-customize]').forEach((button) => button.
     const scope = button.dataset.layoutCustomize;
     const grids = [...document.querySelectorAll('[data-layout-grid]')].filter((grid) => grid.dataset.layoutGrid?.startsWith(scope));
     const editing = button.classList.toggle('is-editing');
-        grids.forEach((grid) => { grid.classList.toggle('is-layout-editing', editing); cards(grid).forEach((card) => card.draggable = editing); });
+        grids.forEach((grid) => {
+            grid.classList.toggle('is-layout-editing', editing);
+            if (editing) {
+                grid.classList.add('has-saved-layout');
+                cards(grid).forEach((card) => card.classList.remove('is-layout-hidden'));
+            }
+            cards(grid).forEach((card) => card.draggable = editing);
+        });
     if (!editing) grids.forEach((grid) => { localStorage.setItem(layoutKey(grid.dataset.layoutGrid), JSON.stringify({order: cards(grid).map((card) => card.dataset.layoutCard), hidden: cards(grid).filter((card) => card.classList.contains('is-layout-hidden')).map((card) => card.dataset.layoutCard)})); syncLayoutRecovery(grid); });
     button.innerHTML = editing ? '<i class="bi bi-floppy"></i>Salvar layout' : '<i class="bi bi-sliders"></i>Personalizar';
     document.querySelector(`[data-layout-cancel="${scope}"]`)?.toggleAttribute('hidden', !editing);
@@ -85,6 +94,7 @@ document.addEventListener('click', async (event) => {
         document.querySelectorAll('[data-layout-grid]').forEach((grid) => {
             if (!grid.dataset.layoutGrid?.startsWith(scope || '')) return;
             grid.classList.remove('is-layout-editing');
+            grid.classList.remove('has-saved-layout');
             localStorage.removeItem(layoutKey(grid.dataset.layoutGrid));
             cards(grid).forEach((card) => { card.draggable = false; card.classList.remove('is-layout-hidden'); });
             syncLayoutRecovery(grid);
@@ -122,7 +132,7 @@ document.addEventListener('click', async (event) => {
     if (!next || !current) return location.assign(link.href);
     current.replaceWith(next); history.pushState({}, '', link.href);
 });
-if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=56', {updateViaCache: 'none'}));
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=57', {updateViaCache: 'none'}));
 
 document.querySelector('[data-diagnostic-copy]')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;
