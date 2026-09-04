@@ -30,12 +30,13 @@ document.querySelector('[data-login-form]')?.addEventListener('submit', (event) 
     form.querySelector('[data-login-loading]')?.removeAttribute('hidden');
 });
 
-const layoutKey = (name) => `kflow-layout-v5-${name}`;
+const layoutKey = (name) => `kflow-layout-v6-${name}`;
 const legacyLayoutKeys = (name) => [
     `kflow-layout-${name}`,
     `kflow-layout-v2-${name}`,
     `kflow-layout-v3-${name}`,
     `kflow-layout-v4-${name}`,
+    `kflow-layout-v5-${name}`,
 ];
 const cards = (grid) => [...grid.querySelectorAll(':scope > [data-layout-card]')];
 const syncLayoutRecovery = (grid) => {
@@ -84,7 +85,9 @@ document.addEventListener('click', async (event) => {
         document.querySelectorAll('[data-layout-grid]').forEach((grid) => {
             if (!grid.dataset.layoutGrid?.startsWith(scope || '')) return;
             grid.classList.remove('is-layout-editing');
+            localStorage.removeItem(layoutKey(grid.dataset.layoutGrid));
             cards(grid).forEach((card) => { card.draggable = false; card.classList.remove('is-layout-hidden'); });
+            syncLayoutRecovery(grid);
         });
         const customize = document.querySelector(`[data-layout-customize="${scope}"]`);
         customize?.classList.remove('is-editing');
@@ -119,7 +122,7 @@ document.addEventListener('click', async (event) => {
     if (!next || !current) return location.assign(link.href);
     current.replaceWith(next); history.pushState({}, '', link.href);
 });
-if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=55', {updateViaCache: 'none'}));
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=56', {updateViaCache: 'none'}));
 
 document.querySelector('[data-diagnostic-copy]')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;
