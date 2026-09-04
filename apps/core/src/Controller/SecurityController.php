@@ -50,7 +50,7 @@ final class SecurityController extends AbstractController
         // page, after a successful login you are redirected to a page in the previous
         // locale. This code regenerates the referrer URL whenever the login page is
         // browsed, to ensure that its locale is always the current one.
-        $this->saveTargetPath($request->getSession(), 'main', $this->generateUrl('kflow_dashboard'));
+        $this->saveTargetPath($request->getSession(), 'main', '/kflow');
 
         return $this->render('security/login.html.twig', [
             // last username entered by the user (if any)
