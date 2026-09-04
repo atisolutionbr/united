@@ -41,7 +41,7 @@ class NaturalLanguageSqlService
 
         $model = $this->providerService->resolveDefaultModel();
         if ($model === null) {
-            return ['success' => false, 'error' => 'Nenhum modelo de IA configurado.', 'sql' => null];
+            return ['success' => false, 'error' => 'Nenhum serviço de consulta assistida configurado.', 'sql' => null];
         }
 
         $result = $this->providerService->dispatch(

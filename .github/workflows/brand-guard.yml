@@ -1,0 +1,23 @@
+name: Proteção de marca
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  verify-brand:
+    name: Verificar identidade Ati Solution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar fonte e documentação entregue
+        run: docker run --rm -v "$PWD:/workspace:ro" -w /workspace php:8.3-cli php tools/verify_ati_branding.php
+      - name: Iniciar aplicação para verificação
+        run: docker compose up -d --build postgres php nginx
+      - name: Verificar fonte, documentação, bundles, banco, logs e resposta HTTP
+        run: |
+          docker compose cp tools/verify_ati_branding.php php:/tmp/verify_ati_branding.php
+          docker compose exec -T -e BRAND_VERIFY_ROOT=/var/www/html php php /tmp/verify_ati_branding.php --database --http=http://nginx/login
+      - name: Encerrar serviços locais
+        if: always()
+        run: docker compose down -v

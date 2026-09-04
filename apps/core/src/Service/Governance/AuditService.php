@@ -63,7 +63,7 @@ class AuditService
     {
         $this->log(
             action: AuditLog::ACTION_AI_QUERY,
-            description: "Consulta IA via {$provider} · Modelo: {$model} · Usuário: {$userIdentifier}",
+            description: "Consulta assistida via {$provider} · Modelo: {$model} · Usuário: {$userIdentifier}",
             entityType: 'AiInteraction',
             userIdentifier: $userIdentifier,
         );

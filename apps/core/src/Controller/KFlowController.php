@@ -87,7 +87,12 @@ final class KFlowController extends AbstractController
         $activeErp = $connection?->getErpName();
         $products = ['recordCount' => 0, 'products' => []];
         $customers = ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0];
-        if ('Senior' === $activeErp) { $products = $this->cachedResult('products', 1, $connection, false); $customers = $this->cachedResult('customers', 1, $connection, false); }
+        $suppliers = ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0];
+        if ('Senior' === $activeErp) {
+            $products = $this->cachedResult('products', 1, $connection);
+            $customers = $this->cachedResult('customers', 1, $connection);
+            $suppliers = $this->cachedResult('suppliers', 1, $connection);
+        }
         $productSample = $products['products'] ?? [];
         $sanitization = $this->sanitizationService->analyze($productSample);
         $fiscalPending = count(array_filter($productSample, static fn (array $product): bool => '' === trim((string) ($product['Ncm'] ?? ''))));
@@ -101,8 +106,8 @@ final class KFlowController extends AbstractController
                 'products' => (int) ($products['recordCount'] ?? 0),
                 'clientsMissingAddress' => (int) ($customers['missingAddressCount'] ?? 0),
                 'clientsStale' => (int) ($customers['staleCount'] ?? 0),
-                'suppliersMissingAddress' => 0,
-                'suppliersStale' => 0,
+                'suppliersMissingAddress' => (int) ($suppliers['missingAddressCount'] ?? 0),
+                'suppliersStale' => (int) ($suppliers['staleCount'] ?? 0),
             ],
         ]);
     }
@@ -487,6 +492,13 @@ final class KFlowController extends AbstractController
                     $mappingInput,
                     $this->connectionProfile->availableColumns($erp, $method),
                 );
+            }
+
+            $validation = $this->databaseSchemaInspector->test($settings);
+            if (!$validation['connected']) {
+                $this->addFlash('warning', $validation['message']);
+
+                return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'connection']);
             }
         }
 
@@ -914,23 +926,25 @@ final class KFlowController extends AbstractController
     {
         $companyId = $this->currentCompany()->getId() ?? 0;
         $erp = strtolower($connection?->getErpName() ?? 'none');
-        $key = sprintf('kflow.%s.%d.%s.%d', $type, $companyId, $erp, $page);
+        $revision = $connection?->getUpdatedAt()?->getTimestamp() ?? $connection?->getConfiguredAt()?->getTimestamp() ?? 0;
+        $key = sprintf('kflow.v2.%s.%d.%s.%d.%d', $type, $companyId, $erp, $revision, $page);
         if (null === $connection || !$load) {
             $item = $this->cache->getItem($key);
             return $item->isHit() ? (array) $item->get() : $this->emptyCachedResult($type);
         }
         return $this->cache->get($key, function (ItemInterface $item) use ($type, $page, $connection): array {
-            $item->expiresAfter(45);
             $settings = $this->settingsForConnection($connection->getErpName(), ErpConnection::METHOD_DATABASE, $connection);
 
             if ('products' === $type) {
-                return $this->seniorProductCatalog->listProducts($this->effectiveMapping($connection), $settings, $page);
+                $result = $this->seniorProductCatalog->listProducts($this->effectiveMapping($connection), $settings, $page);
+            } elseif ('customers' === $type) {
+                $result = $this->seniorCustomerCatalog->listCustomers($this->partyBinding($connection, 'customers'), $settings, $page);
+            } else {
+                $result = $this->seniorPartyCatalog->list($type, $this->partyBinding($connection, $type), $settings, $page);
             }
-            if ('customers' === $type) {
-                return $this->seniorCustomerCatalog->listCustomers($this->partyBinding($connection, 'customers'), $settings, $page);
-            }
+            $item->expiresAfter(null === ($result['error'] ?? null) ? 300 : 10);
 
-            return $this->seniorPartyCatalog->list($type, $this->partyBinding($connection, $type), $settings, $page);
+            return $result;
         });
     }
 

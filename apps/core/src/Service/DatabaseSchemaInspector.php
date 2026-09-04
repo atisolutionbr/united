@@ -92,11 +92,16 @@ final class DatabaseSchemaInspector
     public function test(array $settings): array
     {
         try {
-            $this->open($settings)->query('SELECT 1')->fetchColumn();
+            $statement = $this->open($settings)->query(<<<'SQL'
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.TABLES
+                WHERE TABLE_TYPE = 'BASE TABLE'
+                SQL);
+            $tableCount = (int) $statement->fetchColumn();
 
-            return ['connected' => true, 'message' => 'Conexão estabelecida com sucesso.'];
+            return ['connected' => true, 'message' => sprintf('Conexão estabelecida com sucesso. %d tabelas disponíveis para vínculo.', $tableCount)];
         } catch (\Throwable) {
-            return ['connected' => false, 'message' => 'Não foi possível conectar. Revise IP/DNS, porta, banco, usuário e senha.'];
+            return ['connected' => false, 'message' => 'Não foi possível validar o acesso às tabelas. Revise IP/DNS, porta, banco, usuário e senha.'];
         }
     }
 

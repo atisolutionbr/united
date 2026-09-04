@@ -41,7 +41,7 @@
                             {% if mappingKey and not editable %}<small class="kflow-field-note">Configure o WebService ou mapeie a coluna em Conectar ERP.</small>{% elseif mappingKey and fiscalWriteAvailable %}<small class="kflow-field-note is-ready">Alterações serão enviadas pelo WebService Senior.</small>{% endif %}
                         </div>
                     {% endfor %}
-                    <div class="kflow-product-detail__actions"><button class="btn btn-primary" type="submit" {{ fiscalWriteAvailable ? '' : 'disabled' }}><i class="bi bi-cloud-arrow-up"></i>Atualizar no Senior</button>{% if not fiscalWriteAvailable %}<a href="{{ path('kflow_erp_connect', {erp: 'Senior', method: 'webservice'}) }}">Configurar WebService para gravar</a>{% endif %}</div>
+                    <div class="kflow-product-detail__actions"><button class="btn btn-primary" type="submit" {{ fiscalWriteAvailable ? '' : 'disabled' }}><i class="bi bi-arrow-up-circle"></i>Atualizar no Senior</button>{% if not fiscalWriteAvailable %}<a href="{{ path('kflow_erp_connect', {erp: 'Senior', method: 'webservice'}) }}">Configurar WebService para gravar</a>{% endif %}</div>
                 </form>
             </aside>
         </section>
