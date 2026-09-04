@@ -30,7 +30,13 @@ document.querySelector('[data-login-form]')?.addEventListener('submit', (event) 
     form.querySelector('[data-login-loading]')?.removeAttribute('hidden');
 });
 
-const layoutKey = (name) => `kflow-layout-v4-${name}`;
+const layoutKey = (name) => `kflow-layout-v5-${name}`;
+const legacyLayoutKeys = (name) => [
+    `kflow-layout-${name}`,
+    `kflow-layout-v2-${name}`,
+    `kflow-layout-v3-${name}`,
+    `kflow-layout-v4-${name}`,
+];
 const cards = (grid) => [...grid.querySelectorAll(':scope > [data-layout-card]')];
 const syncLayoutRecovery = (grid) => {
     const recovery = document.querySelector(`[data-layout-recovery="${grid.dataset.layoutGrid}"]`);
@@ -38,11 +44,7 @@ const syncLayoutRecovery = (grid) => {
 };
 document.querySelectorAll('[data-layout-grid]').forEach((grid) => {
     const name = grid.dataset.layoutGrid;
-    if (name === 'dashboard') {
-        ['kflow-layout-dashboard', 'kflow-layout-v2-dashboard', 'kflow-layout-v3-dashboard', layoutKey(name)].forEach((key) => localStorage.removeItem(key));
-        cards(grid).forEach((card) => card.classList.remove('is-layout-hidden'));
-        return;
-    }
+    legacyLayoutKeys(name).forEach((key) => localStorage.removeItem(key));
     try {
         const saved = JSON.parse(localStorage.getItem(layoutKey(name)) || '{}');
         saved.order?.forEach((id) => { const card = cards(grid).find((item) => item.dataset.layoutCard === id); if (card) grid.append(card); });
@@ -117,7 +119,7 @@ document.addEventListener('click', async (event) => {
     if (!next || !current) return location.assign(link.href);
     current.replaceWith(next); history.pushState({}, '', link.href);
 });
-if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=54', {updateViaCache: 'none'}));
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=55', {updateViaCache: 'none'}));
 
 document.querySelector('[data-diagnostic-copy]')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;
