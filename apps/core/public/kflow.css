@@ -322,8 +322,11 @@ body.kflow-body {
 .kflow-form-manager strong { color: var(--kflow-ink); font-size: 0.78rem; }
 .kflow-form-manager small, .kflow-form-manager__empty { color: var(--kflow-muted); font-size: 0.72rem; }
 .kflow-form-manager__items { display: flex; flex-wrap: wrap; gap: 0.45rem; justify-content: flex-end; }
-.kflow-form-chip { align-items: center; background: #edf8f7; border: 1px solid #acdcd6; border-radius: 5px; color: #0b6769; display: inline-flex; font-size: 0.72rem; font-weight: 700; gap: 0.4rem; min-height: 2rem; padding: 0.3rem 0.45rem 0.3rem 0.6rem; }
-.kflow-form-chip:hover { background: #fff1f0; border-color: #e9aaa5; color: #a73732; }
+.kflow-form-chip { align-items: center; background: #edf8f7; border: 1px solid #acdcd6; border-radius: 5px; color: #0b6769; display: inline-flex; font-size: 0.72rem; font-weight: 700; gap: 0.4rem; min-height: 2rem; padding: 0.3rem 0.45rem 0.3rem 0.6rem; text-decoration: none; }
+.kflow-form-chip small { color: #527483; font-size: 0.64rem; font-weight: 500; }
+.kflow-form-chip--select:hover, .kflow-form-chip--select.is-bound { background: #ddf5f1; border-color: #45b9ae; color: #075d63; }
+.kflow-form-chip--delete { background: #fff; color: #a73732; padding: 0.3rem 0.48rem; }
+.kflow-form-chip--delete:hover { background: #fff1f0; border-color: #e9aaa5; color: #a73732; }
 .kflow-form-chip i { font-size: 0.85rem; }
 .kflow-mapping-control { display: flex; gap: 0.4rem; }
 .kflow-mapping-control .form-control, .kflow-mapping-control .form-select { min-width: 0; }

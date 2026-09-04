@@ -117,7 +117,7 @@ document.addEventListener('click', async (event) => {
     if (!next || !current) return location.assign(link.href);
     current.replaceWith(next); history.pushState({}, '', link.href);
 });
-if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=53', {updateViaCache: 'none'}));
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=54', {updateViaCache: 'none'}));
 
 document.querySelector('[data-diagnostic-copy]')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;

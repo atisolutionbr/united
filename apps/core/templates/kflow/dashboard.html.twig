@@ -17,7 +17,7 @@
         </div>
     </section>
 
-    <section class="kflow-stat-grid kflow-layout-grid" data-layout-grid="dashboard" aria-label="Resumo operacional">
+    <section class="kflow-stat-grid kflow-layout-grid" data-layout-grid="dashboard-main" aria-label="Resumo operacional">
         {% set dashboardCards = [
             {id: 'erp', label: 'ERP ativo', value: activeErp ?: 'Nenhum selecionado', icon: 'hdd-stack', tone: 'teal', href: path('kflow_erp_index')},
             {id: 'erps', label: 'ERPs disponíveis', value: erpCount, icon: 'diagram-3', tone: 'blue', href: path('kflow_erp_index')},
@@ -39,7 +39,7 @@
             </article>
         {% endfor %}
     </section>
-    <div class="kflow-layout-recovery" data-layout-recovery="dashboard" hidden><span>Cards ocultos neste painel.</span><button class="btn btn-sm btn-outline-primary" type="button" data-layout-reset="dashboard"><i class="bi bi-arrow-counterclockwise"></i>Restaurar padrão</button></div>
+    <div class="kflow-layout-recovery" data-layout-recovery="dashboard-main" hidden><span>Cards ocultos neste painel.</span><button class="btn btn-sm btn-outline-primary" type="button" data-layout-reset="dashboard-main"><i class="bi bi-arrow-counterclockwise"></i>Restaurar padrão</button></div>
 
     <section class="kflow-workspace-grid">
         <div class="kflow-surface kflow-surface--wide">
