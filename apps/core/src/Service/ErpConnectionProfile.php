@@ -20,11 +20,7 @@ final class ErpConnectionProfile
         'cst_icms' => ['label' => 'CST de ICMS', 'hint' => 'Código de situação tributária de ICMS.'],
     ];
 
-    public function __construct(
-        private readonly SeniorProductCatalog $seniorProductCatalog,
-        private readonly ConnectionSecretCipher $secretCipher,
-    ) {
-    }
+    public function __construct(private readonly ConnectionSecretCipher $secretCipher) {}
 
     /** @return array<string, string> */
     public function connectionMethods(): array
@@ -67,10 +63,6 @@ final class ErpConnectionProfile
     /** @return array<string, mixed> */
     public function defaultSettings(string $erp, string $method): array
     {
-        if ('Senior' === $erp && ErpConnection::METHOD_DATABASE === $method) {
-            return $this->seniorProductCatalog->defaultConnectionSettings();
-        }
-
         return match ($method) {
             ErpConnection::METHOD_API => [
                 'endpoint' => '',
@@ -136,10 +128,6 @@ final class ErpConnectionProfile
     /** @return list<string> */
     public function availableColumns(string $erp, string $method): array
     {
-        if ('Senior' === $erp && ErpConnection::METHOD_DATABASE === $method) {
-            return $this->seniorProductCatalog->availableProductColumns();
-        }
-
         return [];
     }
 

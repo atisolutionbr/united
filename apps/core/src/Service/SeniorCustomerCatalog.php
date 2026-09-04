@@ -3,33 +3,23 @@
 namespace App\Service;
 
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class SeniorCustomerCatalog
 {
-    public function __construct(
-        #[Autowire('%env(SENIOR_DATABASE_DSN)%')]
-        private readonly string $databaseDsn,
-        #[Autowire('%env(SENIOR_DATABASE_USER)%')]
-        private readonly string $databaseUser,
-        #[Autowire('%env(SENIOR_DATABASE_PASSWORD)%')]
-        private readonly string $databasePassword,
-        private readonly LoggerInterface $logger,
-    ) {
-    }
+    public function __construct(private readonly DatabaseSchemaInspector $database, private readonly LoggerInterface $logger) {}
 
     /** @param array<string, mixed> $binding
      *  @return array{configured: bool, customers: list<array<string, mixed>>, error: string|null, sourceTable: string, recordCount: int, page: int, perPage: int, pageCount: int, missingAddressCount: int, staleCount: int}
      */
-    public function listCustomers(array $binding = [], int $page = 1, int $perPage = 10): array
+    public function listCustomers(array $binding, array $settings, int $page = 1, int $perPage = 10): array
     {
         $table = $this->validTable((string) ($binding['table'] ?? '')) ?: 'E085CLI';
-        if ('' === trim($this->databaseDsn) || '' === trim($this->databaseUser)) {
+        if (!$this->database->isConfigured($settings)) {
             return $this->emptyResult(false, $table);
         }
 
         try {
-            $pdo = new \PDO($this->databaseDsn, $this->databaseUser, $this->databasePassword, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION, \PDO::ATTR_TIMEOUT => 4]);
+            $pdo = $this->database->open($settings);
             $columns = $this->columns($pdo, $table);
             if ([] === $columns) {
                 return [...$this->emptyResult(true, $table), 'error' => sprintf('A tabela %s não possui campos disponíveis para consulta.', $table)];

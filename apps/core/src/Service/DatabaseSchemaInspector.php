@@ -14,7 +14,7 @@ final class DatabaseSchemaInspector
     public function tables(array $settings): array
     {
         try {
-            $rows = $this->connection($settings)->query(<<<'SQL'
+            $rows = $this->open($settings)->query(<<<'SQL'
                 SELECT TABLE_SCHEMA, TABLE_NAME
                 FROM INFORMATION_SCHEMA.TABLES
                 WHERE TABLE_TYPE = 'BASE TABLE'
@@ -32,7 +32,7 @@ final class DatabaseSchemaInspector
 
             return ['tables' => $tables, 'error' => null];
         } catch (\Throwable $exception) {
-            return ['tables' => [], 'error' => 'Não foi possível listar as tabelas. Revise servidor, banco, usuário e senha.'];
+            return ['tables' => [], 'error' => 'Não foi possível conectar ao banco externo. Revise IP/DNS, porta, banco, usuário e senha.'];
         }
     }
 
@@ -47,7 +47,7 @@ final class DatabaseSchemaInspector
         }
 
         try {
-            $statement = $this->connection($settings)->prepare(<<<'SQL'
+            $statement = $this->open($settings)->prepare(<<<'SQL'
                 SELECT COLUMN_NAME
                 FROM INFORMATION_SCHEMA.COLUMNS
                 WHERE TABLE_NAME = :table AND (:schema = '' OR TABLE_SCHEMA = :schema)
@@ -70,7 +70,7 @@ final class DatabaseSchemaInspector
         try {
             $quotedColumns = implode(', ', array_map(static fn (string $column): string => sprintf('[%s]', $column), $columns));
             $qualifiedTable = '' === $schema ? sprintf('[%s]', $tableName) : sprintf('[%s].[%s]', $schema, $tableName);
-            $statement = $this->connection($settings)->query(sprintf('SELECT TOP %d %s FROM %s', max(1, min(100, $limit)), $quotedColumns, $qualifiedTable));
+            $statement = $this->open($settings)->query(sprintf('SELECT TOP %d %s FROM %s', max(1, min(100, $limit)), $quotedColumns, $qualifiedTable));
             return ['rows' => $statement->fetchAll(\PDO::FETCH_ASSOC), 'error' => null];
         } catch (\Throwable $exception) {
             return ['rows' => [], 'error' => 'Não foi possível consultar os usuários da origem selecionada.'];
@@ -78,7 +78,16 @@ final class DatabaseSchemaInspector
     }
 
     /** @param array<string, mixed> $settings */
-    private function connection(array $settings): \PDO
+    public function isConfigured(array $settings): bool
+    {
+        return '' !== trim((string) ($settings['host'] ?? ''))
+            && '' !== trim((string) ($settings['database'] ?? ''))
+            && '' !== trim((string) ($settings['username'] ?? ''))
+            && '' !== $this->secretCipher->decrypt((string) ($settings['password_encrypted'] ?? ''));
+    }
+
+    /** @param array<string, mixed> $settings */
+    public function open(array $settings): \PDO
     {
         $driver = strtolower((string) ($settings['driver'] ?? 'sql server'));
         $host = trim((string) ($settings['host'] ?? ''));
