@@ -217,6 +217,13 @@ body.kflow-body {
 .kflow-erp-card[data-erp="uniplus"] .kflow-erp-card__mark img { transform: scale(1.3); }
 .kflow-erp-card__mark:not(.has-logo) { background: rgba(255, 255, 255, 0.18); color: #fff; width: 3.25rem; }
 .kflow-erp-card__status { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 999px; color: #fff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.55rem; }
+.kflow-erp-card__switch { align-items: center; display: inline-flex; gap: 0.35rem; margin: 0; position: relative; z-index: 2; }
+.kflow-erp-card__switch button { background: rgba(13, 45, 76, 0.52); border: 1px solid rgba(255, 255, 255, 0.52); border-radius: 999px; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.22), 0 2px 5px rgba(0, 0, 0, 0.18); height: 1.6rem; padding: 0.16rem; transition: background 160ms ease; width: 2.8rem; }
+.kflow-erp-card__switch button span { background: #f8fbfc; border-radius: 50%; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); display: block; height: 1.1rem; transform: translateX(0); transition: transform 160ms ease; width: 1.1rem; }
+.kflow-erp-card.is-enabled .kflow-erp-card__switch button { background: #17b889; }
+.kflow-erp-card.is-enabled .kflow-erp-card__switch button span { transform: translateX(1.18rem); }
+.kflow-erp-card__switch small { color: #fff; font-size: 0.68rem; font-weight: 800; }
+.kflow-erp-card.is-disabled { filter: saturate(0.72); }
 .kflow-erp-card h2 { color: #fff; font-size: 1.15rem; margin: 1rem 0 0.4rem; position: relative; z-index: 1; }
 .kflow-erp-card p { color: rgba(255, 255, 255, 0.88); font-size: 0.82rem; line-height: 1.5; margin-bottom: 0; position: relative; z-index: 1; }
 .kflow-erp-card form { margin-top: auto; padding-top: 1rem; position: relative; z-index: 1; }

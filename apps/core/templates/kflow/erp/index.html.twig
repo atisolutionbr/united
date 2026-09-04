@@ -21,12 +21,14 @@
             'PowerLogic': 'images/erp/powerlogic.png'
         } %}
         {% for erp in erps %}
-            <article class="kflow-erp-card {{ erp == activeErp ? 'is-selected' }}" data-erp="{{ erp|lower }}">
+            {% set connection = connections[erp]|default(null) %}
+            {% set enabled = connection and connection.isActive %}
+            <article class="kflow-erp-card {{ erp == activeErp ? 'is-selected' }} {{ enabled ? 'is-enabled' : 'is-disabled' }}" data-erp="{{ erp|lower }}">
                 <div class="kflow-erp-card__top">
                     <span class="kflow-erp-card__mark {{ erp in erpLogos|keys ? 'has-logo' }}">
                         {% if erp in erpLogos|keys %}<img src="{{ asset(erpLogos[erp]) }}" alt="{{ erp }}">{% else %}<span>{{ erp|slice(0, 2)|upper }}</span>{% endif %}
                     </span>
-                    {% if erp == activeErp %}<span class="kflow-erp-card__status">Ativo</span>{% endif %}
+                    <form class="kflow-erp-card__switch" method="post" action="{{ path('kflow_erp_active', {erp: erp}) }}"><input type="hidden" name="_token" value="{{ csrf_token('erp-active-'~erp) }}"><input type="hidden" name="active" value="{{ enabled ? '0' : '1' }}"><button type="submit" role="switch" aria-checked="{{ enabled ? 'true' : 'false' }}" aria-label="{{ enabled ? 'Desativar' : 'Ativar' }} {{ erp }}" title="{{ enabled ? 'ERP ativo. Clique para desativar' : 'ERP inativo. Clique para ativar' }}"><span></span></button><small>{{ enabled ? 'Ativo' : 'Inativo' }}</small></form>
                 </div>
                 <h2>{{ erp }}</h2>
                 <p>Conecte seu ERP e conheça o que o Kflow360 poderá fazer por você! Automatize seus processos, tenha segurança e venha ser Kflow360... Onde tudo flui com rapidez em todos os angulos.</p>

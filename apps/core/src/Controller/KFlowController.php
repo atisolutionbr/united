@@ -336,9 +336,14 @@ final class KFlowController extends AbstractController
     public function erps(): Response
     {
         $this->requireMenu('connections');
+        $connections = [];
+        foreach ($this->entityManager->getRepository(ErpConnection::class)->findBy(['company' => $this->currentCompany()]) as $connection) {
+            $connections[$connection->getErpName()] = $connection;
+        }
         return $this->render('kflow/erp/index.html.twig', [
             'erps' => $this->erpCatalog->all(),
             'activeErp' => $this->activeErp(),
+            'connections' => $connections,
         ]);
     }
 
@@ -352,7 +357,8 @@ final class KFlowController extends AbstractController
 
         $company = $this->currentCompany();
         $connection = $this->connectionFor($erp);
-        if (!$connection instanceof ErpConnection) {
+        $isNewConnection = !$connection instanceof ErpConnection;
+        if ($isNewConnection) {
             $connection = new ErpConnection($company, $erp);
             $this->entityManager->persist($connection);
         }
@@ -364,11 +370,36 @@ final class KFlowController extends AbstractController
                 ->setProductMapping($this->connectionProfile->defaultProductMapping($erp));
         }
 
-        $connection->setIsActive(true);
+        if ($isNewConnection) $connection->setIsActive(true);
         $this->entityManager->flush();
-        $request->getSession()->set('kflow_selected_erp', $erp);
+        if ($connection->isActive()) $request->getSession()->set('kflow_selected_erp', $erp);
 
         return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp]);
+    }
+
+    #[Route('/erp/{erp}/active', name: 'kflow_erp_active', methods: ['POST'])]
+    public function setErpActive(string $erp, Request $request): Response
+    {
+        $this->requireMenu('connections');
+        if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('erp-active-'.$erp, (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) {
+            $connection = new ErpConnection($this->currentCompany(), $erp);
+            $connection
+                ->setConnectionMethod(ErpConnection::METHOD_DATABASE)
+                ->setSettingsForMethod(ErpConnection::METHOD_DATABASE, $this->connectionProfile->defaultSettings($erp, ErpConnection::METHOD_DATABASE));
+            $this->entityManager->persist($connection);
+        }
+        $active = '1' === (string) $request->request->get('active');
+        $connection->setIsActive($active);
+        $this->entityManager->flush();
+        if (!$active && $request->getSession()->get('kflow_selected_erp') === $erp) $request->getSession()->remove('kflow_selected_erp');
+        $this->addFlash('success', sprintf('%s marcado como %s.', $erp, $active ? 'ativo' : 'inativo'));
+
+        return $this->redirectToRoute('kflow_erp_index');
     }
 
     #[Route('/erp/{erp}/connect', name: 'kflow_erp_connect', methods: ['GET'])]
@@ -473,7 +504,8 @@ final class KFlowController extends AbstractController
 
         $company = $this->currentCompany();
         $connection = $this->connectionFor($erp);
-        if (!$connection instanceof ErpConnection) {
+        $isNewConnection = !$connection instanceof ErpConnection;
+        if ($isNewConnection) {
             $connection = new ErpConnection($company, $erp);
             $this->entityManager->persist($connection);
         }
@@ -507,10 +539,10 @@ final class KFlowController extends AbstractController
             ->setConnectionMethod($method)
             ->setSettingsForMethod($method, $settings)
             ->setProductMapping($mapping)
-            ->setIsActive(true)
+            ->setIsActive($isNewConnection || $connection->isActive())
             ->markConfigured();
         $this->entityManager->flush();
-        $request->getSession()->set('kflow_selected_erp', $erp);
+        if ($connection->isActive()) $request->getSession()->set('kflow_selected_erp', $erp);
 
         $this->addFlash('success', sprintf('%s vinculado pelo modo %s.', $erp, $this->connectionProfile->connectionMethods()[$method]));
 
