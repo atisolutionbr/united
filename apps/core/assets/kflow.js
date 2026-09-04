@@ -30,15 +30,25 @@ document.querySelector('[data-login-form]')?.addEventListener('submit', (event) 
     form.querySelector('[data-login-loading]')?.removeAttribute('hidden');
 });
 
-const layoutKey = (name) => `kflow-layout-v2-${name}`;
+const layoutKey = (name) => `kflow-layout-v3-${name}`;
 const cards = (grid) => [...grid.querySelectorAll(':scope > [data-layout-card]')];
+const syncLayoutRecovery = (grid) => {
+    const recovery = document.querySelector(`[data-layout-recovery="${grid.dataset.layoutGrid}"]`);
+    if (recovery instanceof HTMLElement) recovery.hidden = !cards(grid).some((card) => card.classList.contains('is-layout-hidden'));
+};
 document.querySelectorAll('[data-layout-grid]').forEach((grid) => {
     const name = grid.dataset.layoutGrid;
     try {
         const saved = JSON.parse(localStorage.getItem(layoutKey(name)) || '{}');
         saved.order?.forEach((id) => { const card = cards(grid).find((item) => item.dataset.layoutCard === id); if (card) grid.append(card); });
-        cards(grid).forEach((card) => card.classList.toggle('is-layout-hidden', saved.hidden?.includes(card.dataset.layoutCard)));
+        const hidden = Array.isArray(saved.hidden) ? saved.hidden : [];
+        if (hidden.length >= cards(grid).length) {
+            localStorage.removeItem(layoutKey(name));
+        } else {
+            cards(grid).forEach((card) => card.classList.toggle('is-layout-hidden', hidden.includes(card.dataset.layoutCard)));
+        }
     } catch {}
+    syncLayoutRecovery(grid);
     let dragging = null;
     cards(grid).forEach((card) => {
         card.addEventListener('dragstart', (event) => { if (!grid.classList.contains('is-layout-editing')) return event.preventDefault(); dragging = card; });
@@ -55,8 +65,8 @@ document.querySelectorAll('[data-layout-customize]').forEach((button) => button.
     const scope = button.dataset.layoutCustomize;
     const grids = [...document.querySelectorAll('[data-layout-grid]')].filter((grid) => grid.dataset.layoutGrid?.startsWith(scope));
     const editing = button.classList.toggle('is-editing');
-    grids.forEach((grid) => { grid.classList.toggle('is-layout-editing', editing); cards(grid).forEach((card) => card.draggable = editing); });
-    if (!editing) grids.forEach((grid) => localStorage.setItem(layoutKey(grid.dataset.layoutGrid), JSON.stringify({order: cards(grid).map((card) => card.dataset.layoutCard), hidden: cards(grid).filter((card) => card.classList.contains('is-layout-hidden')).map((card) => card.dataset.layoutCard)})));
+        grids.forEach((grid) => { grid.classList.toggle('is-layout-editing', editing); cards(grid).forEach((card) => card.draggable = editing); });
+    if (!editing) grids.forEach((grid) => { localStorage.setItem(layoutKey(grid.dataset.layoutGrid), JSON.stringify({order: cards(grid).map((card) => card.dataset.layoutCard), hidden: cards(grid).filter((card) => card.classList.contains('is-layout-hidden')).map((card) => card.dataset.layoutCard)})); syncLayoutRecovery(grid); });
     button.innerHTML = editing ? '<i class="bi bi-floppy"></i>Salvar layout' : '<i class="bi bi-sliders"></i>Personalizar';
     document.querySelector(`[data-layout-cancel="${scope}"]`)?.toggleAttribute('hidden', !editing);
 }));
@@ -76,7 +86,22 @@ document.addEventListener('click', async (event) => {
         return;
     }
     const hide = event.target.closest('[data-layout-hide]');
-    if (hide && hide.closest('[data-layout-grid]')?.classList.contains('is-layout-editing')) hide.closest('[data-layout-card]')?.classList.add('is-layout-hidden');
+    if (hide && hide.closest('[data-layout-grid]')?.classList.contains('is-layout-editing')) {
+        const grid = hide.closest('[data-layout-grid]');
+        hide.closest('[data-layout-card]')?.classList.add('is-layout-hidden');
+        if (grid instanceof HTMLElement) syncLayoutRecovery(grid);
+        return;
+    }
+    const reset = event.target.closest('[data-layout-reset]');
+    if (reset instanceof HTMLButtonElement) {
+        const grid = document.querySelector(`[data-layout-grid="${reset.dataset.layoutReset}"]`);
+        if (grid instanceof HTMLElement) {
+            localStorage.removeItem(layoutKey(grid.dataset.layoutGrid));
+            cards(grid).forEach((card) => card.classList.remove('is-layout-hidden'));
+            syncLayoutRecovery(grid);
+        }
+        return;
+    }
     const link = event.target.closest('.kflow-binding-steps a:not(.is-disabled)');
     if (!(link instanceof HTMLAnchorElement)) return;
     event.preventDefault();
@@ -149,6 +174,41 @@ document.addEventListener('click', async (event) => {
     } catch {
         status.classList.add('is-error');
         status.innerHTML = '<span><i class="bi bi-exclamation-triangle-fill"></i>Não foi possível concluir o teste de conexão.</span>';
+    } finally {
+        button.disabled = false;
+        button.innerHTML = original;
+    }
+});
+
+document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-form-create]');
+    if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+    const catalog = button.closest('[data-form-catalog]');
+    if (!(catalog instanceof HTMLElement)) return;
+    const template = catalog.querySelector('[data-form-template]');
+    const label = catalog.querySelector('[data-form-label]');
+    const status = catalog.querySelector('[data-form-status]');
+    if (!(template instanceof HTMLSelectElement) || !(label instanceof HTMLInputElement) || !(status instanceof HTMLElement)) return;
+
+    const original = button.innerHTML;
+    button.disabled = true;
+    status.textContent = 'Criando formulário...';
+    try {
+        const payload = new FormData();
+        payload.set('_token', catalog.dataset.token || '');
+        payload.set('method', catalog.dataset.method || 'database');
+        payload.set('template', template.value);
+        payload.set('label', label.value.trim());
+        const response = await fetch(catalog.dataset.url || '', {method: 'POST', body: payload, headers: {'X-Requested-With': 'XMLHttpRequest'}});
+        const data = await response.json();
+        if (!response.ok || !data.ok || !data.form?.id) throw new Error(data.message || 'Não foi possível criar o formulário.');
+        const query = new URLSearchParams(location.search);
+        query.set('method', catalog.dataset.method || 'database');
+        query.set('step', (catalog.dataset.method || 'database') === 'database' ? 'table' : 'mapping');
+        query.set('form', data.form.id);
+        location.assign(`${location.pathname}?${query.toString()}`);
+    } catch (error) {
+        status.textContent = error instanceof Error ? error.message : 'Não foi possível criar o formulário.';
     } finally {
         button.disabled = false;
         button.innerHTML = original;

@@ -422,6 +422,7 @@ final class KFlowController extends AbstractController
             'erp' => $erp,
             'method' => $method,
             'methods' => $this->connectionProfile->connectionMethods(),
+            'databaseDrivers' => $this->connectionProfile->databaseDrivers(),
             'settings' => $settings,
             'productFields' => $this->connectionProfile->productFields(),
             'mapping' => $mapping,
@@ -559,6 +560,11 @@ final class KFlowController extends AbstractController
         $settings = $connection->getSettingsForMethod(ErpConnection::METHOD_DATABASE);
         $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
         $table = trim((string) $request->request->get('table'));
+        $availableTables = $this->databaseSchemaInspector->tables($settings);
+        if ('' === $table || !in_array($table, $availableTables['tables'], true)) {
+            $this->addFlash('warning', 'Selecione uma tabela disponível no banco conectado.');
+            return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_DATABASE, 'step' => 'table', 'form' => $form]);
+        }
         $mappingInput = $request->request->all('mapping');
         $columns = $this->databaseSchemaInspector->columns($settings, $table)['columns'];
         $mapping = $this->connectionProfile->mappingForFields(array_keys($forms[$configuredForm['template']]['fields']), is_array($mappingInput) ? $mappingInput : [], $columns);

@@ -4,60 +4,41 @@ namespace App\Service;
 
 final class DatabaseSchemaInspector
 {
-    public function __construct(private readonly ConnectionSecretCipher $secretCipher)
-    {
-    }
+    public function __construct(private readonly ConnectionSecretCipher $secretCipher) {}
 
     /** @param array<string, mixed> $settings
-     *  @return array{tables: list<string>, error: string|null}
+     * @return array{tables: list<string>, error: string|null}
      */
     public function tables(array $settings): array
     {
         try {
-            $rows = $this->open($settings)->query(<<<'SQL'
-                SELECT TABLE_SCHEMA, TABLE_NAME
-                FROM INFORMATION_SCHEMA.TABLES
-                WHERE TABLE_TYPE = 'BASE TABLE'
-                ORDER BY TABLE_SCHEMA, TABLE_NAME
-                SQL)->fetchAll(\PDO::FETCH_ASSOC);
-
+            $rows = $this->open($settings)->query($this->tableQuery($this->driver($settings)))->fetchAll(\PDO::FETCH_ASSOC);
             $tables = [];
             foreach ($rows as $row) {
-                $schema = (string) ($row['TABLE_SCHEMA'] ?? '');
-                $table = (string) ($row['TABLE_NAME'] ?? '');
-                if ('' !== $table) {
-                    $tables[] = '' !== $schema ? $schema.'.'.$table : $table;
-                }
+                $schema = trim((string) ($row['table_schema'] ?? $row['TABLE_SCHEMA'] ?? ''));
+                $table = trim((string) ($row['table_name'] ?? $row['TABLE_NAME'] ?? ''));
+                if ('' !== $table) $tables[] = '' !== $schema ? $schema.'.'.$table : $table;
             }
-
-            return ['tables' => $tables, 'error' => null];
+            return ['tables' => array_values(array_unique($tables)), 'error' => null];
         } catch (\Throwable $exception) {
-            return ['tables' => [], 'error' => 'Não foi possível conectar ao banco externo. Revise IP/DNS, porta, banco, usuário e senha.'];
+            return ['tables' => [], 'error' => $this->message($exception, 'Não foi possível conectar ao banco externo. Revise IP/DNS, porta, banco, usuário e senha.')];
         }
     }
 
     /** @param array<string, mixed> $settings
-     *  @return array{columns: list<string>, error: string|null}
+     * @return array{columns: list<string>, error: string|null}
      */
     public function columns(array $settings, string $table): array
     {
         [$schema, $tableName] = $this->splitTable($table);
-        if ('' === $tableName) {
-            return ['columns' => [], 'error' => 'Selecione uma tabela válida.'];
-        }
-
+        if ('' === $tableName) return ['columns' => [], 'error' => 'Selecione uma tabela válida.'];
         try {
-            $statement = $this->open($settings)->prepare(<<<'SQL'
-                SELECT COLUMN_NAME
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = :table AND (:schema = '' OR TABLE_SCHEMA = :schema)
-                ORDER BY ORDINAL_POSITION
-                SQL);
-            $statement->execute(['table' => $tableName, 'schema' => $schema]);
-
+            $driver = $this->driver($settings);
+            $statement = $this->open($settings)->prepare($this->columnQuery($driver));
+            $statement->execute($this->columnParameters($driver, $schema, $tableName));
             return ['columns' => array_values(array_map('strval', $statement->fetchAll(\PDO::FETCH_COLUMN))), 'error' => null];
         } catch (\Throwable $exception) {
-            return ['columns' => [], 'error' => 'Não foi possível listar os campos da tabela selecionada.'];
+            return ['columns' => [], 'error' => $this->message($exception, 'Não foi possível listar os campos da tabela selecionada.')];
         }
     }
 
@@ -68,72 +49,118 @@ final class DatabaseSchemaInspector
         $columns = array_values(array_filter($columns, static fn (mixed $column): bool => is_string($column) && preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $column) === 1));
         if ('' === $tableName || [] === $columns) return ['rows' => [], 'error' => 'Selecione a tabela e os campos de usuários.'];
         try {
-            $quotedColumns = implode(', ', array_map(static fn (string $column): string => sprintf('[%s]', $column), $columns));
-            $qualifiedTable = '' === $schema ? sprintf('[%s]', $tableName) : sprintf('[%s].[%s]', $schema, $tableName);
-            $statement = $this->open($settings)->query(sprintf('SELECT TOP %d %s FROM %s', max(1, min(100, $limit)), $quotedColumns, $qualifiedTable));
-            return ['rows' => $statement->fetchAll(\PDO::FETCH_ASSOC), 'error' => null];
+            $driver = $this->driver($settings);
+            $quotedColumns = implode(', ', array_map(fn (string $column): string => $this->quote($driver, $column), $columns));
+            $qualifiedTable = '' === $schema ? $this->quote($driver, $tableName) : $this->quote($driver, $schema).'.'.$this->quote($driver, $tableName);
+            $safeLimit = max(1, min(100, $limit));
+            $sql = match ($driver) {
+                'sqlserver' => sprintf('SELECT TOP %d %s FROM %s', $safeLimit, $quotedColumns, $qualifiedTable),
+                'oracle' => sprintf('SELECT %s FROM %s FETCH FIRST %d ROWS ONLY', $quotedColumns, $qualifiedTable, $safeLimit),
+                default => sprintf('SELECT %s FROM %s LIMIT %d', $quotedColumns, $qualifiedTable, $safeLimit),
+            };
+            return ['rows' => $this->open($settings)->query($sql)->fetchAll(\PDO::FETCH_ASSOC), 'error' => null];
         } catch (\Throwable $exception) {
-            return ['rows' => [], 'error' => 'Não foi possível consultar os usuários da origem selecionada.'];
+            return ['rows' => [], 'error' => $this->message($exception, 'Não foi possível consultar os usuários da origem selecionada.')];
         }
     }
 
     /** @param array<string, mixed> $settings */
     public function isConfigured(array $settings): bool
     {
-        return '' !== trim((string) ($settings['host'] ?? ''))
-            && '' !== trim((string) ($settings['database'] ?? ''))
-            && '' !== trim((string) ($settings['username'] ?? ''))
-            && '' !== $this->secretCipher->decrypt((string) ($settings['password_encrypted'] ?? ''));
+        return '' !== trim((string) ($settings['host'] ?? '')) && '' !== trim((string) ($settings['database'] ?? '')) && '' !== trim((string) ($settings['username'] ?? '')) && '' !== $this->secretCipher->decrypt((string) ($settings['password_encrypted'] ?? ''));
     }
 
     /** @param array<string, mixed> $settings
-     *  @return array{connected: bool, message: string}
+     * @return array{connected: bool, message: string}
      */
     public function test(array $settings): array
     {
         try {
-            $statement = $this->open($settings)->query(<<<'SQL'
-                SELECT COUNT(*)
-                FROM INFORMATION_SCHEMA.TABLES
-                WHERE TABLE_TYPE = 'BASE TABLE'
-                SQL);
-            $tableCount = (int) $statement->fetchColumn();
-
-            return ['connected' => true, 'message' => sprintf('Conexão estabelecida com sucesso. %d tabelas disponíveis para vínculo.', $tableCount)];
-        } catch (\Throwable) {
-            return ['connected' => false, 'message' => 'Não foi possível validar o acesso às tabelas. Revise IP/DNS, porta, banco, usuário e senha.'];
+            $count = (int) $this->open($settings)->query($this->countQuery($this->driver($settings)))->fetchColumn();
+            return ['connected' => true, 'message' => sprintf('Conexão direta estabelecida com sucesso. %d tabelas disponíveis para vínculo.', $count)];
+        } catch (\Throwable $exception) {
+            return ['connected' => false, 'message' => $this->message($exception, 'Não foi possível validar o acesso às tabelas. Revise IP/DNS, porta, banco, usuário e senha.')];
         }
     }
 
     /** @param array<string, mixed> $settings */
     public function open(array $settings): \PDO
     {
-        $driver = strtolower((string) ($settings['driver'] ?? 'sql server'));
+        $driver = $this->driver($settings);
         $host = trim((string) ($settings['host'] ?? ''));
         $port = trim((string) ($settings['port'] ?? ''));
         $database = trim((string) ($settings['database'] ?? ''));
         $username = (string) ($settings['username'] ?? '');
         $password = $this->secretCipher->decrypt((string) ($settings['password_encrypted'] ?? ''));
+        if ('' === $host || '' === $database || '' === $username || '' === $password) throw new \RuntimeException('Configuração de banco incompleta.');
+        $pdoDriver = match ($driver) {'sqlserver' => 'dblib', 'postgresql' => 'pgsql', 'mysql', 'mariadb' => 'mysql', 'oracle' => 'oci', 'firebird' => 'firebird', default => throw new \RuntimeException('O conector MongoDB requer a extensao MongoDB do servidor da plataforma.')};
+        if (!in_array($pdoDriver, \PDO::getAvailableDrivers(), true)) throw new \RuntimeException(sprintf('O driver %s precisa ser habilitado no servidor da plataforma.', strtoupper($pdoDriver)));
+        $dsn = match ($driver) {
+            'sqlserver' => sprintf('dblib:host=%s%s;dbname=%s', $host, '' !== $port ? ':'.$port : '', $database),
+            'postgresql' => sprintf('pgsql:host=%s;port=%s;dbname=%s', $host, '' !== $port ? $port : '5432', $database),
+            'mysql', 'mariadb' => sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, '' !== $port ? $port : '3306', $database),
+            'oracle' => sprintf('oci:dbname=//%s:%s/%s;charset=AL32UTF8', $host, '' !== $port ? $port : '1521', $database),
+            'firebird' => sprintf('firebird:dbname=%s/%s:%s;charset=UTF8', $host, '' !== $port ? $port : '3050', $database),
+        };
+        return new \PDO($dsn, $username, $password, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION, \PDO::ATTR_TIMEOUT => 4]);
+    }
 
-        if ('' === $host || '' === $database || '' === $username || '' === $password) {
-            throw new \RuntimeException('Configuração de banco incompleta.');
-        }
+    /** @param array<string, mixed> $settings */
+    private function driver(array $settings): string
+    {
+        return match (strtolower(trim((string) ($settings['driver'] ?? 'sqlserver')))) {
+            'sql server', 'sqlserver', 'mssql' => 'sqlserver', 'postgres', 'postgresql' => 'postgresql', 'mysql' => 'mysql', 'mariadb' => 'mariadb', 'oracle' => 'oracle', 'firebird' => 'firebird', 'mongodb', 'mongo' => 'mongodb', default => throw new \RuntimeException('Driver de banco não suportado.'),
+        };
+    }
 
-        $dsn = str_contains($driver, 'postgres')
-            ? sprintf('pgsql:host=%s;port=%s;dbname=%s', $host, '' !== $port ? $port : '5432', $database)
-            : sprintf('dblib:host=%s%s;dbname=%s', $host, '' !== $port ? ':'.$port : '', $database);
+    private function tableQuery(string $driver): string
+    {
+        return match ($driver) {
+            'oracle' => 'SELECT USER AS table_schema, TABLE_NAME AS table_name FROM USER_TABLES ORDER BY TABLE_NAME',
+            'firebird' => 'SELECT NULL AS table_schema, TRIM(RDB$RELATION_NAME) AS table_name FROM RDB$RELATIONS WHERE COALESCE(RDB$SYSTEM_FLAG, 0) = 0 AND RDB$VIEW_BLR IS NULL ORDER BY RDB$RELATION_NAME',
+            'mysql', 'mariadb' => "SELECT TABLE_SCHEMA AS table_schema, TABLE_NAME AS table_name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = DATABASE() ORDER BY TABLE_SCHEMA, TABLE_NAME",
+            default => "SELECT TABLE_SCHEMA AS table_schema, TABLE_NAME AS table_name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_SCHEMA, TABLE_NAME",
+        };
+    }
 
-        return new \PDO($dsn, $username, $password, [
-            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-            \PDO::ATTR_TIMEOUT => 4,
-        ]);
+    private function countQuery(string $driver): string
+    {
+        return match ($driver) {
+            'oracle' => 'SELECT COUNT(*) FROM USER_TABLES', 'firebird' => 'SELECT COUNT(*) FROM RDB$RELATIONS WHERE COALESCE(RDB$SYSTEM_FLAG, 0) = 0 AND RDB$VIEW_BLR IS NULL', 'mysql', 'mariadb' => "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = DATABASE()", default => "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'",
+        };
+    }
+
+    private function columnQuery(string $driver): string
+    {
+        return match ($driver) {
+            'oracle' => 'SELECT COLUMN_NAME FROM USER_TAB_COLUMNS WHERE TABLE_NAME = UPPER(:table) ORDER BY COLUMN_ID',
+            'firebird' => 'SELECT TRIM(RDB$FIELD_NAME) FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME = UPPER(:table) ORDER BY RDB$FIELD_POSITION',
+            'mysql', 'mariadb' => 'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = :table AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION',
+            default => "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = :table AND (:schema = '' OR TABLE_SCHEMA = :schema) ORDER BY ORDINAL_POSITION",
+        };
+    }
+
+    /** @return array<string, string> */
+    private function columnParameters(string $driver, string $schema, string $table): array
+    {
+        return in_array($driver, ['oracle', 'firebird', 'mysql', 'mariadb'], true) ? ['table' => $table] : ['table' => $table, 'schema' => $schema];
+    }
+
+    private function quote(string $driver, string $identifier): string
+    {
+        return match ($driver) {'sqlserver' => '['.$identifier.']', 'mysql', 'mariadb' => '`'.$identifier.'`', default => '"'.$identifier.'"'};
+    }
+
+    private function message(\Throwable $exception, string $fallback): string
+    {
+        $message = $exception->getMessage();
+        return str_starts_with($message, 'O driver ') || str_starts_with($message, 'O conector ') || str_starts_with($message, 'Driver de banco') || str_starts_with($message, 'Configuração de banco') ? $message : $fallback;
     }
 
     /** @return array{0: string, 1: string} */
     private function splitTable(string $table): array
     {
         $parts = array_values(array_filter(explode('.', trim($table)), static fn (string $part): bool => preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $part) === 1));
-
         return 2 === count($parts) ? [$parts[0], $parts[1]] : ['', $parts[0] ?? ''];
     }
 }

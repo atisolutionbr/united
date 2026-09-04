@@ -32,6 +32,20 @@ final class ErpConnectionProfile
         ];
     }
 
+    /** @return array<string, string> */
+    public function databaseDrivers(): array
+    {
+        return [
+            'sqlserver' => 'SQL Server',
+            'postgresql' => 'PostgreSQL',
+            'mysql' => 'MySQL',
+            'mariadb' => 'MariaDB',
+            'oracle' => 'Oracle',
+            'firebird' => 'Firebird',
+            'mongodb' => 'MongoDB',
+        ];
+    }
+
     /** @return array<string, array{label: string, hint: string}> */
     public function productFields(): array
     {
@@ -97,7 +111,7 @@ final class ErpConnectionProfile
                 'last_test_message' => '',
             ],
             default => [
-                'driver' => 'SQL Server',
+                'driver' => 'sqlserver',
                 'host' => '',
                 'port' => '1433',
                 'database' => '',
@@ -177,7 +191,7 @@ final class ErpConnectionProfile
                 'form_catalog' => is_array($existing['form_catalog'] ?? null) ? $existing['form_catalog'] : [],
             ],
             default => [
-                'driver' => $this->bounded($value('driver'), 120),
+                'driver' => array_key_exists($value('driver'), $this->databaseDrivers()) ? $value('driver') : 'sqlserver',
                 'host' => $this->bounded($value('host'), 255),
                 'port' => preg_match('/^\d{1,5}$/', $value('port')) ? $value('port') : '',
                 'database' => $this->bounded($value('database'), 128),
