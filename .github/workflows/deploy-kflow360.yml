@@ -21,24 +21,12 @@ jobs:
       - name: Obter código da versão publicada
         uses: actions/checkout@v4
 
-      - name: Preparar chave de acesso à VPS
-        env:
-          DEPLOY_SSH_KEY_BASE64: ${{ vars.DEPLOY_SSH_KEY }}
-        run: |
-          test -n "$DEPLOY_SSH_KEY_BASE64"
-          {
-            echo '-----BEGIN OPENSSH PRIVATE KEY-----'
-            echo "$DEPLOY_SSH_KEY_BASE64" | fold -w 70
-            echo '-----END OPENSSH PRIVATE KEY-----'
-          } > "$RUNNER_TEMP/kflow360_deploy"
-          chmod 600 "$RUNNER_TEMP/kflow360_deploy"
-
       - name: Enviar pacote para a VPS
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ vars.DEPLOY_HOST }}
           username: ${{ vars.DEPLOY_USER }}
-          key_path: ${{ runner.temp }}/kflow360_deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ vars.DEPLOY_PORT }}
           source: "."
           target: ${{ vars.DEPLOY_PATH }}
@@ -50,7 +38,7 @@ jobs:
         with:
           host: ${{ vars.DEPLOY_HOST }}
           username: ${{ vars.DEPLOY_USER }}
-          key_path: ${{ runner.temp }}/kflow360_deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ vars.DEPLOY_PORT }}
           script_stop: true
           script: |
