@@ -97,6 +97,8 @@ final class ErpConnectionProfile
                 'connection_name' => sprintf('%s WebService', $erp),
                 'environment' => 'HOMOLOGACAO',
                 'endpoint' => '',
+                'host' => '',
+                'port' => '',
                 'service_key' => 'product',
                 'operation' => 'CadastrarProduto',
                 'username' => '',
@@ -109,6 +111,8 @@ final class ErpConnectionProfile
                 'last_test_at' => null,
                 'last_test_status' => 'NAO_TESTADO',
                 'last_test_message' => '',
+                'webservices' => [],
+                'form_services' => [],
             ],
             default => [
                 'driver' => 'sqlserver',
@@ -162,8 +166,10 @@ final class ErpConnectionProfile
         return match ($method) {
             ErpConnection::METHOD_WEBSERVICE => [
                 'connection_name' => $this->bounded($value('connection_name'), 120),
-                'environment' => in_array($value('environment'), ['PRODUCAO', 'HOMOLOGACAO', 'TESTE', 'DESENVOLVIMENTO'], true) ? $value('environment') : 'HOMOLOGACAO',
+                'environment' => in_array($value('environment'), ['PRODUCAO', 'HOMOLOGACAO', 'TESTE', 'DESENVOLVIMENTO', 'AVULSO'], true) ? $value('environment') : 'HOMOLOGACAO',
                 'endpoint' => $value('endpoint'),
+                'host' => $this->bounded($value('host'), 255),
+                'port' => preg_match('/^\d{1,5}$/', $value('port')) ? $value('port') : '',
                 'service_key' => $this->identifier($value('service_key')) ?: 'product',
                 'operation' => $this->bounded($value('operation'), 120),
                 'username' => $this->bounded($value('username'), 180),
@@ -178,6 +184,8 @@ final class ErpConnectionProfile
                 'last_test_message' => $existing['last_test_message'] ?? '',
                 'form_mappings' => is_array($existing['form_mappings'] ?? null) ? $existing['form_mappings'] : [],
                 'form_catalog' => is_array($existing['form_catalog'] ?? null) ? $existing['form_catalog'] : [],
+                'webservices' => is_array($existing['webservices'] ?? null) ? $existing['webservices'] : [],
+                'form_services' => is_array($existing['form_services'] ?? null) ? $existing['form_services'] : [],
             ],
             ErpConnection::METHOD_API => [
                 'endpoint' => $value('endpoint'),

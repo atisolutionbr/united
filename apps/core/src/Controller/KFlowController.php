@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Service\ErpCatalog;
 use App\Service\ErpConnectionProfile;
 use App\Service\DatabaseSchemaInspector;
+use App\Service\ConnectionSecretCipher;
 use App\Service\KFlowAccess;
 use App\Service\KFlowRelease;
 use App\Service\ProductFiscalIntelligence;
@@ -30,6 +31,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
@@ -60,6 +62,7 @@ final class KFlowController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly ErpCatalog $erpCatalog,
         private readonly ErpConnectionProfile $connectionProfile,
+        private readonly ConnectionSecretCipher $secretCipher,
         private readonly DatabaseSchemaInspector $databaseSchemaInspector,
         private readonly SeniorProductCatalog $seniorProductCatalog,
         private readonly SeniorCustomerCatalog $seniorCustomerCatalog,
@@ -421,7 +424,7 @@ final class KFlowController extends AbstractController
         $databaseStep = (string) $request->query->get('step', 'connection');
         $databaseStep = in_array($databaseStep, ['connection', 'table', 'mapping', 'users'], true) ? $databaseStep : 'connection';
         $integrationStep = (string) $request->query->get('step', 'connection');
-        $integrationStep = in_array($integrationStep, ['connection', 'mapping', 'users'], true) ? $integrationStep : 'connection';
+        $integrationStep = in_array($integrationStep, ['connection', 'services', 'mapping', 'users'], true) ? $integrationStep : 'connection';
         $databaseForms = $this->connectionProfile->databaseForms();
         $configuredForms = $this->configuredForms($settings, $databaseForms);
         $selectedForm = (string) $request->query->get('form', $configuredForms[0]['id']);
@@ -429,6 +432,7 @@ final class KFlowController extends AbstractController
         $selectedForm = $selectedFormConfig['id'];
         $selectedFormDefinition = $databaseForms[$selectedFormConfig['template']];
         $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
+        $webServices = $this->webServices($settings);
         $binding = is_array($bindings[$selectedForm] ?? null) ? $bindings[$selectedForm] : [];
         $selectedTable = (string) ($binding['table'] ?? $settings['table'] ?? '');
         $tables = ['tables' => [], 'error' => null];
@@ -472,6 +476,8 @@ final class KFlowController extends AbstractController
             'databaseColumnsError' => $columns['error'],
             'integrationStep' => $integrationStep,
             'payloadMapping' => is_array(($settings['form_mappings'][$selectedForm] ?? null)) ? $settings['form_mappings'][$selectedForm] : [],
+            'webServices' => $webServices,
+            'selectedWebService' => (string) (($settings['form_services'][$selectedForm] ?? '') ?: ''),
             'isActive' => $connection?->isActive() ?? false,
             'seniorDatabaseAvailable' => ErpConnection::METHOD_DATABASE === $method && $this->databaseSchemaInspector->isConfigured($settings),
             'seniorWebServices' => 'Senior' === $erp ? $this->seniorWebServiceCatalog->all() : [],
@@ -546,7 +552,8 @@ final class KFlowController extends AbstractController
 
         $this->addFlash('success', sprintf('%s vinculado pelo modo %s.', $erp, $this->connectionProfile->connectionMethods()[$method]));
 
-        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, ...(ErpConnection::METHOD_DATABASE === $method ? ['step' => 'table'] : ['step' => 'mapping'])]);
+        $nextStep = ErpConnection::METHOD_DATABASE === $method ? 'table' : (ErpConnection::METHOD_WEBSERVICE === $method ? 'services' : 'mapping');
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => $nextStep]);
     }
 
     #[Route('/erp/{erp}/database/test', name: 'kflow_erp_database_test', methods: ['POST'])]
@@ -643,9 +650,19 @@ final class KFlowController extends AbstractController
         }
 
         $settings = $connection->getSettingsForMethod($method);
+        if (ErpConnection::METHOD_WEBSERVICE === $method) {
+            $serviceId = (string) $request->request->get('webservice_id');
+            if (!in_array($serviceId, array_column($this->webServices($settings), 'id'), true)) {
+                $this->addFlash('warning', 'Selecione um WebService cadastrado para vincular o formulário.');
+                return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'mapping', 'form' => $form]);
+            }
+        }
         $formMappings = is_array($settings['form_mappings'] ?? null) ? $settings['form_mappings'] : [];
         $formMappings[$form] = $mapping;
         $settings['form_mappings'] = $formMappings;
+        if (ErpConnection::METHOD_WEBSERVICE === $method) {
+            $settings['form_services'][$form] = (string) $request->request->get('webservice_id');
+        }
         $connection->setSettingsForMethod($method, $settings);
         $this->entityManager->flush();
         $this->addFlash('success', sprintf('De/Para de %s salvo para %s.', $configuredForm['label'], $this->connectionProfile->connectionMethods()[$method]));
@@ -778,7 +795,7 @@ final class KFlowController extends AbstractController
     public function testErpWebService(string $erp, Request $request): Response
     {
         $this->requireMenu('connections');
-        if ('Senior' !== $erp || !$this->isCsrfTokenValid('test-erp-webservice-'.$erp, (string) $request->request->get('_token'))) {
+        if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('test-erp-webservice-'.$erp, (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException();
         }
 
@@ -789,10 +806,39 @@ final class KFlowController extends AbstractController
             return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_WEBSERVICE]);
         }
 
-        $result = $this->seniorWebServiceManager->testConnection($connection);
+        $result = $this->testWebService($connection);
         $this->addFlash($result['success'] ? 'success' : 'warning', sprintf('%s Tempo: %d ms.', $result['message'], $result['responseTimeMs']));
 
         return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_WEBSERVICE]);
+    }
+
+    #[Route('/erp/{erp}/webservice/services', name: 'kflow_erp_webservice_service_create', methods: ['POST'])]
+    public function createWebService(string $erp, Request $request): Response
+    {
+        $this->requireMenu('connections');
+        if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('create-webservice-'.$erp, (string) $request->request->get('_token'))) throw $this->createAccessDeniedException();
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) { $this->addFlash('warning', 'Salve a conexão WebService antes de cadastrar serviços.'); return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_WEBSERVICE]); }
+        $settings = $connection->getSettingsForMethod(ErpConnection::METHOD_WEBSERVICE);
+        $name = mb_substr(trim((string) $request->request->get('name')), 0, 120);
+        $endpoint = mb_substr(trim((string) $request->request->get('endpoint')), 0, 500);
+        if ('' === $name || '' === $endpoint) { $this->addFlash('warning', 'Informe nome e URL, IP ou link do WebService.'); return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_WEBSERVICE, 'step' => 'services']); }
+        $services = $this->webServices($settings);
+        $services[] = ['id' => 'ws-'.bin2hex(random_bytes(4)), 'name' => $name, 'endpoint' => $endpoint, 'port' => mb_substr(trim((string) $request->request->get('port')), 0, 80), 'method' => mb_substr(trim((string) $request->request->get('service_method')), 0, 80), 'active' => '1' === (string) $request->request->get('active'), 'last_test_status' => 'NAO_TESTADO', 'last_test_message' => ''];
+        $settings['webservices'] = $services; $connection->setSettingsForMethod(ErpConnection::METHOD_WEBSERVICE, $settings); $this->entityManager->flush();
+        $this->addFlash('success', 'WebService cadastrado.');
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_WEBSERVICE, 'step' => 'services']);
+    }
+
+    #[Route('/erp/{erp}/webservice/services/{service}/test', name: 'kflow_erp_webservice_service_test', methods: ['POST'])]
+    public function testRegisteredWebService(string $erp, string $service, Request $request): Response
+    {
+        $this->requireMenu('connections');
+        if (!$this->erpCatalog->supports($erp) || !$this->isCsrfTokenValid('test-webservice-'.$erp.'-'.$service, (string) $request->request->get('_token'))) throw $this->createAccessDeniedException();
+        $connection = $this->connectionFor($erp); if (!$connection instanceof ErpConnection) throw $this->createNotFoundException();
+        $settings = $connection->getSettingsForMethod(ErpConnection::METHOD_WEBSERVICE); $services = $this->webServices($settings);
+        foreach ($services as $index => $item) if ($item['id'] === $service) { $result = $this->testWebService($connection, $item); $services[$index]['last_test_status'] = $result['success'] ? 'SUCESSO' : 'ERRO'; $services[$index]['last_test_message'] = $result['message']; $settings['webservices'] = $services; $connection->setSettingsForMethod(ErpConnection::METHOD_WEBSERVICE, $settings); $this->entityManager->flush(); $this->addFlash($result['success'] ? 'success' : 'warning', $result['message']); break; }
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_WEBSERVICE, 'step' => 'services']);
     }
 
     #[Route('/erp/database', name: 'kflow_erp_database', methods: ['GET'])]
@@ -956,6 +1002,40 @@ final class KFlowController extends AbstractController
     }
 
     /** @return array<string, mixed> */
+    /** @return list<array{id: string, name: string, endpoint: string, port: string, method: string, active: bool, last_test_status: string, last_test_message: string}> */
+    private function webServices(array $settings): array
+    {
+        $services = is_array($settings['webservices'] ?? null) ? $settings['webservices'] : [];
+        $normalized = [];
+        foreach ($services as $service) {
+            if (!is_array($service) || !preg_match('/^ws-[a-f0-9]{8}$/', (string) ($service['id'] ?? ''))) continue;
+            $normalized[] = ['id' => (string) $service['id'], 'name' => mb_substr((string) ($service['name'] ?? ''), 0, 120), 'endpoint' => mb_substr((string) ($service['endpoint'] ?? ''), 0, 500), 'port' => mb_substr((string) ($service['port'] ?? ''), 0, 80), 'method' => mb_substr((string) ($service['method'] ?? ''), 0, 80), 'active' => (bool) ($service['active'] ?? true), 'last_test_status' => (string) ($service['last_test_status'] ?? 'NAO_TESTADO'), 'last_test_message' => mb_substr((string) ($service['last_test_message'] ?? ''), 0, 240)];
+        }
+        return $normalized;
+    }
+
+    /** @param array<string, mixed>|null $service @return array{success: bool, message: string, responseTimeMs: int} */
+    private function testWebService(ErpConnection $connection, ?array $service = null): array
+    {
+        $settings = $connection->getSettingsForMethod(ErpConnection::METHOD_WEBSERVICE);
+        $endpoint = trim((string) ($service['endpoint'] ?? $settings['endpoint'] ?? ''));
+        if ('' === $endpoint) return ['success' => false, 'message' => 'Informe a URL, IP ou link do WebService antes de testar.', 'responseTimeMs' => 0];
+        if (!preg_match('#^https?://#i', $endpoint)) $endpoint = 'http://'.$endpoint;
+        $port = trim((string) ($service['port'] ?? $settings['port'] ?? ''));
+        if ('' !== $port && !str_contains(parse_url($endpoint, PHP_URL_HOST) ?: '', ':') && !preg_match('#:\d+(?:/|$)#', $endpoint)) $endpoint = preg_replace('#^(https?://[^/]+)#', '$1:'.$port, $endpoint) ?: $endpoint;
+        $started = hrtime(true);
+        try {
+            $options = ['timeout' => max(1, min(120, (int) ($settings['timeout_seconds'] ?? 20))), 'max_duration' => max(1, min(120, (int) ($settings['timeout_seconds'] ?? 20)))];
+            $username = trim((string) ($settings['username'] ?? '')); $encrypted = (string) ($settings['password_encrypted'] ?? '');
+            if ('' !== $username && '' !== $encrypted) $options['auth_basic'] = [$username, $this->secretCipher->decrypt($encrypted)];
+            $status = $this->httpClient->request('GET', $endpoint, $options)->getStatusCode();
+            $success = $status < 500; $message = sprintf('WebService respondeu HTTP %d.', $status);
+        } catch (TransportExceptionInterface $exception) { $success = false; $message = 'Não foi possível obter resposta do WebService.'; }
+        $elapsed = (int) round((hrtime(true) - $started) / 1_000_000);
+        if (null === $service) { $settings['last_test_at'] = (new \DateTimeImmutable())->format(DATE_ATOM); $settings['last_test_status'] = $success ? 'SUCESSO' : 'ERRO'; $settings['last_test_message'] = $message; $connection->setSettingsForMethod(ErpConnection::METHOD_WEBSERVICE, $settings); $this->entityManager->flush(); }
+        return ['success' => $success, 'message' => $message, 'responseTimeMs' => $elapsed];
+    }
+
     private function cachedResult(string $type, int $page, ?ErpConnection $connection = null, bool $load = true): array
     {
         $companyId = $this->currentCompany()->getId() ?? 0;
