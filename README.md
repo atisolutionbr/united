@@ -2,7 +2,7 @@
 
 Plataforma de integração e governança cadastral da Ati Solution.
 
-O United · Ati Solution conecta empresas e ERPs por banco de dados, API ou WebService, organiza os vínculos por formulário e oferece fluxos para produtos, clientes, fornecedores, transportadoras, requisições e aprovações.
+O United Ati conecta empresas e ERPs por banco de dados, API ou WebService, organiza os vínculos por formulário e oferece fluxos para produtos, clientes, fornecedores, transportadoras, requisições e aprovações.
 
 ## Ambiente local
 
@@ -12,7 +12,19 @@ No Windows, com o Docker Desktop iniciado e o `.env` local configurado, execute:
 ./scripts/start-local.ps1
 ```
 
-Abra http://localhost:3000/login. Na primeira execução, o script copia o volume PostgreSQL existente para um volume exclusivo do United Ati, preservando usuários, empresas e configurações criptografadas de conexão com o ERP Senior. O banco original precisa estar parado durante essa cópia. A conexão ao banco do ERP continua sendo a mesma; suas credenciais não são versionadas. O arquivo `compose.local.yaml` é exclusivo desse procedimento local.
+Abra http://localhost:4300/login. Na primeira execução, o script exporta o PostgreSQL do KFlow em execução e importa uma cópia consistente para um volume exclusivo do United Ati, preservando usuários, empresas e configurações criptografadas de conexão com o ERP Senior. O KFlow permanece em execução durante todo o procedimento. A conexão ao banco do ERP continua sendo a mesma; suas credenciais não são versionadas. O arquivo `compose.local.yaml` é exclusivo desse procedimento local.
+
+| Serviço | KFlow | United Ati |
+| --- | --- | --- |
+| Aplicação | 3000 | 4300 |
+| Metabase | 3001 | 4301 |
+| Adminer | 8081 | 4381 |
+| PostgreSQL | 5432 | 5433 |
+| Kestra (opcional) | 8082 | 4382 |
+| Ollama (opcional) | 11434 | 21434 |
+| Qdrant (opcional) | 6333 | 16333 |
+
+Containers, redes e volumes do United são exclusivos. O PostgreSQL interno do KFlow não é compartilhado nem interrompido; somente a conexão externa com o ERP Senior é reaproveitada. A importação inicial usa `pg_dump` com o KFlow online. O `.env` local preserva a chave de criptografia necessária para abrir as credenciais importadas.
 
 Para uma instalação nova independente:
 
@@ -20,7 +32,7 @@ Para uma instalação nova independente:
 docker compose up -d --build
 ```
 
-Após iniciar os serviços, acesse `http://localhost:3000`.
+Após iniciar os serviços, acesse `http://localhost:4300`.
 
 ## Verificações
 

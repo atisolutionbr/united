@@ -7,23 +7,34 @@ function Invoke-DockerAti {
 }
 
 & docker info --format '{{.ServerVersion}}' 2>$null
-if ($LASTEXITCODE -ne 0) { throw 'O motor do Docker está indisponível. Inicie ou repare o Docker Desktop antes de continuar.' }
+if ($LASTEXITCODE -ne 0) { throw 'O motor do Docker está indisponível. Inicie o Docker Desktop antes de continuar.' }
 if (-not (Test-Path .env)) { throw 'Configuração local .env ausente.' }
 
+$composeAti = @('compose', '-p', 'united-ati', '-f', 'docker-compose.yml', '-f', 'compose.local.yaml')
 $sourceVolumeAti = 'plataforma360-postgres-data'
 $targetVolumeAti = 'united-ati-local-postgres-data'
 $volumesAti = & docker volume ls --format '{{.Name}}'
 if ($LASTEXITCODE -ne 0) { throw 'Não foi possível consultar os volumes.' }
 if ($targetVolumeAti -notin $volumesAti) {
-    if ($sourceVolumeAti -notin $volumesAti) { throw 'O banco original não foi encontrado. Não será criado um banco vazio.' }
-    $activeAti = & docker ps --filter "volume=$sourceVolumeAti" --format '{{.Names}}'
-    if ($LASTEXITCODE -ne 0) { throw 'Não foi possível verificar o uso do banco original.' }
-    if ($activeAti) { throw 'O banco original está em execução. Pare sua instância antes de fazer a cópia local consistente.' }
-    Invoke-DockerAti volume create $targetVolumeAti
-    Invoke-DockerAti run --rm --user root --entrypoint sh --mount "type=volume,source=$sourceVolumeAti,target=/source,readonly" --mount "type=volume,source=$targetVolumeAti,target=/target" postgis/postgis:16-3.4-alpine -c 'test -f /source/PG_VERSION && cp -a /source/. /target/ && touch /target/.united-copy-complete'
+    # pg_dump creates a consistent snapshot while KFlow remains online.
+    $sourceContainersAti = @(& docker ps --filter "volume=$sourceVolumeAti" --format '{{.Names}}')
+    if ($LASTEXITCODE -ne 0 -or $sourceContainersAti.Count -ne 1) {
+        throw 'Mantenha o PostgreSQL do KFlow iniciado para importar seus cadastros sem interrompê-lo.'
+    }
+    New-Item -ItemType Directory -Path .local-runtime -Force | Out-Null
+    $dumpPathAti = Join-Path $PWD '.local-runtime/platform-seed.dump'
+    Invoke-DockerAti exec $sourceContainersAti[0] sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom --file=/tmp/united-ati-seed.dump'
+    Invoke-DockerAti cp ($sourceContainersAti[0] + ':/tmp/united-ati-seed.dump') $dumpPathAti
+    Invoke-DockerAti @composeAti up -d --wait postgres
+    Invoke-DockerAti cp $dumpPathAti 'united-postgres:/tmp/united-ati-seed.dump'
+    Invoke-DockerAti exec united-postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --no-privileges --exit-on-error /tmp/united-ati-seed.dump'
+    Invoke-DockerAti exec united-postgres touch /var/lib/postgresql/data/.united-import-complete
+} else {
+    Invoke-DockerAti @composeAti up -d --wait postgres
+    Invoke-DockerAti exec united-postgres test -f /var/lib/postgresql/data/.united-import-complete
 }
-Invoke-DockerAti run --rm --entrypoint sh --mount "type=volume,source=$targetVolumeAti,target=/target,readonly" postgis/postgis:16-3.4-alpine -c 'test -f /target/.united-copy-complete'
-Invoke-DockerAti compose -f docker-compose.yml -f compose.local.yaml up -d --build postgres php nginx adminer
-Invoke-DockerAti compose -f docker-compose.yml -f compose.local.yaml exec -T php php bin/console doctrine:migrations:migrate --no-interaction
-Invoke-DockerAti compose -f docker-compose.yml -f compose.local.yaml exec -T php php bin/console cache:clear
-Write-Output 'United Ati: http://localhost:3000/login'
+Invoke-DockerAti @composeAti up -d --build php nginx adminer
+Invoke-DockerAti @composeAti exec -T php php bin/console doctrine:migrations:migrate --no-interaction
+Invoke-DockerAti @composeAti exec -T php php bin/console cache:clear
+Write-Output 'United Ati: http://localhost:4300/login'
+Write-Output 'KFlow permanece na sua porta e com seu banco original.'
