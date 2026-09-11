@@ -1,8 +1,8 @@
-# KFlow360
+# United · Ati Solution
 
 Plataforma de integração e governança cadastral da Ati Solution.
 
-O KFlow360 conecta empresas e ERPs por banco de dados, API ou WebService, organiza os vínculos por formulário e oferece fluxos para produtos, clientes, fornecedores, transportadoras, requisições e aprovações.
+O United · Ati Solution conecta empresas e ERPs por banco de dados, API ou WebService, organiza os vínculos por formulário e oferece fluxos para produtos, clientes, fornecedores, transportadoras, requisições e aprovações.
 
 ## Ambiente local
 

@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}KFlow360 · Conexão BD{% endblock %}
+{% block title %}United · Ati Solution · Conexão BD{% endblock %}
 {% block page_title %}Conexão BD{% endblock %}
 
 {% block main %}
@@ -14,7 +14,7 @@
             <div class="kflow-section-heading"><div><span class="kflow-eyebrow">ERP selecionado</span><h2>{{ activeErp ?: 'Nenhum ERP selecionado' }}</h2></div><span class="badge {{ activeErp ? 'text-bg-success' : 'text-bg-secondary' }}">{{ activeErp ? 'Ativo' : 'Aguardando' }}</span></div>
             {% if activeErp %}
                 <div class="kflow-connection-panel__steps"><span><i class="bi bi-check2"></i>ERP definido</span><span><i class="bi bi-arrow-right"></i></span><span><i class="bi bi-database"></i>Base de dados</span><span><i class="bi bi-arrow-right"></i></span><span><i class="bi bi-bar-chart-line"></i>Análises</span></div>
-                <div class="kflow-metabase-callout"><div><i class="bi bi-bar-chart-line"></i><div><strong>Metabase</strong><p>Acesse bancos, metadados, permissões e consultas da operação. O acesso é iniciado automaticamente pela sua sessão KFlow360.</p></div></div><a class="btn btn-primary" href="{{ path('kflow_metabase') }}">Abrir Metabase<i class="bi bi-box-arrow-up-right"></i></a></div>
+                <div class="kflow-metabase-callout"><div><i class="bi bi-bar-chart-line"></i><div><strong>Metabase</strong><p>Acesse bancos, metadados, permissões e consultas da operação. O acesso é iniciado automaticamente pela sua sessão United · Ati Solution.</p></div></div><a class="btn btn-primary" href="{{ path('kflow_metabase') }}">Abrir Metabase<i class="bi bi-box-arrow-up-right"></i></a></div>
             {% else %}
                 <div class="kflow-empty-state"><i class="bi bi-hdd-network"></i><div><strong>Escolha um ERP para continuar</strong><p>A seleção determina as configurações e telas específicas da operação.</p><a href="{{ path('kflow_erp_index') }}" class="btn btn-primary">Selecionar ERP</a></div></div>
             {% endif %}

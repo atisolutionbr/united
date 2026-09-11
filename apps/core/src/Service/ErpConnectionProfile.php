@@ -62,6 +62,7 @@ final class ErpConnectionProfile
                 'customer_code' => ['label' => 'Código do cliente', 'hint' => 'Identificador do cliente no ERP.'],
                 'name' => ['label' => 'Nome / razão social', 'hint' => 'Nome principal do cliente.'],
                 'document' => ['label' => 'CPF / CNPJ', 'hint' => 'Documento fiscal do cliente.'],
+                'state_registration' => ['label' => 'Inscrição estadual', 'hint' => 'Inscrição estadual para conferência com a base cadastral.'],
                 'email' => ['label' => 'E-mail', 'hint' => 'E-mail principal de contato.'],
             ]],
             'suppliers' => ['label' => 'Fornecedores', 'fields' => [
@@ -69,12 +70,14 @@ final class ErpConnectionProfile
                 'supplier_code' => ['label' => 'Código do fornecedor', 'hint' => 'Identificador do fornecedor no ERP.'],
                 'name' => ['label' => 'Nome / razão social', 'hint' => 'Nome principal do fornecedor.'],
                 'document' => ['label' => 'CPF / CNPJ', 'hint' => 'Documento fiscal do fornecedor.'],
+                'state_registration' => ['label' => 'Inscrição estadual', 'hint' => 'Inscrição estadual para conferência com a base cadastral.'],
                 'email' => ['label' => 'E-mail', 'hint' => 'E-mail principal de contato.'],
             ]],
             'carriers' => ['label' => 'Transportadoras', 'fields' => [
                 'carrier_code' => ['label' => 'Código da transportadora', 'hint' => 'Identificador da transportadora no ERP.'],
                 'name' => ['label' => 'Nome / razão social', 'hint' => 'Nome principal da transportadora.'],
                 'document' => ['label' => 'CPF / CNPJ', 'hint' => 'Documento fiscal da transportadora.'],
+                'state_registration' => ['label' => 'Inscrição estadual', 'hint' => 'Inscrição estadual para conferência com a base cadastral.'],
                 'phone' => ['label' => 'Telefone', 'hint' => 'Telefone principal de contato.'],
             ]],
         ];

@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Configuração Metabase · Integrações · Plataforma360{% endblock %}
+{% block title %}Configuração Metabase · Integrações · United{% endblock %}
 
 {% block main %}
 <div class="data-management-hero p-4 p-lg-5 mb-4 rounded-4" style="background: linear-gradient(135deg, rgba(147,51,234,0.05) 0%, rgba(168,85,247,0.08) 100%); border: 1px solid rgba(147,51,234,0.12);">
@@ -15,7 +15,7 @@
                 {% endif %}
             </div>
             <h1 class="h3 fw-bold mb-1" style="color:#0b3c5d;">Configuração Metabase</h1>
-            <p class="text-muted mb-0" style="max-width:62ch;">Configure a conexão com o Metabase para incorporar dashboards analíticos diretamente na Plataforma360.</p>
+            <p class="text-muted mb-0" style="max-width:62ch;">Configure a conexão com o Metabase para incorporar dashboards analíticos diretamente na United.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             {% if config and config.id %}
@@ -59,7 +59,7 @@
                             <label class="form-label fw-semibold small" for="database_name">Nome do Banco de Dados</label>
                             <input type="text" class="form-control rounded-3" id="database_name" name="database_name"
                                    value="{{ config ? config.databaseName : '' }}"
-                                   placeholder="plataforma360_db">
+                                   placeholder="united_db">
                             <div class="form-text">Nome como cadastrado no Metabase.</div>
                         </div>
                         <div class="col-md-6">
@@ -117,7 +117,7 @@
                         {icon: 'arrow-down', label: '', desc: ''},
                         {icon: 'bar-chart-line', label: 'Metabase', desc: 'Conexão direta ao banco'},
                         {icon: 'arrow-down', label: '', desc: ''},
-                        {icon: 'buildings', label: 'Plataforma360', desc: 'Dashboards incorporados'},
+                        {icon: 'buildings', label: 'United', desc: 'Dashboards incorporados'},
                     ] %}
                         {% if step.icon == 'arrow-down' %}
                             <div class="text-center text-muted">↓</div>

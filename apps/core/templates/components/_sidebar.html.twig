@@ -5,9 +5,9 @@
 
 <button class="kflow-sidebar-scrim" type="button" data-sidebar-scrim aria-label="Fechar menu"></button>
 <aside class="kflow-sidebar" aria-label="Navegação principal">
-    <a class="kflow-brand" href="{{ path('kflow_dashboard') }}" aria-label="KFlow360">
-        <span class="kflow-brand__mark"><img class="kflow-brand__logo" src="/images/kflow360-logo.png" alt=""></span>
-        <span class="kflow-brand__name">KFlow360<small>Integration Platform</small></span>
+    <a class="kflow-brand" href="{{ path('kflow_dashboard') }}" aria-label="United · Ati Solution">
+        <span class="kflow-brand__mark"><img class="kflow-brand__logo" src="/images/united-logo.png" alt=""></span>
+        <span class="kflow-brand__name">United<small>Ati Solution</small></span>
     </a>
     <div class="kflow-release" aria-label="Versão da plataforma">
         <strong>v{{ release.version }}</strong><span>build {{ release.build }}</span>
@@ -22,7 +22,7 @@
 
         {% if kflow_can('products') or kflow_can('clients') or kflow_can('suppliers') or kflow_can('carriers') %}<div class="kflow-nav__group is-open">
             <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="true">
-                <span><i class="bi bi-box-seam"></i><span>Kadastro360</span></span><i class="bi bi-chevron-down"></i>
+                <span><i class="bi bi-box-seam"></i><span>United</span></span><i class="bi bi-chevron-down"></i>
             </button>
             <div class="kflow-nav__submenu">
                 {% if kflow_can('products') %}<a href="{{ path('kflow_products') }}" class="{{ route == 'kflow_products' ? 'is-active' }}">Produtos</a>{% endif %}
@@ -52,7 +52,7 @@
 
         {% if app.user.userIdentifier|lower == 'kadmin' or kflow_can('intelligence') or kflow_can('data') or kflow_can('integrations') or kflow_can('ai') or kflow_can('operations') or kflow_can('governance') or kflow_can('platform') %}<div class="kflow-nav__group">
             <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="false">
-                <span><i class="bi bi-sliders2"></i><span>Configurações Kflow360</span></span><i class="bi bi-chevron-down"></i>
+                <span><i class="bi bi-sliders2"></i><span>Configurações United</span></span><i class="bi bi-chevron-down"></i>
             </button>
             <div class="kflow-nav__submenu">
                 {% if app.user.userIdentifier|lower == 'kadmin' %}<a href="{{ path('kflow_companies') }}" class="{{ route starts with 'kflow_compan' ? 'is-active' }}">Empresas</a><a href="{{ path('kflow_users') }}" class="{{ route starts with 'kflow_users' ? 'is-active' }}">Usuários</a>{% endif %}

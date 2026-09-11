@@ -1,4 +1,4 @@
-name: Deploy KFlow360
+name: Deploy United · Ati Solution
 
 on:
   push:
@@ -9,11 +9,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: kflow360-production
+  group: united-production
   cancel-in-progress: false
 
 jobs:
   deploy:
+    if: vars.DEPLOY_ENABLED == 'true'
     name: Deploy no servidor
     runs-on: ubuntu-latest
     environment: production

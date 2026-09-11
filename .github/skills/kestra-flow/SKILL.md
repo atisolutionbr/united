@@ -1,6 +1,6 @@
 ---
 name: kestra-flow
-description: "Use to create a new Kestra flow YAML and register it as a pipeline in the Plataforma360 portal. Triggers: create flow, new pipeline, kestra flow, criar flow, novo pipeline Kestra, novo fluxo de dados."
+description: "Use to create a new Kestra flow YAML and register it as a pipeline in the United portal. Triggers: create flow, new pipeline, kestra flow, criar flow, novo pipeline Kestra, novo fluxo de dados."
 argument-hint: "Descreva o objetivo do flow: fonte dos dados, transformações, destino, agendamento"
 ---
 
@@ -19,11 +19,11 @@ argument-hint: "Descreva o objetivo do flow: fonte dos dados, transformações, 
 
 | Tipo | Prefix sugerido | Namespace |
 |---|---|---|
-| Ingestão de dados | `ingestao-` | `plataforma360` |
-| Transformação ETL | `transformacao-` | `plataforma360` |
-| Carga Warehouse | `carga-warehouse-` | `plataforma360` |
-| Geração Embeddings | `embeddings-` | `plataforma360` |
-| Verificação Qualidade | `qualidade-` | `plataforma360` |
+| Ingestão de dados | `ingestao-` | `united` |
+| Transformação ETL | `transformacao-` | `united` |
+| Carga Warehouse | `carga-warehouse-` | `united` |
+| Geração Embeddings | `embeddings-` | `united` |
+| Verificação Qualidade | `qualidade-` | `united` |
 
 ### 2. Criar o Arquivo YAML
 
@@ -34,7 +34,7 @@ Ler `future/kestra/flows/olinda360_primeira_ingestao.yml` como referência antes
 Estrutura obrigatória:
 ```yaml
 id: ingestao-nome-da-fonte
-namespace: plataforma360
+namespace: united
 description: "Descreva o que o flow faz"
 labels:
   type: ingestion
@@ -68,7 +68,7 @@ errors:
 
 ### 3. Verificar a Conexão com o Banco
 
-O Kestra usa a rede Docker `plataforma360`. O hostname correto do banco é `postgres` (não `localhost`).
+O Kestra usa a rede Docker `united`. O hostname correto do banco é `postgres` (não `localhost`).
 
 ```yaml
 url: "jdbc:postgresql://postgres:5432/app"
@@ -82,7 +82,7 @@ Com o Kestra rodando (`make up-ops`):
 # Via API REST
 wsl -e bash -c "curl -X POST http://localhost:8082/api/v1/flows/import \
   -H 'Content-Type: application/x-yaml' \
-  --data-binary @/mnt/c/Plataforma360/future/kestra/flows/nome-do-flow.yml"
+  --data-binary @/mnt/c/United/future/kestra/flows/nome-do-flow.yml"
 ```
 
 Ou pela interface: `http://localhost:8082/ui/` → Flows → Import
@@ -97,7 +97,7 @@ Ou pela interface: `http://localhost:8082/ui/` → Flows → Import
 | Tipo | `ingestion` / `transformation` / etc. |
 | Trigger | `manual` / `cron` / `event` |
 | Cron Expression | Se agendado (ex: `0 2 * * *`) |
-| Kestra Namespace | `plataforma360` |
+| Kestra Namespace | `united` |
 | Kestra Flow ID | ID do flow (ex: `ingestao-ckan-turismo`) |
 | Kestra YAML | Cole o conteúdo do arquivo YAML |
 
@@ -110,5 +110,5 @@ Ou pela interface: `http://localhost:8082/ui/` → Flows → Import
 ### 7. Verificar Dados no Staging
 
 ```bash
-wsl -e bash -c "cd /mnt/c/Plataforma360 && docker compose exec postgres psql -U app -c 'SELECT COUNT(*) FROM staging.tabela'"
+wsl -e bash -c "cd /mnt/c/United && docker compose exec postgres psql -U app -c 'SELECT COUNT(*) FROM staging.tabela'"
 ```

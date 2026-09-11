@@ -45,6 +45,7 @@ final class SeniorPartyCatalog
                 $this->select($mapping[$type === 'suppliers' ? 'supplier_code' : 'carrier_code'] ?? $profile['code'], 'Code', $columns),
                 $this->select($mapping['name'] ?? $profile['name'], 'Name', $columns),
                 $this->select($mapping['document'] ?? $profile['document'], 'Document', $columns),
+                $this->select($mapping['state_registration'] ?? 'InsEst', 'StateRegistration', $columns),
                 $this->select($mapping['email'] ?? '', 'Email', $columns),
                 $this->select($profile['address'], 'Address', $columns),
                 $this->select($profile['city'], 'City', $columns),
@@ -64,7 +65,7 @@ final class SeniorPartyCatalog
             ));
             $parties = $statement->fetchAll(\PDO::FETCH_ASSOC);
             foreach ($parties as &$party) {
-                foreach (['Code', 'Name', 'Document', 'Email', 'Address', 'City', 'State', 'Phone', 'UpdatedAt'] as $field) {
+                foreach (['Code', 'Name', 'Document', 'StateRegistration', 'Email', 'Address', 'City', 'State', 'Phone', 'UpdatedAt'] as $field) {
                     $party[$field] ??= '';
                 }
             }

@@ -11,6 +11,7 @@ use App\Service\ErpCatalog;
 use App\Service\ErpConnectionProfile;
 use App\Service\DatabaseSchemaInspector;
 use App\Service\ConnectionSecretCipher;
+use App\Service\CnpjWsRegistry;
 use App\Service\KFlowAccess;
 use App\Service\KFlowRelease;
 use App\Service\ProductFiscalIntelligence;
@@ -45,7 +46,7 @@ final class KFlowController extends AbstractController
         'fornecedor' => ['title' => 'Fornecedor', 'description' => 'Cadastro e gestão de fornecedores.', 'icon' => 'truck'],
         'transportador' => ['title' => 'Transportador', 'description' => 'Cadastro e gestão de transportadores.', 'icon' => 'truck-flatbed'],
         'requisicao' => ['title' => 'Requisição', 'description' => 'Criação e acompanhamento de requisições.', 'icon' => 'clipboard2-plus'],
-        'aprovacao' => ['title' => 'Aprovação', 'description' => 'Central de aprovações dos fluxos do KFlow360.', 'icon' => 'check2-square'],
+        'aprovacao' => ['title' => 'Aprovação', 'description' => 'Central de aprovações dos fluxos do United · Ati Solution.', 'icon' => 'check2-square'],
         'aprovacao-requisicao' => ['title' => 'Aprovação Requisição', 'description' => 'Fluxo de aprovação de requisições.', 'icon' => 'check2-square'],
         'solicitacao' => ['title' => 'Solicitação', 'description' => 'Solicitações operacionais da plataforma.', 'icon' => 'send'],
         'aprovacao-solicitacao' => ['title' => 'Aprovação Solicitação', 'description' => 'Fluxo de aprovação de solicitações.', 'icon' => 'check2-circle'],
@@ -74,6 +75,7 @@ final class KFlowController extends AbstractController
         private readonly KFlowAccess $access,
         private readonly KFlowRelease $release,
         private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly CnpjWsRegistry $cnpjWsRegistry,
         private readonly HttpClientInterface $httpClient,
         private readonly CacheInterface $cache,
         private readonly CsrfTokenManagerInterface $csrfTokenManager,
@@ -295,13 +297,27 @@ final class KFlowController extends AbstractController
     public function companyByCnpj(string $document): JsonResponse
     {
         $this->requirePlatformAdmin();
-        $document = preg_replace('/\D+/', '', $document) ?? '';
-        if (14 !== strlen($document)) return $this->json(['ok' => false, 'message' => 'Informe um CNPJ com 14 dígitos.'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        try {
-            $payload = $this->httpClient->request('GET', 'https://brasilapi.com.br/api/cnpj/v1/'.$document, ['timeout' => 3])->toArray(false);
-            if (!isset($payload['razao_social'])) throw new \RuntimeException();
-            return $this->json(['ok' => true, 'legalName' => $payload['razao_social'] ?? '', 'name' => $payload['nome_fantasia'] ?: ($payload['razao_social'] ?? ''), 'address' => trim(implode(', ', array_filter([$payload['logradouro'] ?? '', $payload['numero'] ?? '', $payload['bairro'] ?? '', $payload['municipio'] ?? '', $payload['uf'] ?? '']))), 'phone' => $payload['ddd_telefone_1'] ?? '', 'email' => $payload['email'] ?? '']);
-        } catch (\Throwable) { return $this->json(['ok' => false, 'message' => 'Consulta indisponível. Você pode informar os dados manualmente.'], Response::HTTP_BAD_GATEWAY); }
+        $result = $this->cnpjWsRegistry->lookup($document);
+        if (!$result['ok']) return $this->json($result, false === ($result['supported'] ?? true) ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_BAD_GATEWAY);
+        $registry = $result['registry'];
+
+        return $this->json([
+            'ok' => true,
+            'legalName' => $registry['legalName'],
+            'name' => $registry['tradeName'] ?: $registry['legalName'],
+            'address' => trim(implode(', ', array_filter([$registry['address'], $registry['city'], $registry['state']]))),
+            'phone' => $registry['phone'],
+            'email' => $registry['email'],
+        ]);
+    }
+
+    #[Route('/registration/cnpj/{document}', name: 'kflow_registration_cnpj', methods: ['GET'])]
+    public function registrationByCnpj(string $document): JsonResponse
+    {
+        $this->requireRegistrationReviewAccess();
+        $result = $this->cnpjWsRegistry->lookup($document);
+
+        return $this->json($result, $result['ok'] ? Response::HTTP_OK : (false === ($result['supported'] ?? true) ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_BAD_GATEWAY));
     }
 
     #[Route('/users', name: 'kflow_users', methods: ['GET'])]
@@ -960,6 +976,15 @@ final class KFlowController extends AbstractController
     private function requireMenu(string $menu): void
     {
         if (!$this->access->can($this->currentUser(), $menu)) throw $this->createAccessDeniedException('Você não tem acesso a este menu nesta empresa.');
+    }
+
+    private function requireRegistrationReviewAccess(): void
+    {
+        foreach (['clients', 'suppliers', 'carriers'] as $menu) {
+            if ($this->access->can($this->currentUser(), $menu)) return;
+        }
+
+        throw $this->createAccessDeniedException('Você não tem acesso aos cadastros para consultar dados fiscais.');
     }
 
     private function menuForModule(string $module): string

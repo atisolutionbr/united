@@ -31,6 +31,7 @@ final class SeniorCustomerCatalog
                 $this->select($mapping['customer_code'] ?? 'CodCli', 'CodCli', $columns),
                 $this->select($mapping['name'] ?? 'NomCli', 'NomCli', $columns),
                 $this->select($mapping['document'] ?? 'CgcCpf', 'CgcCpf', $columns),
+                $this->select($mapping['state_registration'] ?? 'InsEst', 'InsEst', $columns),
                 $this->select($mapping['email'] ?? 'EmlCli', 'EmlCli', $columns),
                 $this->select('EndCli', 'EndCli', $columns),
                 $this->select('CidCli', 'CidCli', $columns),
@@ -49,7 +50,7 @@ final class SeniorCustomerCatalog
             ));
             $customers = $statement->fetchAll(\PDO::FETCH_ASSOC);
             foreach ($customers as &$customer) {
-                foreach (['CodEmp', 'CodCli', 'NomCli', 'CgcCpf', 'EmlCli', 'EndCli', 'CidCli', 'SigUfs', 'DatAlt'] as $field) {
+                foreach (['CodEmp', 'CodCli', 'NomCli', 'CgcCpf', 'InsEst', 'EmlCli', 'EndCli', 'CidCli', 'SigUfs', 'DatAlt'] as $field) {
                     $customer[$field] ??= '';
                 }
             }

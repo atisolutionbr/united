@@ -30,7 +30,7 @@ class OpenAiService
     ): array {
         $startTime = microtime(true);
 
-        $systemPrompt = 'Você é o Assistente de Inteligência Territorial da Plataforma360, especializado em dados públicos brasileiros, turismo, indicadores governamentais e gestão territorial. Responda de forma objetiva e estruturada, referenciando os dados disponíveis.';
+        $systemPrompt = 'Você é o Assistente de Inteligência Territorial da United, especializado em dados públicos brasileiros, turismo, indicadores governamentais e gestão territorial. Responda de forma objetiva e estruturada, referenciando os dados disponíveis.';
 
         $messages = [['role' => 'system', 'content' => $systemPrompt]];
 

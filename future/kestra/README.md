@@ -1,6 +1,6 @@
-# Kestra na Plataforma360
+# Kestra na United
 
-Este diretorio concentra a primeira camada de ingestao, automacao de pipelines e orquestracao de dados da Plataforma360.
+Este diretorio concentra a primeira camada de ingestao, automacao de pipelines e orquestracao de dados da United.
 
 ## Conteudo
 

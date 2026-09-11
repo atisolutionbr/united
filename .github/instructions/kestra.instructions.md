@@ -1,15 +1,15 @@
 ---
-description: "Use when creating Kestra flow YAML files in future/kestra/flows/. Applies Kestra flow conventions for Plataforma360: namespace plataforma360, PostgreSQL connection via kestra-postgres, Python tasks for data processing, schedule triggers and error handling."
+description: "Use when creating Kestra flow YAML files in future/kestra/flows/. Applies Kestra flow conventions for United: namespace united, PostgreSQL connection via kestra-postgres, Python tasks for data processing, schedule triggers and error handling."
 applyTo: "future/kestra/flows/**/*.yml"
 ---
 
-# Kestra Flows — Convenções da Plataforma360
+# Kestra Flows — Convenções da United
 
 ## Estrutura Base
 
 ```yaml
 id: nome-do-flow          # kebab-case, único no namespace
-namespace: plataforma360
+namespace: united
 description: "Descrição clara do objetivo"
 labels:
   type: ingestion         # ingestion | transformation | warehouse_load | quality_check

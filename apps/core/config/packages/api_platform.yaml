@@ -1,5 +1,5 @@
 api_platform:
-    title: Plataforma360 API
+    title: United API
     version: 1.0.0
     description: APIs publicas para inteligencia territorial, turismo inteligente e interoperabilidade municipal.
     defaults:

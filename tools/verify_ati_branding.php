@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Prevents development-tool branding from reaching the KFlow360 deliverable.
+ * Prevents development-tool branding from reaching the United · Ati Solution deliverable.
  * Technical provider adapters are intentionally outside this product-brand scan.
  */
 

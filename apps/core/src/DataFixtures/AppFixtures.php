@@ -47,7 +47,7 @@ final class AppFixtures extends Fixture
     private function loadUsers(ObjectManager $manager): void
     {
         $items = [
-            ['username' => 'Kadmin', 'fullName' => 'KFlow Administrator', 'email' => 'kadmin@kflow360.local', 'roles' => [User::ROLE_ADMIN]],
+            ['username' => 'Kadmin', 'fullName' => 'KFlow Administrator', 'email' => 'kadmin@united.local', 'roles' => [User::ROLE_ADMIN]],
         ];
 
         foreach ($items as $item) {

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script para criar diretórios e arquivos de templates dentro do container Docker
-# Use: docker exec $(docker ps -q -f "name=plataforma360-php") bash /scripts/create-admin-hubs.sh
+# Use: docker exec $(docker ps -q -f "name=united-php") bash /scripts/create-admin-hubs.sh
 
 set -e
 

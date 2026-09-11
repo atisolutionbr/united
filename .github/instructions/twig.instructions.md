@@ -1,9 +1,9 @@
 ---
-description: "Use when creating or modifying Twig templates in apps/core/templates/. Applies Bootstrap 5.3, Bootstrap Icons and visual patterns of Plataforma360: navy gradient navbar, teal accent #0f766e, card layout, table styles and form conventions."
+description: "Use when creating or modifying Twig templates in apps/core/templates/. Applies Bootstrap 5.3, Bootstrap Icons and visual patterns of United: navy gradient navbar, teal accent #0f766e, card layout, table styles and form conventions."
 applyTo: "apps/core/templates/**/*.twig"
 ---
 
-# Twig/Bootstrap — Convenções da Plataforma360
+# Twig/Bootstrap — Convenções da United
 
 ## ⚠️ Regras críticas (nunca violar)
 

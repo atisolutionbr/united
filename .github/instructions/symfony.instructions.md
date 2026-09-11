@@ -1,9 +1,9 @@
 ---
-description: "Use when creating or modifying PHP files in apps/core/src/. Applies Symfony 7.4 / PHP 8.3 / Doctrine ORM 3.2 conventions of the Plataforma360 project: entity patterns, controller structure, service autowiring, security attributes and naming conventions."
+description: "Use when creating or modifying PHP files in apps/core/src/. Applies Symfony 7.4 / PHP 8.3 / Doctrine ORM 3.2 conventions of the United project: entity patterns, controller structure, service autowiring, security attributes and naming conventions."
 applyTo: "apps/core/src/**/*.php"
 ---
 
-# Symfony PHP — Convenções da Plataforma360
+# Symfony PHP — Convenções da United
 
 ## Entidades Doctrine
 

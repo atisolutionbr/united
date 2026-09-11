@@ -30,7 +30,7 @@ class OllamaService
     ): array {
         $startTime = microtime(true);
 
-        $systemPrompt = 'Você é o Assistente de Inteligência Territorial da Plataforma360, especializado em dados públicos brasileiros, turismo, indicadores governamentais e gestão territorial. Responda de forma objetiva, usando sempre os dados disponíveis na plataforma.';
+        $systemPrompt = 'Você é o Assistente de Inteligência Territorial da United, especializado em dados públicos brasileiros, turismo, indicadores governamentais e gestão territorial. Responda de forma objetiva, usando sempre os dados disponíveis na plataforma.';
 
         $messages = [
             ['role' => 'system', 'content' => $systemPrompt],

@@ -12,7 +12,7 @@ final class HealthController
     {
         return new JsonResponse([
             'status' => 'ok',
-            'service' => 'plataforma360-core',
+            'service' => 'united-core',
             'timezone' => date_default_timezone_get(),
             'checkedAt' => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
         ]);

@@ -1,11 +1,11 @@
 id: olinda360_primeira_ingestao
-namespace: plataforma360.turismo
+namespace: united.turismo
 description: >-
   Fluxo inicial de exemplo para simular a ingestao de pontos turisticos de Olinda,
   preparando um artefato bruto e um script SQL para futura carga no schema raw.
 
 labels:
-  plataforma: Plataforma360
+  plataforma: United
   dominio: turismo
   ambiente: local
 
@@ -15,7 +15,7 @@ tasks:
     type: io.kestra.plugin.core.log.Log
     message: >-
       Iniciando a ingestao simulada de /app/examples/pontos_turisticos_olinda.csv
-      para a trilha raw da Plataforma360.
+      para a trilha raw da United.
 
   # Etapa 2: copia o CSV para um diretorio de trabalho e gera um script SQL base
   # para futura carga em PostgreSQL/PostGIS na camada raw.
@@ -33,7 +33,7 @@ tasks:
         REGISTROS=$(tail -n +2 /app/examples/pontos_turisticos_olinda.csv | wc -l | tr -d ' ')
         printf '%s\n' "$REGISTROS" > output/quantidade_registros.txt
         cat <<'SQL' > output/carga_raw_pontos_turisticos.sql
-        -- Preparacao inicial para a camada raw da Plataforma360.
+        -- Preparacao inicial para a camada raw da United.
         CREATE SCHEMA IF NOT EXISTS raw;
 
         CREATE TABLE IF NOT EXISTS raw.pontos_turisticos_olinda (
@@ -58,4 +58,4 @@ tasks:
     type: io.kestra.plugin.core.log.Log
     message: >-
       Artefatos preparados com sucesso. O proximo passo e conectar este fluxo ao
-      PostgreSQL/PostGIS da Plataforma360 para gravacao direta no schema raw.
+      PostgreSQL/PostGIS da United para gravacao direta no schema raw.

@@ -6,5 +6,5 @@ cd "$ROOT_DIR"
 
 docker compose up -d
 
-echo "Plataforma360: http://localhost:${APP_PORT:-8080}"
+echo "United: http://localhost:${APP_PORT:-8080}"
 echo "Adminer: http://localhost:${ADMINER_PORT:-8081}"

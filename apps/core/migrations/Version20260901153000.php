@@ -11,7 +11,7 @@ final class Version20260901153000 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Adds the active ERP selection used by KFlow360.';
+        return 'Adds the active ERP selection used by United · Ati Solution.';
     }
 
     public function up(Schema $schema): void

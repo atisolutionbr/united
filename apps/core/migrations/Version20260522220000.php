@@ -201,18 +201,18 @@ final class Version20260522220000 extends AbstractMigration
         // ── Default seeds ─────────────────────────────────────────────────────
 
         $this->addSql("INSERT INTO tenants (name, slug, type, estado, is_active, created_at) VALUES
-            ('Plataforma360 · Ambiente Padrão', 'default', 'ambiente', 'PE', true, NOW())
+            ('United · Ambiente Padrão', 'default', 'ambiente', 'PE', true, NOW())
         ");
 
         $this->addSql("INSERT INTO pipelines (name, slug, kestra_namespace, kestra_flow_id, type, trigger_type, description, is_active, created_at) VALUES
-            ('Ingestão CKAN · Turismo MTur', 'ingestion-ckan-turismo', 'plataforma360', 'ingestao-ckan-turismo', 'ingestion', 'cron', 'Pipeline de ingestão diária dos datasets de turismo do CKAN do Ministério do Turismo.', true, NOW()),
-            ('Transformação Staging · Turismo', 'transform-staging-turismo', 'plataforma360', 'transform-staging-turismo', 'transformation', 'event', 'Pipeline de normalização e enriquecimento dos dados de agências de turismo para a zona STAGING.', true, NOW()),
-            ('Carga Warehouse · Turismo', 'warehouse-turismo', 'plataforma360', 'warehouse-carga-turismo', 'warehouse', 'cron', 'Pipeline de carga dos dados normalizados para o Data Warehouse (schema warehouse.*).', true, NOW()),
-            ('Geração de Embeddings', 'embeddings-gen', 'plataforma360', 'embeddings-generation', 'embeddings', 'event', 'Gera embeddings vetoriais dos datasets ativos e indexa no Qdrant para RAG.', false, NOW())
+            ('Ingestão CKAN · Turismo MTur', 'ingestion-ckan-turismo', 'united', 'ingestao-ckan-turismo', 'ingestion', 'cron', 'Pipeline de ingestão diária dos datasets de turismo do CKAN do Ministério do Turismo.', true, NOW()),
+            ('Transformação Staging · Turismo', 'transform-staging-turismo', 'united', 'transform-staging-turismo', 'transformation', 'event', 'Pipeline de normalização e enriquecimento dos dados de agências de turismo para a zona STAGING.', true, NOW()),
+            ('Carga Warehouse · Turismo', 'warehouse-turismo', 'united', 'warehouse-carga-turismo', 'warehouse', 'cron', 'Pipeline de carga dos dados normalizados para o Data Warehouse (schema warehouse.*).', true, NOW()),
+            ('Geração de Embeddings', 'embeddings-gen', 'united', 'embeddings-generation', 'embeddings', 'event', 'Gera embeddings vetoriais dos datasets ativos e indexa no Qdrant para RAG.', false, NOW())
         ");
 
         $this->addSql("INSERT INTO alerts (type, level, title, message, source, status, created_at) VALUES
-            ('general', 'info', 'Fase 6 Implementada', 'Plataforma360 Phase 6: Observabilidade, Orquestração e Governança Enterprise ativas com sucesso.', 'system', 'active', NOW())
+            ('general', 'info', 'Fase 6 Implementada', 'United Phase 6: Observabilidade, Orquestração e Governança Enterprise ativas com sucesso.', 'system', 'active', NOW())
         ");
     }
 

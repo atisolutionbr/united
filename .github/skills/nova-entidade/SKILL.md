@@ -1,6 +1,6 @@
 ---
 name: nova-entidade
-description: "Use to create a new Doctrine entity with repository and migration in Plataforma360. Triggers: create entity, new entity, add table, new database table, criar entidade, nova entidade, adicionar tabela."
+description: "Use to create a new Doctrine entity with repository and migration in United. Triggers: create entity, new entity, add table, new database table, criar entidade, nova entidade, adicionar tabela."
 argument-hint: "Nome da entidade e módulo (ex: 'Contrato no módulo Governança')"
 ---
 
@@ -69,7 +69,7 @@ class NomeRepository extends ServiceEntityRepository
 ### 4. Gerar e Revisar a Migration
 
 ```bash
-wsl -e bash -c "cd /mnt/c/Plataforma360 && docker compose exec php php bin/console doctrine:migrations:diff"
+wsl -e bash -c "cd /mnt/c/United && docker compose exec php php bin/console doctrine:migrations:diff"
 ```
 
 Revisar o arquivo gerado em `apps/core/migrations/` e adicionar seed de dados se necessário.
@@ -77,11 +77,11 @@ Revisar o arquivo gerado em `apps/core/migrations/` e adicionar seed de dados se
 ### 5. Executar a Migration
 
 ```bash
-wsl -e bash -c "cd /mnt/c/Plataforma360 && docker compose exec php php bin/console doctrine:migrations:migrate --no-interaction"
+wsl -e bash -c "cd /mnt/c/United && docker compose exec php php bin/console doctrine:migrations:migrate --no-interaction"
 ```
 
 ### 6. Validar
 
 ```bash
-wsl -e bash -c "cd /mnt/c/Plataforma360 && docker compose exec php php bin/console doctrine:schema:validate"
+wsl -e bash -c "cd /mnt/c/United && docker compose exec php php bin/console doctrine:schema:validate"
 ```

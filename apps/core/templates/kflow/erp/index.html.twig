@@ -1,11 +1,11 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}KFlow360 · Conectar ERP{% endblock %}
+{% block title %}United · Ati Solution · Conectar ERP{% endblock %}
 {% block page_title %}Configurações de Conexão{% endblock %}
 
 {% block main %}
     <section class="kflow-page-heading">
-        <div><span class="kflow-eyebrow">Configurações de Conexão</span><h1>Conectar ERP</h1><p>Escolha o ERP que orientará os fluxos e consultas do Kadastro360.</p></div>
+        <div><span class="kflow-eyebrow">Configurações de Conexão</span><h1>Conectar ERP</h1><p>Escolha o ERP que orientará os fluxos e consultas do United.</p></div>
     </section>
     <section class="kflow-erp-grid">
         {% set erpLogos = {
@@ -31,7 +31,7 @@
                     <form class="kflow-erp-card__switch" method="post" action="{{ path('kflow_erp_active', {erp: erp}) }}"><input type="hidden" name="_token" value="{{ csrf_token('erp-active-'~erp) }}"><input type="hidden" name="active" value="{{ enabled ? '0' : '1' }}"><button type="submit" role="switch" aria-checked="{{ enabled ? 'true' : 'false' }}" aria-label="{{ enabled ? 'Desativar' : 'Ativar' }} {{ erp }}" title="{{ enabled ? 'ERP ativo. Clique para desativar' : 'ERP inativo. Clique para ativar' }}"><span></span></button><small>{{ enabled ? 'Ativo' : 'Inativo' }}</small></form>
                 </div>
                 <h2>{{ erp }}</h2>
-                <p>Conecte seu ERP e conheça o que o Kflow360 poderá fazer por você! Automatize seus processos, tenha segurança e venha ser Kflow360... Onde tudo flui com rapidez em todos os angulos.</p>
+                <p>Conecte seu ERP e conheça o que o United poderá fazer por você! Automatize seus processos, tenha segurança e venha ser United... Onde tudo flui com rapidez em todos os angulos.</p>
                 <form method="post" action="{{ path('kflow_erp_select', {erp: erp}) }}"><input type="hidden" name="_token" value="{{ csrf_token('select-erp-'~erp) }}"><button class="btn {{ erp == activeErp ? 'btn-outline-primary' : 'btn-primary' }} w-100" type="submit"><i class="bi bi-plug"></i>{{ erp == activeErp ? 'Configurar conexão' : 'Conectar '~erp }}</button></form>
             </article>
         {% endfor %}
