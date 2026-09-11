@@ -1,11 +1,11 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}United · Ati Solution · Sobre{% endblock %}
+{% block title %}United Ati · Sobre{% endblock %}
 {% block page_title %}Sobre{% endblock %}
 
 {% block main %}
     <section class="kflow-about-hero">
-        <div><span class="kflow-eyebrow">United · Ati Solution · Integration Platform</span><h1>Informações da plataforma</h1><p>Versão instalada, diagnóstico técnico e canais oficiais da Ati Solution.</p></div>
+        <div><span class="kflow-eyebrow">United Ati · Integration Platform</span><h1>Informações da plataforma</h1><p>Versão instalada, diagnóstico técnico e canais oficiais da Ati Solution.</p></div>
         <div class="kflow-about-release"><div><i class="bi bi-box-seam"></i><span>Versão<strong>{{ release.version }}</strong></span></div><div><i class="bi bi-hash"></i><span>Build<strong>{{ release.build }}</strong></span></div></div>
     </section>
 
@@ -14,7 +14,7 @@
             <div class="kflow-about-card__heading"><span class="kflow-about-card__icon"><i class="bi bi-clipboard2-pulse"></i></span><div><span class="kflow-eyebrow">Diagnóstico</span><h2>Informações para suporte</h2><p>Gere um resumo técnico da sessão atual para compartilhar com a equipe de atendimento.</p></div></div>
             <button class="btn kflow-about-copy" type="button" data-diagnostic-copy><i class="bi bi-copy"></i>Copiar informações de diagnóstico</button>
             <p class="kflow-input-help">Inclui versão, build, empresa, ERP, sessão, navegador e tamanho da tela.</p>
-            <pre class="visually-hidden" data-diagnostic-base>Diagnóstico — United · Ati Solution
+            <pre class="visually-hidden" data-diagnostic-base>Diagnóstico — United Ati
 Gerado em: {{ 'now'|date('d/m/Y, H:i:s') }}
 App: Versão {{ release.version }} - Build {{ release.build }}
 Versão: {{ release.version }}

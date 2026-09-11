@@ -139,7 +139,7 @@ document.querySelector('[data-diagnostic-copy]')?.addEventListener('click', asyn
     const source = document.querySelector('[data-diagnostic-base]');
     if (!(button instanceof HTMLButtonElement) || !(source instanceof HTMLElement)) return;
     const details = [
-        source.textContent?.trim() || 'Diagnóstico — United · Ati Solution',
+        source.textContent?.trim() || 'Diagnóstico — United Ati',
         `Online: ${navigator.onLine ? 'sim' : 'não'}`,
         `Idioma: ${navigator.language}`,
         `Tela: ${window.screen.width}x${window.screen.height}`,

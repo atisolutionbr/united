@@ -1,4 +1,4 @@
-# United · Ati Solution
+# United Ati
 
 Domínio de produção: https://united.atioslution.com.br
 

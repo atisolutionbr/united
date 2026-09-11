@@ -1,10 +1,20 @@
-# United · Ati Solution
+# United Ati
 
 Plataforma de integração e governança cadastral da Ati Solution.
 
 O United · Ati Solution conecta empresas e ERPs por banco de dados, API ou WebService, organiza os vínculos por formulário e oferece fluxos para produtos, clientes, fornecedores, transportadoras, requisições e aprovações.
 
 ## Ambiente local
+
+No Windows, com o Docker Desktop iniciado e o `.env` local configurado, execute:
+
+```powershell
+./scripts/start-local.ps1
+```
+
+Abra http://localhost:3000/login. Na primeira execução, o script copia o volume PostgreSQL existente para um volume exclusivo do United Ati, preservando usuários, empresas e configurações criptografadas de conexão com o ERP Senior. O banco original precisa estar parado durante essa cópia. A conexão ao banco do ERP continua sendo a mesma; suas credenciais não são versionadas. O arquivo `compose.local.yaml` é exclusivo desse procedimento local.
+
+Para uma instalação nova independente:
 
 ```powershell
 docker compose up -d --build

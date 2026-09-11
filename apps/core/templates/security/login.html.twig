@@ -1,24 +1,24 @@
 {% extends 'base.html.twig' %}
 
 {% block body_id 'login' %}
-{% block title %}Acessar United · Ati Solution{% endblock %}
+{% block title %}Acessar United Ati{% endblock %}
 
 {% block main %}
     {% set release = kflow_release() %}
     <section class="kflow-login">
         <div class="kflow-login__intro">
-            <a class="kflow-brand kflow-brand--login" href="{{ path('homepage') }}"><span class="kflow-brand__mark"><img class="kflow-brand__logo" src="/images/united-logo.png" alt=""></span><span class="kflow-brand__name">United<small>Ati Solution</small></span></a>
+            <a class="kflow-brand kflow-brand--login" href="{{ path('homepage') }}"><span class="kflow-brand__mark"><img class="kflow-brand__logo" src="/images/united-logo.png" alt=""></span><span class="kflow-brand__name">United Ati<small>Ati Solution</small></span></a>
             <div class="kflow-login__intro-copy">
-                <span class="kflow-eyebrow">United · Ati Solution</span>
+                <span class="kflow-eyebrow">United Ati</span>
                 <h1>Integrações que fazem tudo fluir.</h1>
                 <p>Conecte seus ERPs, saneie cadastros e conduza aprovações em uma plataforma única, rápida e segura.</p>
             </div>
-            <div class="kflow-login__footer">United · Ati Solution · v{{ release.version }} · build {{ release.build }} · {{ app.environment == 'prod' ? 'Ambiente Produção' : 'Ambiente local' }}</div>
+            <div class="kflow-login__footer">United Ati · v{{ release.version }} · build {{ release.build }} · {{ app.environment == 'prod' ? 'Ambiente Produção' : 'Ambiente local' }}</div>
         </div>
 
         <div class="kflow-login__form-wrap">
             <div class="kflow-login__form">
-                <div class="kflow-login__form-brand"><img src="/images/united-login-logo.png" alt="United · Ati Solution"></div>
+                <div class="kflow-login__form-brand"><img src="/images/united-login-logo.png" alt="United Ati"></div>
                 <span class="kflow-eyebrow">Acesso seguro</span>
                 <h2>Entrar</h2>
                 <p>Use suas credenciais para continuar.</p>

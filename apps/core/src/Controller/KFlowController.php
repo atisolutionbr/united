@@ -46,7 +46,7 @@ final class KFlowController extends AbstractController
         'fornecedor' => ['title' => 'Fornecedor', 'description' => 'Cadastro e gestão de fornecedores.', 'icon' => 'truck'],
         'transportador' => ['title' => 'Transportador', 'description' => 'Cadastro e gestão de transportadores.', 'icon' => 'truck-flatbed'],
         'requisicao' => ['title' => 'Requisição', 'description' => 'Criação e acompanhamento de requisições.', 'icon' => 'clipboard2-plus'],
-        'aprovacao' => ['title' => 'Aprovação', 'description' => 'Central de aprovações dos fluxos do United · Ati Solution.', 'icon' => 'check2-square'],
+        'aprovacao' => ['title' => 'Aprovação', 'description' => 'Central de aprovações dos fluxos do United Ati.', 'icon' => 'check2-square'],
         'aprovacao-requisicao' => ['title' => 'Aprovação Requisição', 'description' => 'Fluxo de aprovação de requisições.', 'icon' => 'check2-square'],
         'solicitacao' => ['title' => 'Solicitação', 'description' => 'Solicitações operacionais da plataforma.', 'icon' => 'send'],
         'aprovacao-solicitacao' => ['title' => 'Aprovação Solicitação', 'description' => 'Fluxo de aprovação de solicitações.', 'icon' => 'check2-circle'],

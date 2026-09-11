@@ -1,0 +1,9 @@
+services:
+  postgres:
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+    name: united-ati-local-postgres-data
+    external: true
