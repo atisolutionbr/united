@@ -36,7 +36,7 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
-#[Route('/kflow')]
+#[Route('/unitedati')]
 #[IsGranted(User::ROLE_USER)]
 final class KFlowController extends AbstractController
 {
@@ -85,18 +85,19 @@ final class KFlowController extends AbstractController
     }
 
     #[Route('', name: 'kflow_dashboard', methods: ['GET'])]
-    public function dashboard(): Response
+    public function dashboard(Request $request): Response
     {
         $this->requireMenu('dashboard');
         $connection = $this->activeConnection();
         $activeErp = $connection?->getErpName();
+        if ($request->query->getBoolean('refresh')) $request->getSession()->save();
         $products = ['recordCount' => 0, 'products' => []];
         $customers = ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0];
         $suppliers = ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0];
         if ('Senior' === $activeErp) {
-            $products = $this->cachedResult('products', 1, $connection);
-            $customers = $this->cachedResult('customers', 1, $connection);
-            $suppliers = $this->cachedResult('suppliers', 1, $connection);
+            $products = $this->cachedResult('products', 1, $connection, $request->query->getBoolean('refresh'));
+            $customers = $this->cachedResult('customers', 1, $connection, $request->query->getBoolean('refresh'));
+            $suppliers = $this->cachedResult('suppliers', 1, $connection, $request->query->getBoolean('refresh'));
         }
         $productSample = $products['products'] ?? [];
         $sanitization = $this->sanitizationService->analyze($productSample);
@@ -104,6 +105,7 @@ final class KFlowController extends AbstractController
 
         return $this->render('kflow/dashboard.html.twig', [
             'activeErp' => $activeErp,
+            'pendingMetrics' => ['products' => $products['pending'] ?? false, 'customers' => $customers['pending'] ?? false, 'suppliers' => $suppliers['pending'] ?? false],
             'erpCount' => count($this->erpCatalog->all()),
             'metrics' => [
                 'duplicates' => count($sanitization['duplicates']),
@@ -134,6 +136,8 @@ final class KFlowController extends AbstractController
     #[Route('/module/{module}', name: 'kflow_module', methods: ['GET'])]
     public function module(string $module): Response
     {
+        if ('aprovacao' === $module) return $this->redirectToRoute('united_approvals');
+        if (in_array($module, ['requisicao', 'solicitacao'], true)) return $this->redirectToRoute('united_documents', ['kind' => 'requisicao' === $module ? 'requisitions' : 'requests']);
         if (!isset(self::MODULES[$module])) {
             throw $this->createNotFoundException();
         }
@@ -188,7 +192,13 @@ final class KFlowController extends AbstractController
                 ['key' => 'CstPis', 'label' => 'CST PIS', 'fiscal' => true],
                 ['key' => 'CstCofins', 'label' => 'CST COFINS', 'fiscal' => true],
                 ['key' => 'CstIcms', 'label' => 'CST ICMS', 'fiscal' => true],
+                ['key' => 'X_ibs_rate', 'label' => 'Alíquota IBS', 'fiscal' => true],
+                ['key' => 'X_cbs_rate', 'label' => 'Alíquota CBS', 'fiscal' => true],
+                ['key' => 'X_cst_ibs_cbs', 'label' => 'CST IBS/CBS', 'fiscal' => true],
+                ['key' => 'X_cclass_trib', 'label' => 'cClassTrib', 'fiscal' => true],
+                ['key' => 'X_tax_selective', 'label' => 'Imposto Seletivo', 'fiscal' => true],
             ],
+            'extraFields' => \App\Service\IntegrationFields::forForm($connection?->getSettingsForMethod('database') ?? [], $this->partyBinding($connection, 'products')['form'] ?? 'products', []),
             'mapping' => $mapping,
             'fiscalWriteAvailable' => $connection instanceof ErpConnection && $this->seniorWebServiceManager->isProductUpdateAvailable($connection),
         ]);
@@ -219,6 +229,7 @@ final class KFlowController extends AbstractController
         return $this->render('kflow/clients.html.twig', [
             'activeErp' => $activeErp,
             'customerData' => $customerData,
+            'extraFields' => \App\Service\IntegrationFields::forForm($connection?->getSettingsForMethod('database') ?? [], $this->partyBinding($connection, 'customers')['form'] ?? 'customers', []),
         ]);
     }
 
@@ -443,14 +454,17 @@ final class KFlowController extends AbstractController
         $integrationStep = in_array($integrationStep, ['connection', 'services', 'mapping', 'users'], true) ? $integrationStep : 'connection';
         $databaseForms = $this->connectionProfile->databaseForms();
         $configuredForms = $this->configuredForms($settings, $databaseForms);
-        $selectedForm = (string) $request->query->get('form', $configuredForms[0]['id']);
-        $selectedFormConfig = $this->formConfig($configuredForms, $selectedForm) ?? $configuredForms[0];
+        $defaultForm = $configuredForms[0] ?? ['id' => 'products', 'template' => 'products', 'label' => 'Produtos'];
+        $selectedForm = (string) $request->query->get('form', $defaultForm['id']);
+        $selectedFormConfig = $this->formConfig($configuredForms, $selectedForm) ?? $defaultForm;
         $selectedForm = $selectedFormConfig['id'];
         $selectedFormDefinition = $databaseForms[$selectedFormConfig['template']];
+        $selectedFormDefinition['fields'] = \App\Service\IntegrationFields::forForm($settings, $selectedForm, $selectedFormDefinition['fields']);
         $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
         $webServices = $this->webServices($settings);
         $binding = is_array($bindings[$selectedForm] ?? null) ? $bindings[$selectedForm] : [];
-        $selectedTable = (string) ($binding['table'] ?? $settings['table'] ?? '');
+        $selectedTable = (string) ($binding['table'] ?? ('products' === $selectedForm ? ($settings['table'] ?? '') : ''));
+        if ('products' === $selectedForm && !isset($bindings['products']) && '' !== $selectedTable) $bindings['products'] = ['table' => $selectedTable, 'mapping' => $mapping];
         $tables = ['tables' => [], 'error' => null];
         $columns = ['columns' => [], 'error' => null];
         if (ErpConnection::METHOD_DATABASE === $method && 'connection' !== $databaseStep) {
@@ -481,6 +495,7 @@ final class KFlowController extends AbstractController
             'databaseStep' => $databaseStep,
             'databaseForms' => $databaseForms,
             'configuredForms' => $configuredForms,
+            'bindings' => $bindings,
             'selectedForm' => $selectedForm,
             'selectedFormDefinition' => $selectedFormDefinition,
             'selectedFormLabel' => $selectedFormConfig['label'],
@@ -615,14 +630,19 @@ final class KFlowController extends AbstractController
         $settings = $connection->getSettingsForMethod(ErpConnection::METHOD_DATABASE);
         $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
         $table = trim((string) $request->request->get('table'));
-        $availableTables = $this->databaseSchemaInspector->tables($settings);
-        if ('' === $table || !in_array($table, $availableTables['tables'], true)) {
-            $this->addFlash('warning', 'Selecione uma tabela disponível no banco conectado.');
-            return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_DATABASE, 'step' => 'table', 'form' => $form]);
+        $columns = preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/D', $table) ? $this->databaseSchemaInspector->columns($settings, $table) : ['columns' => [], 'error' => 'Tabela inválida.'];
+        if (!$columns['columns'] || $columns['error']) {
+            $this->addFlash('warning', 'Não foi possível validar os campos da tabela. O vínculo anterior foi preservado; confira a conexão e tente novamente.');
+            return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => 'database', 'step' => 'table', 'form' => $form]);
         }
+        $columns = $columns['columns'];
         $mappingInput = $request->request->all('mapping');
-        $columns = $this->databaseSchemaInspector->columns($settings, $table)['columns'];
-        $mapping = $this->connectionProfile->mappingForFields(array_keys($forms[$configuredForm['template']]['fields']), is_array($mappingInput) ? $mappingInput : [], $columns);
+        $fields = \App\Service\IntegrationFields::forForm($settings, $form, $forms[$configuredForm['template']]['fields']);
+        $previous = ($bindings[$form]['table'] ?? '') === $table ? ($bindings[$form]['mapping'] ?? []) : [];
+        if ('products' === $form && !isset($bindings[$form]) && ($settings['table'] ?? '') === $table) $previous = $connection->getProductMapping();
+        $mapping = $request->request->has('mapping')
+            ? $this->connectionProfile->mappingForFields(array_keys($fields), $mappingInput, $columns)
+            : $previous;
         $bindings[$form] = ['table' => $table, 'mapping' => $mapping];
         $settings['bindings'] = $bindings;
         $settings['table'] = 'products' === $form ? $table : (string) ($settings['table'] ?? '');
@@ -660,7 +680,7 @@ final class KFlowController extends AbstractController
 
         $input = $request->request->all('mapping');
         $mapping = [];
-        foreach (array_keys($forms[$configuredForm['template']]['fields']) as $field) {
+        foreach (array_keys(\App\Service\IntegrationFields::forForm($connection->getSettingsForMethod($method), $form, $forms[$configuredForm['template']]['fields'])) as $field) {
             $source = trim((string) (is_array($input) ? ($input[$field] ?? '') : ''));
             $mapping[$field] = preg_match('/^[A-Za-z0-9_.\[\]-]{0,160}$/', $source) ? $source : '';
         }
@@ -733,6 +753,34 @@ final class KFlowController extends AbstractController
         return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'users']);
     }
 
+    #[Route('/erp/{erp}/fields', name: 'kflow_erp_fields_create', methods: ['POST'])]
+    public function createIntegrationField(string $erp, Request $request): Response
+    {
+        $this->requireMenu('connections');
+        $method = (string) $request->request->get('method');
+        $form = (string) $request->request->get('form');
+        if (!$this->isCsrfTokenValid('field-'.$erp.'-'.$method.'-'.$form, (string) $request->request->get('_token'))) throw $this->createAccessDeniedException();
+        if (!isset($this->connectionProfile->connectionMethods()[$method])) throw $this->createNotFoundException();
+        $connection = $this->connectionFor($erp);
+        if (!$connection) throw $this->createNotFoundException();
+        $settings = $connection->getSettingsForMethod($method);
+        if (!$this->formConfig($this->configuredForms($settings, $this->connectionProfile->databaseForms()), $form)) throw $this->createNotFoundException();
+        $label = mb_substr(trim((string) $request->request->get('label')), 0, 80);
+        $type = (string) $request->request->get('type', 'text');
+        if ('' === $label || !in_array($type, ['text', 'number', 'date', 'checkbox', 'textarea'], true)) {
+            $this->addFlash('warning', 'Informe o nome e o tipo do novo campo.');
+        } elseif (count($settings['custom_fields'][$form] ?? []) >= 50) {
+            $this->addFlash('warning', 'Este formulário já possui 50 campos adicionais.');
+        } else {
+            $key = 'extra_'.bin2hex(random_bytes(6));
+            $settings['custom_fields'][$form][$key] = ['label' => $label, 'type' => $type, 'required' => $request->request->getBoolean('required')];
+            $connection->setSettingsForMethod($method, $settings);
+            $this->entityManager->flush();
+            $this->addFlash('success', 'Campo criado. Selecione sua coluna ou propriedade e salve o De/Para.');
+        }
+        return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'form' => $form, 'step' => 'mapping']);
+    }
+
     #[Route('/erp/{erp}/forms', name: 'kflow_erp_forms_create', methods: ['POST'])]
     public function createIntegrationForm(string $erp, Request $request): Response
     {
@@ -760,7 +808,11 @@ final class KFlowController extends AbstractController
         $settings = $connection->getSettingsForMethod($method);
         $forms = $this->configuredForms($settings, $definitions);
         $label = trim((string) $request->request->get('label'));
-        $label = '' !== $label ? mb_substr($label, 0, 80) : $definitions[$template]['label'];
+        $label = mb_substr($label, 0, 80);
+        if ('' === $label || in_array(mb_strtolower($label), array_map(static fn (array $f): string => mb_strtolower($f['label']), $forms), true)) {
+            $this->addFlash('warning', 'Informe um nome exclusivo para identificar o novo formulário.');
+            return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'table']);
+        }
         $form = ['id' => 'form-'.bin2hex(random_bytes(4)), 'label' => $label, 'template' => $template];
         $forms[] = $form;
         $settings['form_catalog'] = $forms;
@@ -778,7 +830,6 @@ final class KFlowController extends AbstractController
         $method = (string) $request->request->get('method');
         if (!$this->erpCatalog->supports($erp)
             || !array_key_exists($method, $this->connectionProfile->connectionMethods())
-            || !str_starts_with($form, 'form-')
             || !$this->isCsrfTokenValid('delete-integration-form-'.$erp.'-'.$method.'-'.$form, (string) $request->request->get('_token'))) {
             return $this->json(['ok' => false, 'message' => 'Não foi possível excluir o formulário.'], Response::HTTP_FORBIDDEN);
         }
@@ -789,18 +840,11 @@ final class KFlowController extends AbstractController
         }
 
         $settings = $connection->getSettingsForMethod($method);
-        $catalog = is_array($settings['form_catalog'] ?? null) ? $settings['form_catalog'] : [];
-        $remainingForms = array_values(array_filter($catalog, static fn (mixed $item): bool => !is_array($item) || ($item['id'] ?? null) !== $form));
-        if (count($remainingForms) === count($catalog)) {
-            return $this->json(['ok' => false, 'message' => 'Formulário não encontrado.'], Response::HTTP_NOT_FOUND);
+        if (!$this->formConfig($this->configuredForms($settings, $this->connectionProfile->databaseForms()), $form)) {
+            return $this->json(['ok' => false, 'message' => 'Formulário não encontrado.'], 404);
         }
-
-        $settings['form_catalog'] = $remainingForms;
-        foreach (['bindings', 'form_mappings'] as $setting) {
-            if (is_array($settings[$setting] ?? null)) {
-                unset($settings[$setting][$form]);
-            }
-        }
+        $settings = \App\Service\FormBindingRegistry::remove($settings, $form);
+        if ('database' === $method && 'products' === $form) $connection->setProductMapping([]);
         $connection->setSettingsForMethod($method, $settings);
         $this->entityManager->flush();
 
@@ -921,6 +965,7 @@ final class KFlowController extends AbstractController
         return $this->render('kflow/parties.html.twig', [
             'activeErp' => $activeErp,
             'partyData' => $partyData,
+            'extraFields' => \App\Service\IntegrationFields::forForm($connection?->getSettingsForMethod('database') ?? [], $this->partyBinding($connection, $type)['form'] ?? $type, []),
             'partyType' => $type,
             'title' => $title,
             'singular' => $singular,
@@ -1069,7 +1114,7 @@ final class KFlowController extends AbstractController
         $key = sprintf('kflow.v3.%s.%d.%s.%d.%d', $type, $companyId, $erp, $revision, $page);
         if (null === $connection || !$load) {
             $item = $this->cache->getItem($key);
-            return $item->isHit() ? (array) $item->get() : $this->emptyCachedResult($type);
+            return $item->isHit() ? (array) $item->get() : $this->emptyCachedResult($type) + ['pending' => true];
         }
         return $this->cache->get($key, function (ItemInterface $item) use ($type, $page, $connection): array {
             $settings = $this->settingsForConnection($connection->getErpName(), ErpConnection::METHOD_DATABASE, $connection);
@@ -1122,9 +1167,7 @@ final class KFlowController extends AbstractController
     private function partyBinding(?ErpConnection $connection, string $form): array
     {
         $settings = $connection?->getSettingsForMethod(ErpConnection::METHOD_DATABASE) ?? [];
-        $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
-
-        return is_array($bindings[$form] ?? null) ? $bindings[$form] : [];
+        return \App\Service\FormBindingRegistry::resolve($settings, $form, $connection?->getProductMapping() ?? []);
     }
 
     /** @param array<string, mixed> $settings
@@ -1133,34 +1176,7 @@ final class KFlowController extends AbstractController
      */
     private function configuredForms(array $settings, array $definitions): array
     {
-        $forms = $settings['form_catalog'] ?? [];
-        $baseForms = [];
-        foreach ($definitions as $template => $definition) {
-            $baseForms[] = ['id' => $template, 'label' => $definition['label'], 'template' => $template];
-        }
-        if (!is_array($forms) || [] === $forms) {
-            return $baseForms;
-        }
-
-        $normalized = [];
-        foreach ($forms as $form) {
-            if (!is_array($form) || !isset($definitions[$form['template'] ?? ''])) {
-                continue;
-            }
-            $id = (string) ($form['id'] ?? '');
-            if (preg_match('/^[A-Za-z0-9-]{1,40}$/', $id) !== 1) {
-                continue;
-            }
-            $normalized[] = ['id' => $id, 'label' => (string) ($form['label'] ?? $definitions[$form['template']]['label']), 'template' => (string) $form['template']];
-        }
-
-        foreach ($baseForms as $baseForm) {
-            if (!in_array($baseForm['id'], array_column($normalized, 'id'), true)) {
-                $normalized[] = $baseForm;
-            }
-        }
-
-        return [] !== $normalized ? $normalized : $baseForms;
+        return \App\Service\FormBindingRegistry::forms($settings, $definitions);
     }
 
     /** @param list<array{id: string, label: string, template: string}> $forms

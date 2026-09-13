@@ -40,11 +40,12 @@ security:
                 # The page users are redirect to when there is no previous page stored in the
                 # session (for example when the users access directly to the login page).
                 always_use_default_target_path: true
-                default_target_path: /kflow
+                default_target_path: /unitedati
 
             # This option allows users to choose to stay logged in for longer than
             # the session lasts using a cookie. Reference: https://symfony.com/doc/current/security/remember_me.html
             remember_me:
+                name: UNITEDATI_REMEMBER_ME
                 secret:   '%kernel.secret%' # required
                 lifetime: 604800 # 1 week in seconds
                 # by default, the feature is enabled by checking a checkbox in the

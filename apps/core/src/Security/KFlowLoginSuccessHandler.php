@@ -12,6 +12,6 @@ final class KFlowLoginSuccessHandler implements AuthenticationSuccessHandlerInte
 {
     public function onAuthenticationSuccess(Request $request, TokenInterface $token): ?Response
     {
-        return new RedirectResponse('/kflow');
+        return new RedirectResponse('/unitedati');
     }
 }

@@ -102,7 +102,7 @@ final class DatabaseSchemaInspector
             'oracle' => sprintf('oci:dbname=//%s:%s/%s;charset=AL32UTF8', $host, '' !== $port ? $port : '1521', $database),
             'firebird' => sprintf('firebird:dbname=%s/%s:%s;charset=UTF8', $host, '' !== $port ? $port : '3050', $database),
         };
-        return new \PDO($dsn, $username, $password, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION, \PDO::ATTR_TIMEOUT => 4]);
+        return new \PDO($dsn, $username, $password, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION, \PDO::ATTR_TIMEOUT => 15]);
     }
 
     /** @param array<string, mixed> $settings */

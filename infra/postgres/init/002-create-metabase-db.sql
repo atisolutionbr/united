@@ -1,6 +1,6 @@
 -- Banco de dados dedicado para o Metabase
 CREATE DATABASE metabase
-    WITH OWNER = united
+    WITH
     ENCODING = 'UTF8'
     LC_COLLATE = 'en_US.utf8'
     LC_CTYPE = 'en_US.utf8'

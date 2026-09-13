@@ -10,6 +10,7 @@ final class ErpConnectionProfile
     private const PRODUCT_FIELDS = [
         'company' => ['label' => 'Empresa', 'hint' => 'Empresa ou filial proprietária do produto.'],
         'product_code' => ['label' => 'Código do produto', 'hint' => 'Identificador do produto no ERP.'],
+        'barcode' => ['label' => 'Código de barras', 'hint' => 'Campo utilizado na pesquisa de produtos.'],
         'product_name' => ['label' => 'Nome do produto', 'hint' => 'Descrição comercial principal.'],
         'unit' => ['label' => 'Unidade de medida', 'hint' => 'Unidade de venda ou estoque.'],
         'ncm' => ['label' => 'NCM', 'hint' => 'Classificação fiscal de oito dígitos.'],
@@ -17,6 +18,11 @@ final class ErpConnectionProfile
         'family' => ['label' => 'Família', 'hint' => 'Família ou agrupador do produto.'],
         'cst_pis' => ['label' => 'CST de PIS', 'hint' => 'Código de situação tributária de PIS.'],
         'cst_cofins' => ['label' => 'CST de COFINS', 'hint' => 'Código de situação tributária de COFINS.'],
+        'ibs_rate' => ['label' => 'Alíquota IBS', 'hint' => 'Valor informado no ERP; revisar de acordo com a operação e vigência.'],
+        'cbs_rate' => ['label' => 'Alíquota CBS', 'hint' => 'Valor informado no ERP; revisar de acordo com a operação e vigência.'],
+        'cst_ibs_cbs' => ['label' => 'CST IBS/CBS', 'hint' => 'Código de situação tributária de IBS e CBS.'],
+        'cclass_trib' => ['label' => 'cClassTrib', 'hint' => 'Classificação tributária conforme tabela oficial vigente.'],
+        'tax_selective' => ['label' => 'Imposto Seletivo', 'hint' => 'Enquadramento do produto no ERP, quando aplicável.'],
         'cst_icms' => ['label' => 'CST de ICMS', 'hint' => 'Código de situação tributária de ICMS.'],
     ];
 
@@ -57,6 +63,8 @@ final class ErpConnectionProfile
     {
         return [
             'products' => ['label' => 'Produtos', 'fields' => self::PRODUCT_FIELDS],
+            'requests' => ['label' => 'Solicitações', 'fields' => array_map(static fn ($f) => $f + ['hint' => 'Informação do processo de compra.'], PurchasingCatalog::fields('requests'))],
+            'requisitions' => ['label' => 'Requisições', 'fields' => array_map(static fn ($f) => $f + ['hint' => 'Informação da requisição.'], PurchasingCatalog::fields('requisitions'))],
             'customers' => ['label' => 'Clientes', 'fields' => [
                 'company' => ['label' => 'Empresa', 'hint' => 'Empresa ou filial proprietária do cadastro.'],
                 'customer_code' => ['label' => 'Código do cliente', 'hint' => 'Identificador do cliente no ERP.'],
@@ -166,7 +174,7 @@ final class ErpConnectionProfile
     {
         $value = static fn (string $key): string => trim((string) ($input[$key] ?? ''));
 
-        return match ($method) {
+        return array_replace($existing, match ($method) {
             ErpConnection::METHOD_WEBSERVICE => [
                 'connection_name' => $this->bounded($value('connection_name'), 120),
                 'environment' => in_array($value('environment'), ['PRODUCAO', 'HOMOLOGACAO', 'TESTE', 'DESENVOLVIMENTO', 'AVULSO'], true) ? $value('environment') : 'HOMOLOGACAO',
@@ -186,6 +194,7 @@ final class ErpConnectionProfile
                 'last_test_status' => $existing['last_test_status'] ?? 'NAO_TESTADO',
                 'last_test_message' => $existing['last_test_message'] ?? '',
                 'form_mappings' => is_array($existing['form_mappings'] ?? null) ? $existing['form_mappings'] : [],
+                'custom_fields' => $existing['custom_fields'] ?? [],
                 'form_catalog' => is_array($existing['form_catalog'] ?? null) ? $existing['form_catalog'] : [],
                 'webservices' => is_array($existing['webservices'] ?? null) ? $existing['webservices'] : [],
                 'form_services' => is_array($existing['form_services'] ?? null) ? $existing['form_services'] : [],
@@ -199,6 +208,7 @@ final class ErpConnectionProfile
                 'client_secret_encrypted' => '' !== $value('client_secret') ? $this->secretCipher->encrypt($value('client_secret')) : (string) ($existing['client_secret_encrypted'] ?? ''),
                 'token_configured' => '' !== $value('token') || '' !== $value('client_secret') || '' !== (string) ($existing['token_encrypted'] ?? '') || '' !== (string) ($existing['client_secret_encrypted'] ?? ''),
                 'form_mappings' => is_array($existing['form_mappings'] ?? null) ? $existing['form_mappings'] : [],
+                'custom_fields' => $existing['custom_fields'] ?? [],
                 'form_catalog' => is_array($existing['form_catalog'] ?? null) ? $existing['form_catalog'] : [],
             ],
             default => [
@@ -211,9 +221,10 @@ final class ErpConnectionProfile
                 'table' => $this->identifier($value('table')),
                 'credentials_configured' => '' !== $value('password') || '' !== (string) ($existing['password_encrypted'] ?? '') || (bool) ($existing['credentials_configured'] ?? false),
                 'bindings' => is_array($existing['bindings'] ?? null) ? $existing['bindings'] : [],
+                'custom_fields' => $existing['custom_fields'] ?? [],
                 'form_catalog' => is_array($existing['form_catalog'] ?? null) ? $existing['form_catalog'] : [],
             ],
-        };
+        });
     }
 
     /** @param array<string, mixed> $input

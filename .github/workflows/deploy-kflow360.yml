@@ -47,12 +47,11 @@ jobs:
             cd "${{ vars.DEPLOY_PATH }}"
             test -f .env
             test -f apps/core/.env || touch apps/core/.env
-            docker compose up -d --build
-            docker compose restart nginx
-            docker compose exec -T php php bin/console doctrine:migrations:migrate --env=prod --no-interaction
-            docker compose exec -T php php bin/console sass:build
-            docker compose exec -T --user root php php bin/console importmap:install --env=prod
-            docker compose exec -T --user root php sh -c 'mkdir -p public/assets && chown -R www-data:www-data assets/vendor public/assets'
-            docker compose exec -T php php bin/console asset-map:compile --env=prod
-            docker compose exec -T php php bin/console cache:clear --env=prod --no-warmup
-            docker image prune -f
+            docker compose -f docker-compose.yml -f compose.production.yaml up -d --build postgres php nginx
+            docker compose -f docker-compose.yml -f compose.production.yaml restart nginx
+            docker compose -f docker-compose.yml -f compose.production.yaml exec -T php php bin/console doctrine:migrations:migrate --env=prod --no-interaction
+            docker compose -f docker-compose.yml -f compose.production.yaml exec -T php php bin/console sass:build
+            docker compose -f docker-compose.yml -f compose.production.yaml exec -T --user root php php bin/console importmap:install --env=prod
+            docker compose -f docker-compose.yml -f compose.production.yaml exec -T --user root php sh -c 'mkdir -p public/assets && chown -R www-data:www-data assets/vendor public/assets'
+            docker compose -f docker-compose.yml -f compose.production.yaml exec -T php php bin/console asset-map:compile --env=prod
+            docker compose -f docker-compose.yml -f compose.production.yaml exec -T php php bin/console cache:clear --env=prod --no-warmup

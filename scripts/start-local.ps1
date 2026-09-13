@@ -27,7 +27,7 @@ if ($targetVolumeAti -notin $volumesAti) {
     Invoke-DockerAti cp ($sourceContainersAti[0] + ':/tmp/united-ati-seed.dump') $dumpPathAti
     Invoke-DockerAti @composeAti up -d --wait postgres
     Invoke-DockerAti cp $dumpPathAti 'united-postgres:/tmp/united-ati-seed.dump'
-    Invoke-DockerAti exec united-postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --no-privileges --exit-on-error /tmp/united-ati-seed.dump'
+    Invoke-DockerAti exec united-postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error /tmp/united-ati-seed.dump'
     Invoke-DockerAti exec united-postgres touch /var/lib/postgresql/data/.united-import-complete
 } else {
     Invoke-DockerAti @composeAti up -d --wait postgres
@@ -35,6 +35,7 @@ if ($targetVolumeAti -notin $volumesAti) {
 }
 Invoke-DockerAti @composeAti up -d --build php nginx adminer
 Invoke-DockerAti @composeAti exec -T php php bin/console doctrine:migrations:migrate --no-interaction
+Invoke-DockerAti @composeAti exec -T php php bin/console asset-map:compile
 Invoke-DockerAti @composeAti exec -T php php bin/console cache:clear
-Write-Output 'United Ati: http://localhost:4300/login'
+Write-Output 'United Ati: http://localhost:4300/unitedati'
 Write-Output 'KFlow permanece na sua porta e com seu banco original.'

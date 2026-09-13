@@ -30,7 +30,7 @@ document.querySelector('[data-login-form]')?.addEventListener('submit', (event) 
     form.querySelector('[data-login-loading]')?.removeAttribute('hidden');
 });
 
-const layoutKey = (name) => `kflow-layout-v7-${name}`;
+const layoutKey = (name) => `united-layout-v8-${name}`;
 const legacyLayoutKeys = (name) => [
     `kflow-layout-${name}`,
     `kflow-layout-v2-${name}`,
@@ -38,6 +38,7 @@ const legacyLayoutKeys = (name) => [
     `kflow-layout-v4-${name}`,
     `kflow-layout-v5-${name}`,
     `kflow-layout-v6-${name}`,
+    `kflow-layout-v7-${name}`,
 ];
 const cards = (grid) => [...grid.querySelectorAll(':scope > [data-layout-card]')];
 const syncLayoutRecovery = (grid) => {
@@ -58,6 +59,7 @@ document.querySelectorAll('[data-layout-grid]').forEach((grid) => {
             cards(grid).forEach((card) => card.classList.toggle('is-layout-hidden', hidden.includes(card.dataset.layoutCard)));
         }
     } catch {}
+    if (grid.classList.contains('kflow-product-workspace')) cards(grid).forEach(card => card.classList.remove('is-layout-hidden'));
     syncLayoutRecovery(grid);
     let dragging = null;
     cards(grid).forEach((card) => {
@@ -132,7 +134,7 @@ document.addEventListener('click', async (event) => {
     if (!next || !current) return location.assign(link.href);
     current.replaceWith(next); history.pushState({}, '', link.href);
 });
-if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=57', {updateViaCache: 'none'}));
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=64', {updateViaCache: 'none'}));
 
 document.querySelector('[data-diagnostic-copy]')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;
@@ -353,3 +355,46 @@ document.addEventListener('click', async (event) => {
         button.innerHTML = original;
     }
 });
+
+// Saved form navigation always reloads its persisted mapping.
+document.querySelectorAll('[data-switch-integration-form]').forEach(select => select.addEventListener('change', () => {
+    const url = new URL(location.href); url.searchParams.set('form', select.value); url.searchParams.set('step', 'mapping'); location.assign(url);
+}));
+document.addEventListener('click', async event => {
+    if (!(event.target instanceof Element)) return;
+    const clear = event.target.closest('[data-clear-mapping]');
+    if (clear) { const field = document.getElementById(clear.dataset.clearMapping); if (field) { field.value = ''; field.dispatchEvent(new Event('change', {bubbles:true})); } }
+    const remove = event.target.closest('[data-form-delete]');
+    if (remove && !remove.disabled && confirm('Excluir este formulário e todos os seus vínculos nesta conexão? Os dados do ERP serão preservados.')) {
+        remove.disabled = true;
+        try {
+            const data = new FormData(); data.set('_token', remove.dataset.token); data.set('method', remove.dataset.method);
+            const response = await fetch(remove.dataset.url, {method:'POST', body:data}); const result = await response.json();
+            if (!response.ok || !result.ok) throw new Error(result.message || 'Não foi possível excluir.');
+            const url = new URL(location.href); if (url.searchParams.get('form') === remove.dataset.formId) url.searchParams.delete('form'); location.assign(url);
+        } catch (error) { alert(error.message || 'Falha ao excluir formulário.'); remove.disabled = false; }
+    }
+    for (const kind of ['product','customer']) {
+        const button = event.target.closest(`[data-${kind}-select]`); if (!button) continue;
+        const data = JSON.parse(button.dataset[kind] || '{}');
+        document.querySelectorAll(`[data-${kind}-row]`).forEach(row => row.classList.remove('is-selected')); button.closest(`[data-${kind}-row]`)?.classList.add('is-selected');
+        document.querySelectorAll(`[data-${kind}-field]`).forEach(field => {
+            const value = data[field.getAttribute(`data-${kind}-field`)] ?? '';
+            if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) field.value = value;
+            else field.textContent = String(value || 'Não informado');
+        });
+    }
+});
+
+const pendingDashboard = document.querySelector('[data-dashboard-pending]');
+if (pendingDashboard) {
+    const refreshUrl = new URL(location.href); refreshUrl.searchParams.set('refresh', '1');
+    fetch(refreshUrl, {signal: AbortSignal.timeout(120000)}).then(response => { if (!response.ok) throw new Error(); return response.text(); }).then(html => {
+        const page = new DOMParser().parseFromString(html, 'text/html');
+        document.querySelectorAll('[data-layout-grid="dashboard-main"] [data-layout-card]').forEach(card => {
+            const value = page.querySelector(`[data-layout-card="${card.dataset.layoutCard}"] .kflow-stat__link strong`);
+            if (value) card.querySelector('.kflow-stat__link strong').textContent = value.textContent;
+        });
+        pendingDashboard.textContent = 'Indicadores atualizados a partir das consultas ao ERP.';
+    }).catch(() => { pendingDashboard.textContent = 'Indicadores indisponíveis no momento. Os menus continuam acessíveis; confira a conexão do ERP.'; });
+}

@@ -22,7 +22,7 @@
             <aside class="kflow-surface kflow-product-detail kflow-layout-card" data-layout-card="detail" draggable="false">
                 <button class="kflow-layout-card__hide" type="button" data-layout-hide title="Ocultar informações" aria-label="Ocultar informações"><i class="bi bi-eye-slash"></i></button>
                 <span class="kflow-eyebrow">{{ singular }} selecionado</span><h2>Informações cadastrais</h2>
-                <div class="kflow-customer-detail">{% for key, label in {'Code': 'Código do ERP', 'Name': 'Nome / razão social', 'Document': 'CPF / CNPJ', 'StateRegistration': 'Inscrição estadual', 'Phone': 'Telefone', 'Email': 'E-mail', 'Address': 'Endereço', 'City': 'Cidade', 'State': 'UF', 'UpdatedAt': 'Última atualização'} %}<div><small>{{ label }}</small><strong data-party-field="{{ key }}">{{ firstParty[key]|default('Não informado') }}</strong></div>{% endfor %}</div>
+                {% for key, field in extraFields|default([]) %}<div class="mb-3"><small>{{ field.label }}</small><strong data-party-field="X_{{ key }}">{{ firstParty['X_'~key]|default('Não informado') }}</strong></div>{% endfor %}<div class="kflow-customer-detail">{% for key, label in {'Code': 'Código do ERP', 'Name': 'Nome / razão social', 'Document': 'CPF / CNPJ', 'StateRegistration': 'Inscrição estadual', 'Phone': 'Telefone', 'Email': 'E-mail', 'Address': 'Endereço', 'City': 'Cidade', 'State': 'UF', 'UpdatedAt': 'Última atualização'} %}<div><small>{{ label }}</small><strong data-party-field="{{ key }}">{{ firstParty[key]|default('Não informado') }}</strong></div>{% endfor %}</div>
             </aside>
         </section>
 

@@ -15,7 +15,7 @@ final class KFlowAccess
     private const MENUS = [
         'dashboard' => 'Visão Geral', 'products' => 'Produtos', 'clients' => 'Clientes',
         'suppliers' => 'Fornecedor', 'carriers' => 'Transportador', 'requisition' => 'Requisição',
-        'approval' => 'Aprovação', 'connections' => 'Conectar ERP',
+        'solicitation' => 'Solicitação', 'approval' => 'Aprovações', 'connections' => 'Conectar ERP',
     ];
 
     /** @var array<int, Company|null> */ private array $activeCompanies = [];
@@ -24,7 +24,7 @@ final class KFlowAccess
     /** @var array<string, CompanyMembership|null> */ private array $memberships = [];
     public function __construct(private readonly EntityManagerInterface $entityManager, private readonly RequestStack $requestStack) {}
     /** @return array<string, string> */ public function menuOptions(): array { return self::MENUS; }
-    public function isPlatformAdmin(?User $user): bool { return $user instanceof User && (in_array(User::ROLE_ADMIN, $user->getRoles(), true) || 'kadmin' === strtolower($user->getUserIdentifier())); }
+    public function isPlatformAdmin(?User $user): bool { return $user instanceof User && (in_array(User::ROLE_ADMIN, $user->getRoles(), true)); }
     public function activeCompany(?User $user): ?Company
     {
         if (!$user instanceof User) return null;

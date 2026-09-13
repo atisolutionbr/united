@@ -1,0 +1,7 @@
+{% extends 'base.html.twig' %}
+{% block title %}United Ati · Aprovações{% endblock %}
+{% block page_title %}Aprovações{% endblock %}
+{% block main %}
+<section class="kflow-page-heading"><div><span class="kflow-eyebrow">{{ erp }}</span><h1>Aprovações</h1><p>Selecione o processo para conferir os objetos pendentes e devolver sua decisão ao ERP.</p></div></section>
+<div class="united-approval-grid">{% for key, label in cards %}<article class="kflow-surface united-approval-card"><i class="bi bi-check2-square"></i><h2>{{ label }}</h2><p>{{ counts[key] }} origem(ns) de aprovação vinculada(s)</p><a class="btn btn-primary" href="{{ path('united_approval_items', {process: key}) }}">Abrir pendências</a>{% if kflow_can('connections') %}<a href="{{ path('united_process_bindings', {process: key, purpose: 'approval'}) }}">Vincular tabelas / API / WS</a>{% endif %}</article>{% endfor %}</div>
+{% endblock %}

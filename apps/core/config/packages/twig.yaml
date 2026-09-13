@@ -1,4 +1,6 @@
 twig:
+    globals:
+        deployment_environment: '%env(default:deployment_environment:APP_DEPLOYMENT_ENV)%'
     file_name_pattern: '*.twig'
     form_themes:
         - 'bootstrap_5_layout.html.twig'

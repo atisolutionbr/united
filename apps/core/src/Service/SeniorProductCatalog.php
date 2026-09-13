@@ -34,22 +34,22 @@ final class SeniorProductCatalog
     {
         $table = $this->validTable((string) ($binding['table'] ?? '')) ?: 'E075PRO';
         $mapping = is_array($binding['mapping'] ?? null) ? $binding['mapping'] : [];
-        if (!$this->database->isConfigured($settings)) {
+        if (empty($binding['table']) || !$this->database->isConfigured($settings)) {
             return $this->emptyResult(false, $table);
         }
 
         try {
             $columns = $this->columnLookup($settings, $table);
             $selects = [
-                $this->selectColumn('CodEmp', 'CodEmp', $columns),
-                $this->selectColumn('CodPro', 'CodPro', $columns),
-                $this->selectColumn('DesPro', 'DesPro', $columns),
+                $this->selectColumn($mapping['company'] ?? 'CodEmp', 'CodEmp', $columns),
+                $this->selectColumn($mapping['product_code'] ?? 'CodPro', 'CodPro', $columns),
+                $this->selectColumn($mapping['product_name'] ?? 'DesPro', 'DesPro', $columns),
                 $this->selectColumn('CplPro', 'CplPro', $columns),
                 $this->selectColumn('DesNFv', 'DesNFv', $columns),
-                $this->selectColumn('CodFam', 'CodFam', $columns),
-                $this->selectColumn('UniMed', 'UniMed', $columns),
+                $this->selectColumn($mapping['family'] ?? 'CodFam', 'CodFam', $columns),
+                $this->selectColumn($mapping['unit'] ?? 'UniMed', 'UniMed', $columns),
                 $this->selectColumn('TipPro', 'TipPro', $columns),
-                $this->selectColumn('CodOri', 'CodOri', $columns),
+                $this->selectColumn($mapping['origin_code'] ?? 'CodOri', 'CodOri', $columns),
             ];
 
             $taxAliases = [
@@ -72,10 +72,11 @@ final class SeniorProductCatalog
             $perPage = max(1, min(50, $perPage));
             $pageCount = max(1, (int) ceil($recordCount / $perPage));
             $page = max(1, min($page, $pageCount));
+            $selects = array_merge($selects, IntegrationFields::selectedColumns($mapping, $columns));
             $offset = ($page - 1) * $perPage;
             $statement = $connection->query(sprintf(
-                'SELECT %s FROM %s ORDER BY [CodPro] OFFSET %d ROWS FETCH NEXT %d ROWS ONLY',
-                implode(', ', $selects), $quotedTable,
+                'SELECT %s FROM %s ORDER BY %s OFFSET %d ROWS FETCH NEXT %d ROWS ONLY',
+                implode(', ', $selects), $quotedTable, '['.str_replace(']', ']]', $columns[strtolower($mapping['product_code'] ?? 'CodPro')] ?? 'CodPro').']',
                 $offset,
                 $perPage,
             ));

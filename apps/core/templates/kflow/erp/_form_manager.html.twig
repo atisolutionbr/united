@@ -1,20 +1,23 @@
 <div class="kflow-form-manager" data-form-manager>
-    <div><strong>Formulários disponíveis</strong><small>Selecione um formulário para conferir ou editar o vínculo. A exclusão só vale para formulários adicionais.</small></div>
+    <div><strong>Vínculos salvos</strong><small>Abra um formulário para conferir sua origem e os campos vinculados.</small></div>
     <div class="kflow-form-manager__items">
-        {% for definition in configuredForms %}
-            {% set table = bindings[definition.id].table|default('') %}
-            {% set targetStep = method == 'database' ? 'table' : 'mapping' %}
-            <a class="kflow-form-chip kflow-form-chip--select {{ table ? 'is-bound' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: targetStep, form: definition.id}) }}" title="Abrir vínculo de {{ definition.label }}">
-                <span>{{ definition.label }}</span>
-                <small>{{ table ?: 'Sem vínculo' }}</small>
+    {% for definition in configuredForms %}
+        {% set table = bindings[definition.id].table|default('') %}
+        {% set saved = method == 'database' ? bindings[definition.id].mapping|default([]) : settings.form_mappings[definition.id]|default([]) %}
+        {% set count = saved|filter(v => v != '')|length %}
+        {% set targetStep = method == 'database' and not table ? 'table' : 'mapping' %}
+        {% if table or count or definition.id starts with 'form-' %}
+        <div class="united-form-entry {{ selectedForm == definition.id ? 'is-selected' }}">
+            <a class="kflow-form-chip kflow-form-chip--select {{ table or count ? 'is-bound' }}" href="{{ path('kflow_erp_connect', {erp: erp, method: method, step: targetStep, form: definition.id}) }}" {{ selectedForm == definition.id ? 'aria-current=page' }}>
+                <strong>{{ definition.label }}</strong><small>{{ method == 'database' ? (table ?: 'Tabela ainda não selecionada') : methods[method] }} · {{ count }} campos vinculados</small>
+                {% if definition.id starts with 'form-' %}<small>Adicional · {{ definition.id }}</small>{% endif %}
             </a>
-            {% if definition.id starts with 'form-' %}
-                <button class="kflow-form-chip kflow-form-chip--delete" type="button" data-form-delete data-form-id="{{ definition.id }}" data-method="{{ method }}" data-token="{{ csrf_token('delete-integration-form-'~erp~'-'~method~'-'~definition.id) }}" data-url="{{ path('kflow_erp_forms_delete', {erp: erp, form: definition.id}) }}" aria-label="Excluir formulário {{ definition.label }}" title="Excluir formulário e vínculos">
-                    <i class="bi bi-trash3"></i>
-                </button>
+            {% if table or count or definition.id starts with 'form-' %}
+                {% if table and method == 'database' and definition.id starts with 'form-' %}<a href="{{ path('united_integration_form', {form: definition.id}) }}">Abrir formulário</a>{% endif %}
+                <button class="btn btn-sm btn-outline-danger" type="button" data-form-delete data-form-id="{{ definition.id }}" data-method="{{ method }}" data-token="{{ csrf_token('delete-integration-form-'~erp~'-'~method~'-'~definition.id) }}" data-url="{{ path('kflow_erp_forms_delete', {erp: erp, form: definition.id}) }}" aria-label="Excluir vínculo do formulário {{ definition.label }}"><i class="bi bi-trash3"></i> Excluir vínculo</button>
             {% endif %}
-        {% else %}
-            <span class="kflow-form-manager__empty">Nenhum formulário disponível.</span>
-        {% endfor %}
+        </div>
+        {% endif %}
+    {% endfor %}
     </div>
 </div>

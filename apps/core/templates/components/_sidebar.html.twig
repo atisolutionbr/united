@@ -22,7 +22,7 @@
 
         {% if kflow_can('products') or kflow_can('clients') or kflow_can('suppliers') or kflow_can('carriers') %}<div class="kflow-nav__group is-open">
             <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="true">
-                <span><i class="bi bi-box-seam"></i><span>United</span></span><i class="bi bi-chevron-down"></i>
+                <span><i class="bi bi-box-seam"></i><span>Cadastros</span></span><i class="bi bi-chevron-down"></i>
             </button>
             <div class="kflow-nav__submenu">
                 {% if kflow_can('products') %}<a href="{{ path('kflow_products') }}" class="{{ route == 'kflow_products' ? 'is-active' }}">Produtos</a>{% endif %}
@@ -35,8 +35,9 @@
         {% if kflow_can('requisition') %}<a class="kflow-nav__link {{ pathInfo ends with '/requisicao' ? 'is-active' }}" href="{{ path('kflow_module', {module: 'requisicao'}) }}">
             <i class="bi bi-clipboard2-plus"></i><span>Requisição</span>
         </a>{% endif %}
+        {% if kflow_can('solicitation') %}<a class="kflow-nav__link" href="{{ path('kflow_module', {module: 'solicitacao'}) }}"><i class="bi bi-send"></i><span>Solicitação</span></a>{% endif %}
         {% if kflow_can('approval') %}<a class="kflow-nav__link {{ pathInfo ends with '/aprovacao' ? 'is-active' }}" href="{{ path('kflow_module', {module: 'aprovacao'}) }}">
-            <i class="bi bi-check2-square"></i><span>Aprovação</span>
+            <i class="bi bi-check2-square"></i><span>Aprovações</span>
         </a>{% endif %}
 
         <div class="kflow-nav__separator"></div>
@@ -50,12 +51,12 @@
             </div>
         </div>{% endif %}
 
-        {% if app.user.userIdentifier|lower == 'kadmin' or kflow_can('intelligence') or kflow_can('data') or kflow_can('integrations') or kflow_can('ai') or kflow_can('operations') or kflow_can('governance') or kflow_can('platform') %}<div class="kflow-nav__group">
+        {% if is_granted('ROLE_ADMIN') or kflow_can('intelligence') or kflow_can('data') or kflow_can('integrations') or kflow_can('ai') or kflow_can('operations') or kflow_can('governance') or kflow_can('platform') %}<div class="kflow-nav__group">
             <button class="kflow-nav__group-toggle" type="button" data-sidebar-group aria-expanded="false">
                 <span><i class="bi bi-sliders2"></i><span>Configurações United</span></span><i class="bi bi-chevron-down"></i>
             </button>
             <div class="kflow-nav__submenu">
-                {% if app.user.userIdentifier|lower == 'kadmin' %}<a href="{{ path('kflow_companies') }}" class="{{ route starts with 'kflow_compan' ? 'is-active' }}">Empresas</a><a href="{{ path('kflow_users') }}" class="{{ route starts with 'kflow_users' ? 'is-active' }}">Usuários</a>{% endif %}
+                {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('kflow_companies') }}" class="{{ route starts with 'kflow_compan' ? 'is-active' }}">Empresas</a><a href="{{ path('kflow_users') }}" class="{{ route starts with 'kflow_users' ? 'is-active' }}">Usuários</a>{% endif %}
                 {% if kflow_can('intelligence') %}<a href="{{ path('app_admin_intelligence_hub') }}">Inteligência</a>{% endif %}
                 {% if kflow_can('data') %}<a href="{{ path('app_admin_data_hub') }}">Dados</a>{% endif %}
                 {% if kflow_can('integrations') %}<a href="{{ path('app_admin_integrations_hub') }}">Integrações</a>{% endif %}

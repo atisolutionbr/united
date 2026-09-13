@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+{% block title %}United Ati · {{ title }}{% endblock %}
+{% block page_title %}Aprovações · {{ title }}{% endblock %}
+{% block main %}
+<section class="kflow-page-heading"><div><h1>{{ title }}</h1><p>Selecione um objeto para aprovar ou reprovar. Cada decisão será enviada à origem vinculada.</p></div><a class="btn btn-outline-primary" href="{{ path('united_approvals') }}">Todas as aprovações</a></section>
+<section class="kflow-surface">
+<form method="get" class="kflow-form-grid"><label>Origem vinculada<select class="form-select" name="source" onchange="this.form.submit()">{% for binding in bindings %}<option value="{{ binding.id }}" {{ selected == binding.id ? 'selected' }}>{{ binding.label }} · {{ binding.config.table|default(binding.config.method) }}</option>{% endfor %}</select></label></form>
+{% if kflow_can('connections') %}<a href="{{ path('united_process_bindings', {process: process, purpose: 'approval'}) }}">Configurar ou acrescentar outra origem</a>{% endif %}
+{% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}
+<form method="post"><input type="hidden" name="_token" value="{{ csrf_token('decision-'~process) }}">
+<div class="table-responsive"><table class="table kflow-table"><thead><tr><th>Selecionar</th><th>Objeto</th><th>Solicitante</th><th>Valor</th><th>Data / documento</th></tr></thead><tbody>
+{% for row in result.rows %}<tr><td><input type="radio" name="record" value="{{ row.token }}" required aria-label="Selecionar {{ row.data.description|default(row.data.id|default('objeto')) }}"></td><td><strong>{{ row.data.id|default('') }}</strong> {{ row.data.description|default('') }}</td><td>{{ row.data.requester|default('—') }}</td><td>{{ row.data.amount|default('—') }}</td><td>{{ row.data.date|default('') }} {{ row.data.document|default('') }}</td></tr>{% else %}<tr><td colspan="5">{{ bindings is empty ? 'Configure a origem deste processo para carregar as pendências.' : (error ? 'Consulta indisponível.' : 'Nenhum objeto pendente nesta página.') }}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="kflow-pagination"><span>Página {{ page }} · {{ result.total }} pendências · 15 por página</span><div>{% if page > 1 %}<a class="btn btn-outline-primary" href="{{ path('united_approval_items', {process: process, source: selected, page: page - 1}) }}">Anterior</a>{% endif %}{% if page * 15 < result.total %}<a class="btn btn-outline-primary" href="{{ path('united_approval_items', {process: process, source: selected, page: page + 1}) }}">Próxima</a>{% endif %}</div></div>
+<div class="kflow-connection-actions"><button class="btn btn-success" name="decision" value="approve" {{ result.rows is empty ? 'disabled' }}>Aprovar</button><button class="btn btn-danger" name="decision" value="reject" {{ result.rows is empty ? 'disabled' }}>Reprovar</button></div>
+</form></section>
+{% endblock %}

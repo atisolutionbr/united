@@ -26,6 +26,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      APP_DEPLOYMENT_ENV: ${APP_DEPLOYMENT_ENV:-local}
       APP_ENV: ${APP_ENV:-dev}
       APP_SECRET: ${APP_SECRET:-change-me-local-secret}
       APP_DEBUG: ${APP_DEBUG:-1}

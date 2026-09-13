@@ -22,7 +22,7 @@
             <aside class="kflow-surface kflow-product-detail kflow-layout-card" data-layout-card="detail" draggable="false">
                 <button class="kflow-layout-card__hide" type="button" data-layout-hide title="Ocultar informações" aria-label="Ocultar informações do cliente"><i class="bi bi-eye-slash"></i></button>
                 <span class="kflow-eyebrow">Cliente selecionado</span><h2>Informações do cliente</h2>
-                <div class="kflow-customer-detail">
+                {% for key, field in extraFields|default([]) %}<div class="mb-3"><small>{{ field.label }}</small><strong data-customer-field="X_{{ key }}">{{ firstCustomer['X_'~key]|default('Não informado') }}</strong></div>{% endfor %}<div class="kflow-customer-detail">
                     {% for key, label in {'CodEmp': 'Empresa', 'CodCli': 'Código do cliente', 'NomCli': 'Nome / Razão social', 'CgcCpf': 'CPF / CNPJ', 'InsEst': 'Inscrição estadual', 'EmlCli': 'E-mail', 'EndCli': 'Endereço', 'CidCli': 'Cidade', 'SigUfs': 'UF', 'DatAlt': 'Última atualização'} %}
                         <div><small>{{ label }}</small><strong data-customer-field="{{ key }}">{{ firstCustomer[key]|default('Não informado') }}</strong></div>
                     {% endfor %}

@@ -1,17 +1,42 @@
-# United Ati
+# United Ati: ambiente local e publicação
 
-Domínio de produção: https://united.atioslution.com.br
+## Local
 
-Repositório: https://github.com/atisolutionbr/united
+Execute `scripts/start-local.ps1` com Docker Desktop em execução. United: http://localhost:4300/unitedati. O KFlow continua na porta 3000 e utiliza outro volume de banco. Não executar `docker compose down -v`.
 
-O histórico e a branch `kflow360` foram preservados. A versão continua no formato mês.ano e o build sequencial continua em `KFlowRelease`; esta entrega incrementa o build de 58 para 59. As alterações locais presentes no projeto de origem também integram esta cópia.
+O login mostra Ambiente Local mesmo quando APP_ENV=prod é usado para desempenho. A indicação depende de APP_DEPLOYMENT_ENV; o override local fixa local e o de produção fixa production.
 
-## Nova VPS
+## VPS informada
 
-O deploy permanece desativado até configurar o ambiente `production` no GitHub. Cadastre `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PORT`, `DEPLOY_PATH`, o segredo `DEPLOY_SSH_KEY` e, somente quando a VPS estiver pronta, `DEPLOY_ENABLED=true`.
+Ubuntu 22.04, IP 143.95.167.97, SSH 22022. Domínio definitivo: united.atisolution.com.br. Ainda é necessário informar usuário SSH, chave disponível e provedor DNS. Este documento prepara a publicação; não confirma uma implantação realizada.
 
-Crie o `.env` a partir de `.env.example` e defina segredos exclusivos para a nova instalação. Em produção use `APP_ENV=prod`, `APP_DEBUG=0`, `DEFAULT_URI=https://united.atioslution.com.br` e `CORS_ALLOW_ORIGIN=^https://united\.atioslution\.com\.br$`. Configure as credenciais do banco e as integrações na nova instância.
+1. No DNS de atisolution.com.br, criar registro A, nome united, valor 143.95.167.97, TTL 300. Conferir se existe AAAA antigo antes de habilitar IPv6. Aguardar a resolução pública.
+2. Acessar com `ssh -p 22022 USUARIO@143.95.167.97`. Instalar Docker Engine e Compose conforme https://docs.docker.com/engine/install/ubuntu/ e Nginx no host. Manter SSH 22022 permitido e liberar HTTP 80/HTTPS 443. Não publicar o PostgreSQL na internet.
+3. Clonar https://github.com/atisolutionbr/united.git na branch kflow360, por exemplo em /opt/united. Preparar .env privado: PROJECT_NAME=united, APP_ENV=prod, APP_DEBUG=0, APP_DEPLOYMENT_ENV=production, DEFAULT_URI=https://united.atisolution.com.br, POSTGRES_DB/USER/PASSWORD e DATABASE_URL coerentes e senha exclusiva. Nunca versionar .env.
+4. Para transportar vínculos já configurados, exportar o PostgreSQL **do United** com pg_dump, copiar por canal seguro e restaurar somente na base nova da VPS. Preservar APP_SECRET por transferência segura, pois as credenciais dos ERPs estão criptografadas com ele. Não sobrescrever uma base existente sem backup. Garantir conectividade da VPS com o ERP; acesso liberado para o PC não implica acesso liberado para a VPS.
+5. Executar os comandos abaixo dentro de /opt/united. O override de produção expõe a aplicação apenas em 127.0.0.1:18080 e marca Ambiente Produção.
 
-Instale Docker e Compose na VPS. O proxy de host em `infra/nginx/host/united.atioslution.com.br.conf` encaminha para a porta local 18080; configure `APP_PORT=127.0.0.1:18080`. Aponte o DNS para o novo IP e emita o certificado TLS desse domínio antes da liberação de produção.
+```sh
+test -f apps/core/.env || touch apps/core/.env
+docker compose -f docker-compose.yml -f compose.production.yaml up -d --build postgres php nginx
+docker compose -f docker-compose.yml -f compose.production.yaml exec -T php php bin/console doctrine:migrations:migrate --env=prod --no-interaction
+docker compose -f docker-compose.yml -f compose.production.yaml exec -T php php bin/console asset-map:compile --env=prod
+docker compose -f docker-compose.yml -f compose.production.yaml exec -T php php bin/console cache:clear --env=prod
+```
 
-Arquivos de segredos `.env` da instalação antiga não são publicados. Banco em execução e volumes Docker externos ao código precisam de exportação/importação na migração da VPS. Dependências e caches são reconstruídos pelos procedimentos existentes.
+6. Instalar infra/nginx/host/united.atisolution.com.br.conf em sites-available do Nginx, ativar o site, executar `sudo nginx -t` e recarregar. Após o DNS apontar à VPS, emitir certificado com Certbot Nginx seguindo https://certbot.eff.org/instructions?os=snap&ws=nginx, usando `sudo certbot --nginx -d united.atisolution.com.br`. Conferir renovação com `sudo certbot renew --dry-run`.
+7. Validar HTTPS, login, Ambiente Produção, assets, leituras do ERP e backup antes de ativar deploy automático. Testes de gravação no ERP devem usar registros de homologação e os vínculos reais definidos pelo responsável.
+
+## Versionamento e deploy
+
+Preservados repositório united e branch kflow360. O workflow deploy-kflow360.yml exige DEPLOY_ENABLED=true e ambiente GitHub production. Configurar variáveis DEPLOY_HOST=143.95.167.97, DEPLOY_PORT=22022, DEPLOY_USER, DEPLOY_PATH e segredo DEPLOY_SSH_KEY. Deixar desabilitado até a primeira implantação ser validada. Antes de atualizar produção, fazer backup do PostgreSQL. Para reversão, recuperar o commit anterior; migrações e dados exigem avaliação específica.
+
+## Vínculos e processos
+
+Cadastros: vínculos salvos mostram tabela e quantidade de campos. Todos podem ser excluídos; excluir um vínculo não apaga a tabela do ERP. Formulários adicionais podem ser abertos individualmente. Quando existe apenas um formulário adicional vinculado de um cadastro, ele é usado na tela desse cadastro.
+
+Requisições e solicitações: Produto utiliza o cadastro de Produtos; pesquisar código, nome e código de barras exige os respectivos campos vinculados. Em Vínculos de listas, configurar origem BD/API/WebService de Solicitante, Projeto, Fase, Depósito e outros campos textuais. Selecionar uma opção válida antes de salvar. Não são inventadas tabelas de ERP.
+
+Aprovações: configurar origem, chave do registro, campos, situação pendente e retorno aprovado/reprovado por categoria. Listagem de 15 por página; ações registradas em auditoria. Solicitações/requisições têm rascunho e envio explícito ao ERP. O acompanhamento das etapas é local; geração de OC/NF depende dos serviços e contratos do ERP configurados, não ocorre implicitamente.
+
+Sanitização: análise de duplicidades, descrição e consistência dos campos fiscais vinculados. A aplicação de padronização é explícita e limita-se à descrição. NCM sozinho não determina a tributação; a análise não substitui classificação fiscal validada com as tabelas oficiais.

@@ -17,6 +17,7 @@
         </div>
     </section>
 
+    {% if pendingMetrics|filter(v => v)|length %}<p data-dashboard-pending>Carregando indicadores do ERP…</p>{% endif %}
     <section class="kflow-stat-grid kflow-layout-grid" data-layout-grid="dashboard-main" aria-label="Resumo operacional">
         {% set dashboardCards = [
             {id: 'erp', label: 'ERP ativo', value: activeErp ?: 'Nenhum selecionado', icon: 'hdd-stack', tone: 'teal', href: path('kflow_erp_index')},
@@ -34,7 +35,7 @@
                 <button class="kflow-layout-card__hide" type="button" data-layout-hide title="Ocultar card" aria-label="Ocultar {{ card.label }}"><i class="bi bi-eye-slash"></i></button>
                 <a href="{{ card.href }}" class="kflow-stat__link">
                     <span class="kflow-stat__icon kflow-tone-{{ card.tone }}"><i class="bi bi-{{ card.icon }}"></i></span>
-                    <div><small>{{ card.label }}</small><strong>{{ card.value }}</strong></div>
+                    <div><small>{{ card.label }}</small><strong>{{ (card.id in ['products', 'duplicates', 'fiscal'] and pendingMetrics.products) or (card.id starts with 'clients-' and pendingMetrics.customers) or (card.id starts with 'suppliers-' and pendingMetrics.suppliers) ? '—' : card.value }}</strong></div>
                 </a>
             </article>
         {% endfor %}

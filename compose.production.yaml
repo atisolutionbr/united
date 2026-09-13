@@ -1,0 +1,27 @@
+services:
+  nginx:
+    ports: !override
+      - "127.0.0.1:18080:80"
+  php:
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      APP_DEPLOYMENT_ENV: production
+      DEFAULT_URI: https://united.atisolution.com.br
+  postgres:
+    ports: !override []
+  adminer:
+    ports: !override
+      - "127.0.0.1:18081:8080"
+  metabase:
+    ports: !override
+      - "127.0.0.1:18001:3000"
+  ollama:
+    ports: !override
+      - "127.0.0.1:21434:11434"
+  qdrant:
+    ports: !override
+      - "127.0.0.1:16333:6333"
+  kestra:
+    ports: !override
+      - "127.0.0.1:18082:8080"

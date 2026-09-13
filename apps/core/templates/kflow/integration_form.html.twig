@@ -1,0 +1,8 @@
+{% extends 'base.html.twig' %}
+{% block title %}United Ati · {{ definition.label }}{% endblock %}
+{% block page_title %}{{ definition.label }}{% endblock %}
+{% block main %}
+<section class="kflow-page-heading"><div><span class="kflow-eyebrow">{{ erp }} · {{ binding.table|default('Sem tabela') }}</span><h1>{{ definition.label }}</h1><p>Formulário salvo · {{ definition.id }} · {{ total }} registros</p></div>{% if kflow_can('connections') %}<a class="btn btn-outline-primary" href="{{ path('kflow_erp_connect', {erp: erp, method: 'database', step: 'mapping', form: definition.id}) }}">Editar vínculos / incluir campo</a>{% endif %}</section>
+{% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}
+<section class="kflow-surface"><div class="table-responsive"><table class="table kflow-table"><thead><tr>{% for key, field in fields %}<th>{{ field.label }}<small>{{ binding.mapping[key]|default('Não vinculado') }}</small></th>{% endfor %}</tr></thead><tbody>{% for row in rows %}<tr>{% for key, field in fields %}<td>{{ row[key]|default('—') }}</td>{% endfor %}</tr>{% else %}<tr><td colspan="{{ fields|length }}">Nenhum registro disponível.</td></tr>{% endfor %}</tbody></table></div><nav class="kflow-pagination"><span>Página {{ page }} · 15 registros por página</span><div>{% if page > 1 %}<a href="{{ path('united_integration_form', {form: definition.id, page: page - 1}) }}">Anterior</a>{% endif %}{% if page * 15 < total %}<a href="{{ path('united_integration_form', {form: definition.id, page: page + 1}) }}">Próxima</a>{% endif %}</div></nav></section>
+{% endblock %}

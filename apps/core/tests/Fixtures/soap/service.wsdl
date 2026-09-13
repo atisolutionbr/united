@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:tns="urn:UnitedFixture" targetNamespace="urn:UnitedFixture">
+  <types><xsd:schema targetNamespace="urn:UnitedFixture"><xsd:element name="Create"><xsd:complexType><xsd:sequence><xsd:element name="product" type="xsd:string"/><xsd:element name="request_id" type="xsd:string" minOccurs="0"/></xsd:sequence></xsd:complexType></xsd:element><xsd:element name="CreateResponse"><xsd:complexType><xsd:sequence><xsd:element name="success" type="xsd:boolean"/></xsd:sequence></xsd:complexType></xsd:element></xsd:schema></types>
+  <message name="CreateInput"><part name="parameters" element="tns:Create"/></message><message name="CreateOutput"><part name="parameters" element="tns:CreateResponse"/></message>
+  <portType name="FixturePort"><operation name="Create"><input message="tns:CreateInput"/><output message="tns:CreateOutput"/></operation></portType>
+  <binding name="FixtureBinding" type="tns:FixturePort"><soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/><operation name="Create"><soap:operation soapAction="urn:UnitedFixture#Create"/><input><soap:body use="literal"/></input><output><soap:body use="literal"/></output></operation></binding>
+  <service name="FixtureService"><port name="FixturePort" binding="tns:FixtureBinding"><soap:address location="http://127.0.0.1:18083/"/></port></service>
+</definitions>

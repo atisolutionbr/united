@@ -29,7 +29,7 @@ final class SeniorPartyCatalog
         }
 
         $table = $this->validTable((string) ($binding['table'] ?? '')) ?: $profile['table'];
-        if (!$this->database->isConfigured($settings)) {
+        if (empty($binding['table']) || !$this->database->isConfigured($settings)) {
             return $this->emptyResult(false, $table);
         }
 
@@ -53,7 +53,7 @@ final class SeniorPartyCatalog
                 $this->select($mapping['phone'] ?? $profile['phone'], 'Phone', $columns),
                 $this->select($profile['updated'], 'UpdatedAt', $columns),
             ];
-            $selects = array_values(array_filter($selects));
+            $selects = array_merge(array_values(array_filter($selects)), IntegrationFields::selectedColumns($mapping, $columns));
             $recordCount = (int) $pdo->query(sprintf('SELECT COUNT(*) FROM %s', $this->quoteTable($table)))->fetchColumn();
             $perPage = max(1, min(50, $perPage));
             $pageCount = max(1, (int) ceil($recordCount / $perPage));

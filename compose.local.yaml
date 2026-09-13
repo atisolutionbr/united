@@ -4,6 +4,7 @@ services:
       - "127.0.0.1:4300:80"
   php:
     environment:
+      APP_DEPLOYMENT_ENV: local
       DEFAULT_URI: http://localhost:4300
       METABASE_URL: http://localhost:4301
   postgres:

@@ -9,3 +9,5 @@ data/staging
 apps/core/var
 apps/core/vendor
 apps/core/.phpunit.result.cache
+
+.local-runtime
