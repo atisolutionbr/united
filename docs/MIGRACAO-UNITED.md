@@ -75,3 +75,4 @@ Chamadas API de processos têm limite total de 10 segundos; SOAP usa conexão de
 
 Na verificação de 14/09, o Windows estava com aproximadamente 500 MB de memória física disponível, o que também afeta o desempenho do Docker.
 A inicialização reutiliza a imagem local quando existente. Ao alterar dependências PHP ou o Dockerfile, reconstruir explicitamente com docker compose -p united-ati -f docker-compose.yml -f compose.local.yaml build php antes de iniciar novamente.
+Para mudanças exclusivamente PHP, com assets já compilados, sync-local.ps1 -SkipAssets evita recompilar Sass. Em 14/09 foi aplicado limite de 1,5 CPU ao container de relatórios plataforma360-metabase, que chegou a consumir quase três núcleos; ele permaneceu ativo. Esse ajuste é do container atual e não altera o projeto KFlow.
