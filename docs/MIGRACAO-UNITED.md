@@ -40,3 +40,11 @@ Requisições e solicitações: Produto utiliza o cadastro de Produtos; pesquisa
 Aprovações: configurar origem, chave do registro, campos, situação pendente e retorno aprovado/reprovado por categoria. Listagem de 15 por página; ações registradas em auditoria. Solicitações/requisições têm rascunho e envio explícito ao ERP. O acompanhamento das etapas é local; geração de OC/NF depende dos serviços e contratos do ERP configurados, não ocorre implicitamente.
 
 Sanitização: análise de duplicidades, descrição e consistência dos campos fiscais vinculados. A aplicação de padronização é explícita e limita-se à descrição. NCM sozinho não determina a tributação; a análise não substitui classificação fiscal validada com as tabelas oficiais.
+
+## Implantação em 13/09/2026
+
+VPS provisionada em /opt/united com Docker Engine, Compose, PostgreSQL/PostGIS, PHP, Nginx e Certbot. Domínio HTTPS configurado com renovação automática. Banco da aplicação restaurado da cópia consistente do United local; APP_SECRET preservado. Login admin.ati validado em HTTPS. Serviços locais permanecem separados.
+
+Diagnóstico do Senior: o vínculo usa host.docker.internal:1433 e base sapiens. A instância Windows SQL Server (SQLEXPRESS) estava parada; a outra instância MSSQLSERVER não foi interrompida. Iniciar SQLEXPRESS é requisito para recuperar as consultas. Uma falha de comunicação não significa tabela vazia.
+
+Acesso da VPS ao Senior local: preparado usuário SSH restrito united-tunnel, limitado à escuta 172.17.0.1:21433, sem shell ou senha. O início do túnel e a reconexão automática no Windows aguardam autorização explícita. O script scripts/senior-tunnel.ps1 usa chave local privada não versionada. Não executar sem essa autorização. Após habilitar, a origem na VPS deve usar host.docker.internal:21433; a origem local continua na porta 1433. A disponibilidade do ERP depende do PC ligado e do SQL Express em execução. Nenhuma cópia independente do banco ERP foi criada na VPS.

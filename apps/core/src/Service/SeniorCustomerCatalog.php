@@ -68,7 +68,7 @@ final class SeniorCustomerCatalog
         } catch (\Throwable $exception) {
             $this->logger->warning('Unable to read customers from the Senior ERP.', ['exception' => $exception]);
 
-            return [...$this->emptyResult(true, $table), 'error' => 'Não foi possível consultar a base Senior. Verifique a tabela e o vínculo de Clientes.'];
+            return [...$this->emptyResult(true, $table), 'error' => DatabaseSchemaInspector::queryFailure($exception)];
         }
     }
 

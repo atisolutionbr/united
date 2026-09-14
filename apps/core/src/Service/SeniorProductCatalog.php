@@ -105,7 +105,7 @@ final class SeniorProductCatalog
 
             return [
                 ...$this->emptyResult(true, $table),
-                'error' => 'Não foi possível consultar a base Senior. Verifique o vínculo de banco e o mapeamento de campos.',
+                'error' => DatabaseSchemaInspector::queryFailure($exception),
             ];
         }
     }

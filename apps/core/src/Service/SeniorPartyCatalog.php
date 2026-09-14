@@ -83,7 +83,7 @@ final class SeniorPartyCatalog
         } catch (\Throwable $exception) {
             $this->logger->warning('Unable to read records from the Senior ERP.', ['type' => $type, 'exception' => $exception]);
 
-            return [...$this->emptyResult(true, $table), 'error' => sprintf('Não foi possível consultar %s na base Senior. Verifique a tabela e o vínculo.', $type === 'suppliers' ? 'os fornecedores' : 'as transportadoras')];
+            return [...$this->emptyResult(true, $table), 'error' => DatabaseSchemaInspector::queryFailure($exception)];
         }
     }
 

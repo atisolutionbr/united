@@ -505,3 +505,12 @@ body.sidebar-is-collapsed .kflow-nav__link, body.sidebar-is-collapsed .kflow-nav
 .kflow-product-workspace:not(.is-layout-editing) > .kflow-layout-card.is-layout-hidden { display:block; }
 
 .united-lookup{position:relative}.united-lookup>small{display:block;color:#536777;margin-top:5px}.united-lookup-results{position:absolute;top:100%;left:0;right:0;max-height:300px;overflow:auto;z-index:30;background:#fff;border:1px solid #9bc7cf;border-radius:8px;box-shadow:0 8px 22px #183a4e25}.united-lookup-results button{display:block;width:100%;border:0;border-bottom:1px solid #e3ecef;background:white;text-align:left;padding:12px;color:#163c50}.united-lookup-results button:hover,.united-lookup-results button[aria-selected=true]{background:#eaf5e7}
+
+.kflow-erp-card:nth-child(odd) { background: linear-gradient(135deg, #163f55 0%, #167ead 68%, #39751c 100%); }
+.kflow-erp-card:nth-child(even) { background: linear-gradient(135deg, #f7fcff 0%, #dceef4 65%, #e3efd8 100%); border: 1px solid #b8d4df; color: #163f55; }
+.kflow-erp-card:nth-child(even) h2, .kflow-erp-card:nth-child(even) .kflow-erp-card__switch small { color: #163f55; }
+.kflow-erp-card:nth-child(even) p { color: #36566a; }
+.kflow-erp-card:nth-child(even) .btn { background: #167ead; border-color: #167ead; color: #fff; }
+.kflow-erp-card:nth-child(even) .btn:hover { background: #163f55; border-color: #163f55; }
+.kflow-erp-card:nth-child(even) .btn-outline-primary { background: transparent; color: #163f55; }
+.kflow-erp-card:nth-child(even) .btn-outline-primary:hover { background: #163f55; color: #fff; }
