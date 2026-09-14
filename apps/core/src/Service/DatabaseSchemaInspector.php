@@ -4,12 +4,38 @@ namespace App\Service;
 
 final class DatabaseSchemaInspector
 {
-    public function __construct(private readonly ConnectionSecretCipher $secretCipher) {}
+    private array $connections = [];
+    public function __construct(private readonly ConnectionSecretCipher $secretCipher, private readonly ?\Psr\Cache\CacheItemPoolInterface $cache = null, private readonly ?\Symfony\Component\HttpFoundation\RequestStack $requests = null) {}
+
+    public function releaseSession(): void
+    {
+        $request = $this->requests?->getCurrentRequest();
+        if ($request?->hasSession() && $request->getSession()->isStarted()) $request->getSession()->save();
+    }
+
+    private function connectionKey(array $settings): string
+    {
+        return hash('sha256', json_encode(array_intersect_key($settings, array_flip(['driver','host','port','database','username','password_encrypted']))));
+    }
+
+    private function metadata(string $kind, array $settings, callable $load): array
+    {
+        $item = $this->cache?->getItem('united.schema.'.hash('sha256', $kind.$this->connectionKey($settings)));
+        if ($item?->isHit()) return $item->get();
+        $result = $load();
+        if ($item) { $item->set($result)->expiresAfter(empty($result['error']) ? 300 : 10); $this->cache->save($item); }
+        return $result;
+    }
 
     /** @param array<string, mixed> $settings
      * @return array{tables: list<string>, error: string|null}
      */
     public function tables(array $settings): array
+    {
+        return $this->metadata('tables', $settings, fn () => $this->loadTables($settings));
+    }
+
+    private function loadTables(array $settings): array
     {
         try {
             $rows = $this->open($settings)->query($this->tableQuery($this->driver($settings)))->fetchAll(\PDO::FETCH_ASSOC);
@@ -29,6 +55,11 @@ final class DatabaseSchemaInspector
      * @return array{columns: list<string>, error: string|null}
      */
     public function columns(array $settings, string $table): array
+    {
+        return $this->metadata('columns.'.$table, $settings, fn () => $this->loadColumns($settings, $table));
+    }
+
+    private function loadColumns(array $settings, string $table): array
     {
         [$schema, $tableName] = $this->splitTable($table);
         if ('' === $tableName) return ['columns' => [], 'error' => 'Selecione uma tabela válida.'];
@@ -86,6 +117,11 @@ final class DatabaseSchemaInspector
     /** @param array<string, mixed> $settings */
     public function open(array $settings): \PDO
     {
+        $this->releaseSession();
+        $key = $this->connectionKey($settings);
+        if (isset($this->connections[$key])) return $this->connections[$key];
+        $failure = $this->cache?->getItem('united.database.failure.'.$key);
+        if ($failure?->isHit()) throw new \PDOException('ERP temporariamente indisponível; nova tentativa em até 20 segundos.', 20009);
         $driver = $this->driver($settings);
         $host = trim((string) ($settings['host'] ?? ''));
         $port = trim((string) ($settings['port'] ?? ''));
@@ -96,13 +132,25 @@ final class DatabaseSchemaInspector
         $pdoDriver = match ($driver) {'sqlserver' => 'dblib', 'postgresql' => 'pgsql', 'mysql', 'mariadb' => 'mysql', 'oracle' => 'oci', 'firebird' => 'firebird', default => throw new \RuntimeException('O conector MongoDB requer a extensao MongoDB do servidor da plataforma.')};
         if (!in_array($pdoDriver, \PDO::getAvailableDrivers(), true)) throw new \RuntimeException(sprintf('O driver %s precisa ser habilitado no servidor da plataforma.', strtoupper($pdoDriver)));
         $dsn = match ($driver) {
-            'sqlserver' => sprintf('dblib:host=%s%s;dbname=%s', $host, '' !== $port ? ':'.$port : '', $database),
-            'postgresql' => sprintf('pgsql:host=%s;port=%s;dbname=%s', $host, '' !== $port ? $port : '5432', $database),
+            'sqlserver' => sprintf('dblib:host=%s%s;dbname=%s;version=7.4', $host, '' !== $port ? ':'.$port : '', $database),
+            'postgresql' => sprintf('pgsql:host=%s;port=%s;dbname=%s;connect_timeout=3', $host, '' !== $port ? $port : '5432', $database),
             'mysql', 'mariadb' => sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, '' !== $port ? $port : '3306', $database),
             'oracle' => sprintf('oci:dbname=//%s:%s/%s;charset=AL32UTF8', $host, '' !== $port ? $port : '1521', $database),
             'firebird' => sprintf('firebird:dbname=%s/%s:%s;charset=UTF8', $host, '' !== $port ? $port : '3050', $database),
         };
-        return new \PDO($dsn, $username, $password, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION, \PDO::ATTR_TIMEOUT => 15]);
+        $options = [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION, \PDO::ATTR_TIMEOUT => 3];
+        if ('dblib' === $pdoDriver) {
+            $options[\PDO::DBLIB_ATTR_CONNECTION_TIMEOUT] = 3;
+            $options[\PDO::DBLIB_ATTR_QUERY_TIMEOUT] = 8;
+        }
+        try {
+            $pdo = new \PDO($dsn, $username, $password, $options);
+            if ('pgsql' === $pdoDriver) $pdo->exec('SET statement_timeout = 8000');
+            return $this->connections[$key] = $pdo;
+        } catch (\PDOException $e) {
+            if ($failure) { $failure->set(true)->expiresAfter(20); $this->cache->save($failure); }
+            throw $e;
+        }
     }
 
     /** @param array<string, mixed> $settings */

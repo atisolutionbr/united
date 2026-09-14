@@ -55,3 +55,4 @@ jobs:
             docker compose -f docker-compose.yml -f compose.production.yaml exec -T --user root php sh -c 'mkdir -p public/assets && chown -R www-data:www-data assets/vendor public/assets'
             docker compose -f docker-compose.yml -f compose.production.yaml exec -T php php bin/console asset-map:compile --env=prod
             docker compose -f docker-compose.yml -f compose.production.yaml exec -T php php bin/console cache:clear --env=prod --no-warmup
+            docker compose -f docker-compose.yml -f compose.production.yaml kill -s USR2 php

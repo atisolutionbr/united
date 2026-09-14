@@ -54,3 +54,15 @@ Acesso da VPS ao Senior local: preparado usuário SSH restrito united-tunnel, li
 Produto nas telas Requisição e Solicitação tem botão Lista, pesquisa digitada por código/nome/código de barras e seleção explícita do resultado. Consultas antigas são descartadas quando o usuário altera a pesquisa. Em Vínculos de listas, a tabela Relacionamentos dos campos mostra origem e mapeamento de cada campo. A lista de Produtos pode acompanhar os campos de um formulário de Produtos em BD, API ou WebService; alterações de mapeamento são aplicadas às duas telas. APIs/WS ainda exigem operação e caminho da coleção compatíveis com o serviço do ERP.
 
 O usuário definiu que configurará Senior por WebService na VPS; o túnel SQL não será iniciado. Os vínculos existentes foram preservados. A integração real aguarda a configuração desse WebService.
+
+## Revisão 67 — desempenho
+
+- Localhost atendido em IPv4 e IPv6: removida a tentativa frustrada de IPv6 antes de cada conexão. Medição inicial dos arquivos: cerca de 2 s; após ajuste: 0–0,02 s. Login local medido em 0,44 s após a correção da porta.
+- Consultas liberam o bloqueio da sessão antes do acesso externo, permitindo navegar enquanto o ERP responde.
+- SQL Server usa TDS 7.4 explícito, login de 3 s e limite de consulta de 8 s. O teste com servidor que aceita conexão sem responder passou em aproximadamente 3 s; outra tentativa durante a pausa de 20 s retorna imediatamente. Novos endpoints/credenciais têm outra chave e não herdam a pausa.
+- Conexão PDO reutilizada durante a requisição; metadados por conexão em cache por 5 minutos, falhas por 10 s. Resultados com erro ficam 20 s em cache para evitar uma sequência de consultas ao mesmo ERP indisponível.
+- Painel mostra os indicadores disponíveis em cache e consulta o ERP quando o usuário clica Atualizar indicadores; não inicia consultas externas em cada abertura.
+- Service worker atualizado: não intercepta navegação nem substitui páginas por um aviso local. Falhas de gravação no cache não impedem carregar arquivos da rede.
+- OPcache revalida arquivos a cada 30 s. Os scripts de inicialização/deploy recarregam o PHP-FPM de forma graciosa após publicar a versão, aplicando código e configurações sem esperar esse intervalo.
+
+Os limites de resposta evitam esperas prolongadas, mas não tornam um ERP desligado acessível. Operações externas sem confirmação continuam exigindo conferência de resultado antes de uma nova tentativa.

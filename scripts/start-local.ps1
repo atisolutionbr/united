@@ -37,5 +37,6 @@ Invoke-DockerAti @composeAti up -d --build php nginx adminer
 Invoke-DockerAti @composeAti exec -T php php bin/console doctrine:migrations:migrate --no-interaction
 Invoke-DockerAti @composeAti exec -T php php bin/console asset-map:compile
 Invoke-DockerAti @composeAti exec -T php php bin/console cache:clear
+Invoke-DockerAti @composeAti kill -s USR2 php
 Write-Output 'United Ati: http://localhost:4300/unitedati'
 Write-Output 'KFlow permanece na sua porta e com seu banco original.'

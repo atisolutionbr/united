@@ -134,7 +134,7 @@ document.addEventListener('click', async (event) => {
     if (!next || !current) return location.assign(link.href);
     current.replaceWith(next); history.pushState({}, '', link.href);
 });
-if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=64', {updateViaCache: 'none'}));
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/kflow-sw.js?v=67', {updateViaCache: 'none'}));
 
 document.querySelector('[data-diagnostic-copy]')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;
@@ -387,14 +387,21 @@ document.addEventListener('click', async event => {
 });
 
 const pendingDashboard = document.querySelector('[data-dashboard-pending]');
-if (pendingDashboard) {
+const refreshDashboard = document.querySelector('[data-dashboard-refresh]');
+if (pendingDashboard && refreshDashboard) refreshDashboard.addEventListener('click', async () => {
+    refreshDashboard.disabled = true;
+    pendingDashboard.textContent = 'Consultando indicadores…';
     const refreshUrl = new URL(location.href); refreshUrl.searchParams.set('refresh', '1');
-    fetch(refreshUrl, {signal: AbortSignal.timeout(120000)}).then(response => { if (!response.ok) throw new Error(); return response.text(); }).then(html => {
-        const page = new DOMParser().parseFromString(html, 'text/html');
+    try {
+        const response = await fetch(refreshUrl, {signal: AbortSignal.timeout(15000)});
+        if (!response.ok) throw new Error();
+        const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+        if (page.querySelector('[data-metrics-error]')) throw new Error();
         document.querySelectorAll('[data-layout-grid="dashboard-main"] [data-layout-card]').forEach(card => {
             const value = page.querySelector(`[data-layout-card="${card.dataset.layoutCard}"] .kflow-stat__link strong`);
             if (value) card.querySelector('.kflow-stat__link strong').textContent = value.textContent;
         });
-        pendingDashboard.textContent = 'Indicadores atualizados a partir das consultas ao ERP.';
-    }).catch(() => { pendingDashboard.textContent = 'Indicadores indisponíveis no momento. Os menus continuam acessíveis; confira a conexão do ERP.'; });
-}
+        pendingDashboard.textContent = 'Indicadores atualizados.';
+    } catch { pendingDashboard.textContent = 'ERP indisponível. Os valores anteriores foram mantidos; você pode continuar navegando.'; }
+    finally { refreshDashboard.disabled = false; }
+});

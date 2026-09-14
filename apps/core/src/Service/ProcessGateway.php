@@ -170,6 +170,7 @@ final class ProcessGateway
 
     private function remote(ErpConnection $connection, array $config, string $operation, array $payload, string $requestKey = ''): array
     {
+        $this->schema->releaseSession();
         $settings = $connection->getSettingsForMethod($config['method']);
         $endpoint = $settings['endpoint'] ?? '';
         if (!in_array(parse_url($endpoint, PHP_URL_SCHEME), ['http', 'https'], true)) throw new \InvalidArgumentException('Endpoint HTTP(S) obrigatório.');

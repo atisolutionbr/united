@@ -105,6 +105,7 @@ final class KFlowController extends AbstractController
 
         return $this->render('kflow/dashboard.html.twig', [
             'activeErp' => $activeErp,
+            'metricsError' => !empty($products['error']) || !empty($customers['error']) || !empty($suppliers['error']),
             'pendingMetrics' => ['products' => $products['pending'] ?? false, 'customers' => $customers['pending'] ?? false, 'suppliers' => $suppliers['pending'] ?? false],
             'erpCount' => count($this->erpCatalog->all()),
             'metrics' => [
@@ -1111,7 +1112,7 @@ final class KFlowController extends AbstractController
         $companyId = $this->currentCompany()->getId() ?? 0;
         $erp = strtolower($connection?->getErpName() ?? 'none');
         $revision = $connection?->getUpdatedAt()?->getTimestamp() ?? $connection?->getConfiguredAt()?->getTimestamp() ?? 0;
-        $key = sprintf('kflow.v3.%s.%d.%s.%d.%d', $type, $companyId, $erp, $revision, $page);
+        $key = sprintf('united.v4.%s.%d.%s.%d.%d', $type, $companyId, $erp, $revision, $page);
         if (null === $connection || !$load) {
             $item = $this->cache->getItem($key);
             return $item->isHit() ? (array) $item->get() : $this->emptyCachedResult($type) + ['pending' => true];
@@ -1126,7 +1127,7 @@ final class KFlowController extends AbstractController
             } else {
                 $result = $this->seniorPartyCatalog->list($type, $this->partyBinding($connection, $type), $settings, $page);
             }
-            $item->expiresAfter(null === ($result['error'] ?? null) ? 300 : 1);
+            $item->expiresAfter(null === ($result['error'] ?? null) ? 300 : 20);
 
             return $result;
         });

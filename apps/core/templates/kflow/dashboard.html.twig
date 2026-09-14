@@ -17,7 +17,7 @@
         </div>
     </section>
 
-    {% if pendingMetrics|filter(v => v)|length %}<p data-dashboard-pending>Carregando indicadores do ERP…</p>{% endif %}
+    <p data-dashboard-pending {{ metricsError ? 'data-metrics-error' }}>{% if pendingMetrics|filter(v => v)|length %}Indicadores ainda não consultados.{% else %}Indicadores da última consulta disponível.{% endif %}</p><button type="button" class="btn btn-outline-primary mb-3" data-dashboard-refresh>Atualizar indicadores</button>
     <section class="kflow-stat-grid kflow-layout-grid" data-layout-grid="dashboard-main" aria-label="Resumo operacional">
         {% set dashboardCards = [
             {id: 'erp', label: 'ERP ativo', value: activeErp ?: 'Nenhum selecionado', icon: 'hdd-stack', tone: 'teal', href: path('kflow_erp_index')},

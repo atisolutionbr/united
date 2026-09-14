@@ -2,6 +2,7 @@ services:
   nginx:
     ports: !override
       - "127.0.0.1:4300:80"
+      - "[::1]:4300:80"
   php:
     environment:
       APP_DEPLOYMENT_ENV: local
