@@ -66,3 +66,12 @@ O usuário definiu que configurará Senior por WebService na VPS; o túnel SQL n
 - OPcache revalida arquivos a cada 30 s. Os scripts de inicialização/deploy recarregam o PHP-FPM de forma graciosa após publicar a versão, aplicando código e configurações sem esperar esse intervalo.
 
 Os limites de resposta evitam esperas prolongadas, mas não tornam um ERP desligado acessível. Operações externas sem confirmação continuam exigindo conferência de resultado antes de uma nova tentativa.
+
+## Revisão 68 — runtime local
+
+O código executado pelo PHP e Nginx locais passa a residir no volume Linux exclusivo united-ati-local-runtime. O projeto editável continua no diretório Windows. Após alterações, executar scripts/sync-local.ps1; scripts/start-local.ps1 também sincroniza automaticamente. A sincronização valida o volume de destino, preserva vendor, var e arquivos de ambiente, compila os assets e recarrega o PHP-FPM. Os volumes de dados e serviços do KFlow permanecem separados.
+
+Chamadas API de processos têm limite total de 10 segundos; SOAP usa conexão de 3 segundos e leitura de 8 segundos. Uma falha ou timeout de envio não confirma que o ERP deixou de receber a operação: conferir o resultado antes de repetir.
+
+Na verificação de 14/09, o Windows estava com aproximadamente 500 MB de memória física disponível, o que também afeta o desempenho do Docker.
+A inicialização reutiliza a imagem local quando existente. Ao alterar dependências PHP ou o Dockerfile, reconstruir explicitamente com docker compose -p united-ati -f docker-compose.yml -f compose.local.yaml build php antes de iniciar novamente.

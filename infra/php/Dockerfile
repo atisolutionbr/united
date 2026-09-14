@@ -55,6 +55,8 @@ RUN mkdir -p var/cache var/log \
     && chown -R www-data:www-data var \
     && composer dump-autoload --optimize
 
+RUN apk add --no-cache rsync
+
 USER www-data
 
 EXPOSE 9000

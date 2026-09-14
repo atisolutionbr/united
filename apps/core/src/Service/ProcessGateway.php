@@ -176,7 +176,7 @@ final class ProcessGateway
         if (!in_array(parse_url($endpoint, PHP_URL_SCHEME), ['http', 'https'], true)) throw new \InvalidArgumentException('Endpoint HTTP(S) obrigatório.');
         if ('webservice' === $config['method']) {
             if (!class_exists(\SoapClient::class)) throw new \RuntimeException('Extensão SOAP indisponível.');
-            $client = new \SoapClient($endpoint, ['exceptions' => true, 'connection_timeout' => 15, 'cache_wsdl' => WSDL_CACHE_NONE, 'login' => $settings['username'] ?? '', 'password' => $this->cipher->decrypt($settings['password_encrypted'] ?? ''), 'stream_context' => stream_context_create(['http' => ['timeout' => 25]])]);
+            $client = new \SoapClient($endpoint, ['exceptions' => true, 'connection_timeout' => 3, 'cache_wsdl' => WSDL_CACHE_NONE, 'login' => $settings['username'] ?? '', 'password' => $this->cipher->decrypt($settings['password_encrypted'] ?? ''), 'stream_context' => stream_context_create(['http' => ['timeout' => 8]])]);
             if ($requestKey) $payload['request_id'] = $requestKey;
             foreach (['soap_user_path' => ($settings['username'] ?? ''), 'soap_password_path' => $this->cipher->decrypt($settings['password_encrypted'] ?? '')] as $key => $value) {
                 if (!empty($config[$key])) self::putPath($payload, $config[$key], $value);
@@ -192,7 +192,7 @@ final class ProcessGateway
         if ($token) $headers['api_key' === ($settings['authentication'] ?? '') ? ($settings['api_key_name'] ?: 'Authorization') : 'Authorization'] = 'api_key' === ($settings['authentication'] ?? '') ? $token : 'Bearer '.$token;
         if ('oauth_client' === ($settings['authentication'] ?? '') && !$token) throw new \RuntimeException('Configure um token OAuth válido na conexão antes do envio.');
         if ($requestKey) $headers['Idempotency-Key'] = $requestKey;
-        $options = ['headers' => $headers, 'timeout' => 25, 'max_duration' => 30, 'max_redirects' => 0];
+        $options = ['headers' => $headers, 'timeout' => 8, 'max_duration' => 10, 'max_redirects' => 0];
         $options['list_operation' === $operation ? 'query' : 'json'] = $payload;
         $response = $this->http->request('list_operation' === $operation ? 'GET' : 'POST', rtrim($endpoint, '/').$path, $options);
         if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) throw new \RuntimeException('O ERP respondeu HTTP '.$response->getStatusCode().'.');

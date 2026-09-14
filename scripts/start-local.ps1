@@ -33,10 +33,10 @@ if ($targetVolumeAti -notin $volumesAti) {
     Invoke-DockerAti @composeAti up -d --wait postgres
     Invoke-DockerAti exec united-postgres test -f /var/lib/postgresql/data/.united-import-complete
 }
-Invoke-DockerAti @composeAti up -d --build php nginx adminer
+& docker image inspect united-ati-php --format '{{.Id}}' 2>$null | Out-Null
+if ($LASTEXITCODE -ne 0) { Invoke-DockerAti @composeAti build php }
+Invoke-DockerAti @composeAti up -d --no-build php nginx adminer
+& (Join-Path $PSScriptRoot 'sync-local.ps1')
 Invoke-DockerAti @composeAti exec -T php php bin/console doctrine:migrations:migrate --no-interaction
-Invoke-DockerAti @composeAti exec -T php php bin/console asset-map:compile
-Invoke-DockerAti @composeAti exec -T php php bin/console cache:clear
-Invoke-DockerAti @composeAti kill -s USR2 php
 Write-Output 'United Ati: http://localhost:4300/unitedati'
 Write-Output 'KFlow permanece na sua porta e com seu banco original.'

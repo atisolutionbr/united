@@ -1,9 +1,20 @@
 services:
   nginx:
+    volumes: !override
+      - core_runtime:/var/www/html:ro
+      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     ports: !override
       - "127.0.0.1:4300:80"
       - "[::1]:4300:80"
   php:
+    volumes: !override
+      - core_runtime:/var/www/html
+      - ./data:/var/data
+      - ./storage:/var/storage
+      - ./infra/php/performance.ini:/usr/local/etc/php/conf.d/zz-performance.ini:ro
+      - core_vendor:/var/www/html/vendor
+      - core_var:/var/www/html/var
+      - composer_cache:/tmp/composer-cache
     environment:
       APP_DEPLOYMENT_ENV: local
       DEFAULT_URI: http://localhost:4300
@@ -32,5 +43,7 @@ services:
       - "127.0.0.1:4382:8080"
 
 volumes:
+  core_runtime:
+    name: united-ati-local-runtime
   postgres_data:
     name: united-ati-local-postgres-data
