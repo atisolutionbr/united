@@ -50,7 +50,9 @@ final class LookupController extends AbstractController
         $fields = 'products' === $form ? ['product' => ['label' => 'Produto']] : array_filter(PurchasingCatalog::fields($form), static fn ($f, $key) => 'product' !== $key && in_array($f['type'], ['text', 'textarea'], true), ARRAY_FILTER_USE_BOTH);
         $field = (string) $request->query->get('field', array_key_first($fields));
         if (!isset($fields[$field])) throw $this->createNotFoundException();
-        $method = (string) $request->query->get('method', 'database');
+        $defaultMethod = $c->getConnectionMethod() ?: 'database';
+        foreach (['database', 'api', 'webservice'] as $candidate) if (!empty($c->getSettingsForMethod($candidate)['lookup_sources'][$form][$field]['enabled'])) $defaultMethod = $candidate;
+        $method = (string) $request->query->get('method', $defaultMethod);
         if (!in_array($method, ['database', 'api', 'webservice'], true)) throw $this->createNotFoundException();
         $settings = $c->getSettingsForMethod($method);
         $source = $settings['lookup_sources'][$form][$field] ?? [];
@@ -61,6 +63,12 @@ final class LookupController extends AbstractController
             try {
                 $enabled = $request->request->getBoolean('enabled');
                 if ($enabled) {
+                    if ('products' === $form && !empty($source['mapping_form'])) {
+                        $mapping = LookupCatalog::productMapping($settings, $method, $source['mapping_form']);
+                        if (empty($mapping['product_code']) || empty($mapping['product_name'])) throw new \InvalidArgumentException('Vincule código e nome no formulário de Produtos antes de relacioná-lo à lista.');
+                        $source = array_replace($source, ['value' => $mapping['product_code'], 'label' => $mapping['product_name'], 'barcode' => $mapping['barcode'] ?? '', 'company_column' => $mapping['company'] ?? '']);
+                        if ('database' === $method) $source['table'] = $settings['bindings'][$source['mapping_form']]['table'] ?? '';
+                    }
                     if ('database' === $method) {
                         ProcessGateway::identifier($source['table'] ?? '');
                         $columns = $this->schema->columns($settings, $source['table'])['columns'];
@@ -87,6 +95,15 @@ final class LookupController extends AbstractController
         } elseif ($request->query->has('table')) $source['table'] = (string) $request->query->get('table');
         $tables = 'database' === $method ? $this->schema->tables($settings) : ['tables' => [], 'error' => null];
         $columns = 'database' === $method && !empty($source['table']) ? $this->schema->columns($settings, $source['table']) : ['columns' => [], 'error' => null];
-        return $this->render('kflow/purchasing/lookups.html.twig', ['form' => $form, 'field' => $field, 'fields' => $fields, 'method' => $method, 'source' => $source, 'tables' => $tables['tables'], 'columns' => $columns['columns'], 'error' => $error ?? $tables['error'] ?? $columns['error'], 'erp' => $c->getErpName()]);
+        $productForms = ['products' => 'Produtos'];
+        foreach ($settings['form_catalog'] ?? [] as $entry) if (($entry['template'] ?? '') === 'products') $productForms[$entry['id']] = $entry['label'];
+        foreach ($settings['deleted_forms'] ?? [] as $deleted) unset($productForms[$deleted]);
+        $relationships = [];
+        $displayFields = 'products' === $form ? $fields : ['product' => ['label' => 'Produto']] + $fields;
+        foreach ($displayFields as $key => $definition) {
+            try { $related = $this->lookups->source($c, $form, $key); $relationships[] = ['key' => $key, 'label' => $definition['label'], 'method' => $related['method'], 'origin' => $related['table'] ?? $related['operation'] ?? '', 'code' => $related['value'] ?? '', 'name' => $related['label'] ?? '']; }
+            catch (\InvalidArgumentException $e) { $relationships[] = ['key' => $key, 'label' => $definition['label'], 'method' => '', 'origin' => $e->getMessage(), 'code' => '', 'name' => '']; }
+        }
+        return $this->render('kflow/purchasing/lookups.html.twig', ['productForms' => $productForms, 'relationships' => $relationships,'form' => $form, 'field' => $field, 'fields' => $fields, 'method' => $method, 'source' => $source, 'tables' => $tables['tables'], 'columns' => $columns['columns'], 'error' => $error ?? $tables['error'] ?? $columns['error'], 'erp' => $c->getErpName()]);
     }
 }

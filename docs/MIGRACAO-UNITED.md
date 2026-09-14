@@ -48,3 +48,9 @@ VPS provisionada em /opt/united com Docker Engine, Compose, PostgreSQL/PostGIS, 
 Diagnóstico do Senior: o vínculo usa host.docker.internal:1433 e base sapiens. A instância Windows SQL Server (SQLEXPRESS) estava parada; a outra instância MSSQLSERVER não foi interrompida. Iniciar SQLEXPRESS é requisito para recuperar as consultas. Uma falha de comunicação não significa tabela vazia.
 
 Acesso da VPS ao Senior local: preparado usuário SSH restrito united-tunnel, limitado à escuta 172.17.0.1:21433, sem shell ou senha. O início do túnel e a reconexão automática no Windows aguardam autorização explícita. O script scripts/senior-tunnel.ps1 usa chave local privada não versionada. Não executar sem essa autorização. Após habilitar, a origem na VPS deve usar host.docker.internal:21433; a origem local continua na porta 1433. A disponibilidade do ERP depende do PC ligado e do SQL Express em execução. Nenhuma cópia independente do banco ERP foi criada na VPS.
+
+## Revisão 66 — listas pesquisáveis e relacionamentos
+
+Produto nas telas Requisição e Solicitação tem botão Lista, pesquisa digitada por código/nome/código de barras e seleção explícita do resultado. Consultas antigas são descartadas quando o usuário altera a pesquisa. Em Vínculos de listas, a tabela Relacionamentos dos campos mostra origem e mapeamento de cada campo. A lista de Produtos pode acompanhar os campos de um formulário de Produtos em BD, API ou WebService; alterações de mapeamento são aplicadas às duas telas. APIs/WS ainda exigem operação e caminho da coleção compatíveis com o serviço do ERP.
+
+O usuário definiu que configurará Senior por WebService na VPS; o túnel SQL não será iniciado. Os vínculos existentes foram preservados. A integração real aguarda a configuração desse WebService.

@@ -14,18 +14,29 @@ final class LookupCatalog
         if ('product' === $field) $form = 'products';
         foreach (['database', 'api', 'webservice'] as $method) {
             $source = $connection->getSettingsForMethod($method)['lookup_sources'][$form][$field] ?? [];
-            if (!empty($source['enabled'])) return $source + ['method' => $method];
+            if (!empty($source['enabled'])) {
+                if ('product' === $field && !empty($source['mapping_form'])) {
+                    $mapping = self::productMapping($connection->getSettingsForMethod($method), $method, $source['mapping_form']);
+                    if (empty($mapping['product_code']) || empty($mapping['product_name'])) throw new \InvalidArgumentException('Vincule código e nome no formulário de Produtos selecionado para esta lista.');
+                    $source = array_replace($source, ['value' => $mapping['product_code'], 'label' => $mapping['product_name'], 'barcode' => $mapping['barcode'] ?? '', 'company_column' => $mapping['company'] ?? '']);
+                    if ('database' === $method) $source['table'] = $connection->getSettingsForMethod($method)['bindings'][$source['mapping_form']]['table'] ?? '';
+                }
+                return array_replace($source, ['method' => $method]);
+            }
         }
         if ('product' === $field) {
-            foreach (['database', 'api', 'webservice'] as $method) {
-                $settings = $connection->getSettingsForMethod($method);
-                $custom = $settings['lookup_sources']['products']['product'] ?? [];
-                if (!empty($custom['enabled'])) return $custom + ['method' => $method];
-            }
             $binding = FormBindingRegistry::resolve($connection->getSettingsForMethod('database'), 'products', $connection->getProductMapping());
             if (!empty($binding['table'])) return ['method' => 'database', 'table' => $binding['table'], 'value' => $binding['mapping']['product_code'] ?? '', 'label' => $binding['mapping']['product_name'] ?? '', 'barcode' => $binding['mapping']['barcode'] ?? '', 'company_column' => $binding['mapping']['company'] ?? ''];
         }
         throw new \InvalidArgumentException('Configure a origem da lista deste campo em Vínculos de listas.');
+    }
+
+    public static function productMapping(array $settings, string $method, string $form): array
+    {
+        $valid = 'products' === $form;
+        foreach ($settings['form_catalog'] ?? [] as $entry) if (($entry['id'] ?? '') === $form && ($entry['template'] ?? '') === 'products') $valid = true;
+        if (!$valid || in_array($form, $settings['deleted_forms'] ?? [], true)) return [];
+        return 'database' === $method ? ($settings['bindings'][$form]['mapping'] ?? []) : ($settings['form_mappings'][$form] ?? []);
     }
 
     public function search(ErpConnection $connection, string $form, string $field, string $term, int $page, ?string $company = null): array
