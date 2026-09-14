@@ -27,7 +27,7 @@ final class LookupController extends AbstractController
     public function search(string $form, string $field, Request $request): JsonResponse
     {
         $c = $this->connection('requests' === $form ? 'solicitation' : 'requisition');
-        if (!isset(PurchasingCatalog::fields($form)[$field])) throw $this->createNotFoundException();
+        if (!isset(\App\Service\IntegrationFields::forConnection($c, $form, PurchasingCatalog::fields($form))[$field])) throw $this->createNotFoundException();
         try {
             $term = mb_substr(trim((string) $request->query->get('q')), 0, 120);
             $source = $this->lookups->source($c, $form, $field);
@@ -47,7 +47,7 @@ final class LookupController extends AbstractController
     public function configure(string $form, Request $request): Response
     {
         $c = $this->connection('connections');
-        $fields = 'products' === $form ? ['product' => ['label' => 'Produto']] : array_filter(PurchasingCatalog::fields($form), static fn ($f, $key) => 'product' !== $key && in_array($f['type'], ['text', 'textarea'], true), ARRAY_FILTER_USE_BOTH);
+        $fields = 'products' === $form ? ['product' => ['label' => 'Produto']] : array_filter(\App\Service\IntegrationFields::forConnection($c, $form, PurchasingCatalog::fields($form)), static fn ($f, $key) => 'product' !== $key && in_array($f['type'], ['text', 'textarea'], true), ARRAY_FILTER_USE_BOTH);
         $field = (string) $request->query->get('field', array_key_first($fields));
         if (!isset($fields[$field])) throw $this->createNotFoundException();
         $defaultMethod = $c->getConnectionMethod() ?: 'database';
