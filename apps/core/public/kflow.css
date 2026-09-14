@@ -504,7 +504,6 @@ body.sidebar-is-collapsed .kflow-nav__link, body.sidebar-is-collapsed .kflow-nav
 
 .kflow-product-workspace:not(.is-layout-editing) > .kflow-layout-card.is-layout-hidden { display:block; }
 
-.united-lookup{position:relative}.united-lookup>small{display:block;color:#536777;margin-top:5px}.united-lookup-results{position:absolute;top:100%;left:0;right:0;max-height:300px;overflow:auto;z-index:30;background:#fff;border:1px solid #9bc7cf;border-radius:8px;box-shadow:0 8px 22px #183a4e25}.united-lookup-results button{display:block;width:100%;border:0;border-bottom:1px solid #e3ecef;background:white;text-align:left;padding:12px;color:#163c50}.united-lookup-results button:hover,.united-lookup-results button[aria-selected=true]{background:#eaf5e7}
 
 .kflow-erp-card:nth-child(odd) { background: linear-gradient(135deg, #163f55 0%, #167ead 68%, #39751c 100%); }
 .kflow-erp-card:nth-child(even) { background: linear-gradient(135deg, #f7fcff 0%, #dceef4 65%, #e3efd8 100%); border: 1px solid #b8d4df; color: #163f55; }
@@ -514,3 +513,27 @@ body.sidebar-is-collapsed .kflow-nav__link, body.sidebar-is-collapsed .kflow-nav
 .kflow-erp-card:nth-child(even) .btn:hover { background: #163f55; border-color: #163f55; }
 .kflow-erp-card:nth-child(even) .btn-outline-primary { background: transparent; color: #163f55; }
 .kflow-erp-card:nth-child(even) .btn-outline-primary:hover { background: #163f55; color: #fff; }
+
+.united-lookup { position:relative; min-width:0; }
+.united-lookup.is-open { z-index:80; }
+.united-lookup-trigger { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-height:43px; padding:10px 13px; text-align:left; color:#173c50; background:#f1f5f7; border:1px solid #c8d8e0; border-radius:7px; font:inherit; cursor:pointer; }
+.united-lookup-trigger span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.united-lookup-trigger:focus-visible,.united-lookup-trigger[aria-expanded=true] { outline:2px solid #1683b5; outline-offset:2px; }
+.united-lookup-trigger[aria-invalid=true] { border-color:#b43131; }
+.united-lookup-popover { position:absolute; top:calc(100% + 5px); left:0; right:0; z-index:81; padding:5px; background:#fff; border:1px solid #b8cdd8; border-radius:9px; box-shadow:0 10px 25px #173c5030; }
+.united-lookup-popover[hidden],.united-lookup-pagination[hidden] { display:none; }
+.united-lookup-searchbar { display:flex; align-items:center; gap:8px; padding:7px 9px; border-bottom:1px solid #d9e4ea; color:#55717f; }
+.united-lookup-searchbar .form-control { min-width:0; padding:6px 2px; border:0; box-shadow:none; background:#fff; }
+.united-lookup-searchbar:focus-within { border-bottom-color:#1683b5; }
+.united-lookup-status { padding:8px 10px; color:#526d7c; font-size:.76rem; }
+.united-lookup-status.is-error { color:#9b2929; background:#fff4f2; border-radius:5px; }
+.united-lookup-results { max-height:260px; overflow:auto; overscroll-behavior:contain; }
+.united-lookup-results button { display:block; width:100%; padding:10px 12px; margin-bottom:2px; border:0; border-radius:6px; background:#fff; color:#173c50; text-align:left; cursor:pointer; }
+.united-lookup-results strong,.united-lookup-results small { display:block; overflow-wrap:anywhere; }
+.united-lookup-results strong { font-weight:500; font-size:.86rem; }
+.united-lookup-results small { margin-top:3px; color:#526d7c; font-size:.73rem; }
+.united-lookup-results button:hover,.united-lookup-results button[aria-selected=true] { background:#0787b8; color:#fff; }
+.united-lookup-results button:hover small,.united-lookup-results button[aria-selected=true] small { color:#e5f5ff; }
+.united-lookup-pagination,.united-lookup-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px; border-top:1px solid #d9e4ea; font-size:.78rem; }
+.united-lookup-pagination button,.united-lookup-actions button { border:0; background:none; padding:3px; color:#176489; font:inherit; cursor:pointer; }
+.united-lookup-actions a { color:#176489; }

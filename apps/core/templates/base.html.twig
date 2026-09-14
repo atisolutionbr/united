@@ -68,7 +68,7 @@
             {% endblock %}
         </div>
 
-        {% if app.user or app.request.pathInfo starts with '/login' %}<script type="module" src="{{ asset('kflow.js') }}?v={{ release.build }}"></script><script type="module" src="{{ asset('united-lookups.js') }}?v={{ release.build }}"></script>{% else %}{% block importmap %}{{ importmap('app') }}{% endblock %}{% endif %}
+        {% if app.user or app.request.pathInfo starts with '/login' %}<script type="module" src="{{ asset('kflow.js') }}?v={{ release.build }}"></script><script type="module" src="{{ app.request.basePath }}/united-lookups.js?v={{ release.build }}"></script>{% else %}{% block importmap %}{{ importmap('app') }}{% endblock %}{% endif %}
         {% block javascripts %}{% endblock %}
     </body>
 </html>

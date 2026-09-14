@@ -82,3 +82,9 @@ Para mudanças exclusivamente PHP, com assets já compilados, sync-local.ps1 -Sk
 A configuração de banco passa a ser persistida mesmo quando a validação falha, com senha protegida e status de falha visível. Uma conexão nova com falha não é ativada; o método anteriormente ativo não é trocado. Campos, relacionamentos e tabela legada são preservados ao editar o endpoint. Erros distinguem indisponibilidade, autenticação e falta de permissão.
 
 Em 14/09, tentativas TCP da VPS e do container para 187.125.70.46:1433 expiraram. A saída da VPS é permitida, com origem 143.95.167.97. A validação SQL depende da conectividade até esse endpoint; resposta a ping não valida TCP ou credenciais.
+
+## Revisão 70 — seletor com lista e busca
+
+Campos vinculados de Requisições e Solicitações abrem um painel ao clicar no seletor, com busca no topo, código/nome/código de barras conforme o vínculo, paginação de 25 opções, navegação por teclado e limpeza da seleção. A abertura é imediata; carregamento, lista vazia e falha de consulta são exibidos dentro do painel, com nova tentativa. Tokens de seleção e validação no servidor foram preservados. O script do seletor usa o arquivo público com a versão da release para evitar dependência de uma compilação antiga dos assets.
+
+O SQLEXPRESS do PC foi iniciado com autorização explícita e está escutando TCP 1433. Foi criada uma regra de firewall do Windows restrita à origem 143.95.167.97. A consulta local ao Senior retornou colunas e produtos. O endpoint 187.125.70.46:1433 foi salvo na VPS, mas o TCP externo continua expirando. Conferir no roteador 192.168.1.1 o encaminhamento TCP 1433 para 192.168.1.2:1433; não foi alterada a configuração do roteador.
