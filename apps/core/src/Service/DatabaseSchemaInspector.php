@@ -204,6 +204,9 @@ final class DatabaseSchemaInspector
         $code = (string) ($exception instanceof \PDOException ? ($exception->errorInfo[1] ?? $exception->getCode()) : $exception->getCode());
         return match ($code) {
             '20009', '20002', '08001', '08006', '08003' => 'O servidor do banco não está acessível. Verifique se o serviço SQL está iniciado e se o endereço e a porta estão disponíveis. Os vínculos foram preservados.',
+            '20003', 'HYT00', 'HYT01' => 'O banco não respondeu dentro do limite de tempo. Verifique a disponibilidade do serviço e a liberação da porta TCP para este servidor.',
+            '4060', '3D000' => 'O banco informado não existe ou o usuário não possui acesso a ele.',
+            '229', '42501' => 'O usuário do banco não possui permissão para consultar as tabelas solicitadas.',
             '18456', '28000', '28P01' => 'O banco recusou a autenticação. Confira as credenciais da conexão; os vínculos foram preservados.',
             '208', '42P01', '42S02' => 'A tabela vinculada não foi encontrada ou não está acessível ao usuário da conexão.',
             '207', '42703', '42S22' => 'Uma coluna vinculada não foi encontrada. Confira os campos da tabela selecionada.',
@@ -214,6 +217,7 @@ final class DatabaseSchemaInspector
     private function message(\Throwable $exception, string $fallback): string
     {
         $message = $exception->getMessage();
+        if ($exception instanceof \PDOException) return self::queryFailure($exception);
         return str_starts_with($message, 'O driver ') || str_starts_with($message, 'O conector ') || str_starts_with($message, 'Driver de banco') || str_starts_with($message, 'Configuração de banco') ? $message : $fallback;
     }
 

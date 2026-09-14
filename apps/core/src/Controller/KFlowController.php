@@ -566,8 +566,15 @@ final class KFlowController extends AbstractController
             }
 
             $validation = $this->databaseSchemaInspector->test($settings);
+            $settings['connection_validation'] = [
+                'connected' => $validation['connected'],
+                'message' => $validation['message'],
+                'checked_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
+            ];
             if (!$validation['connected']) {
-                $this->addFlash('warning', $validation['message']);
+                $connection->setSettingsForMethod($method, $settings);
+                $this->entityManager->flush();
+                $this->addFlash('warning', 'Configuração salva. A conexão ainda não foi validada. '.$validation['message']);
 
                 return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'connection']);
             }

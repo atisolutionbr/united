@@ -33,6 +33,10 @@
             </form>
         {% endif %}
 
+        {% if method == 'database' and settings.connection_validation is defined and not settings.connection_validation.connected %}
+            <div class="alert alert-warning kflow-alert" role="status"><strong>Configuração salva; conexão não validada.</strong> {{ settings.connection_validation.message }} Você pode corrigir os dados e testar novamente. Os vínculos existentes foram mantidos.</div>
+        {% endif %}
+
         {% set isUsersStep = (method == 'database' and databaseStep == 'users') or (method != 'database' and integrationStep == 'users') %}
         <form id="erp-form-create" method="post" action="{{ path('kflow_erp_forms_create', {erp: erp}) }}"><input type="hidden" name="_token" value="{{ csrf_token('create-integration-form-'~erp~'-'~method) }}"><input type="hidden" name="method" value="{{ method }}"></form>
         <form id="ws-service-create" method="post" action="{{ path('kflow_erp_webservice_service_create', {erp: erp}) }}"><input type="hidden" name="_token" value="{{ csrf_token('create-webservice-'~erp) }}"></form>
@@ -84,7 +88,7 @@
                         <div><label class="form-label" for="erp-user">Usuário</label><input class="form-control" id="erp-user" name="settings[username]" value="{{ settings.username|default('') }}" autocomplete="username" required></div>
                         <div><label class="form-label" for="erp-password">Senha</label><input class="form-control" id="erp-password" name="settings[password]" type="password" autocomplete="new-password" placeholder="{{ settings.credentials_configured|default(false) ? 'Em branco mantém a senha atual' : 'Informe a senha' }}" {{ settings.credentials_configured|default(false) ? '' : 'required' }}></div>
                     </div>
-                    <div class="kflow-database-test" data-database-test-status aria-live="polite"><span><i class="bi bi-info-circle"></i>Valide a conexão antes de salvar o vínculo.</span><button class="btn btn-outline-primary" type="button" data-database-test data-url="{{ path('kflow_erp_database_test', {erp: erp}) }}" data-token="{{ csrf_token('test-erp-database-'~erp) }}"><i class="bi bi-plug"></i><span>Testar conexão</span></button></div>
+                    <div class="kflow-database-test" data-database-test-status aria-live="polite"><span><i class="bi bi-info-circle"></i>Os dados são salvos mesmo se o teste falhar. O acesso às tabelas depende de uma conexão válida.</span><button class="btn btn-outline-primary" type="button" data-database-test data-url="{{ path('kflow_erp_database_test', {erp: erp}) }}" data-token="{{ csrf_token('test-erp-database-'~erp) }}"><i class="bi bi-plug"></i><span>Testar conexão</span></button></div>
                 {% else %}
                     <div class="kflow-binding-context"><span><i class="bi bi-{{ databaseStep == 'table' ? 'table' : 'diagram-2' }}"></i></span><div><strong>{{ databaseStep == 'table' ? 'Selecione a origem do cadastro' : 'Faça o De/Para dos campos' }}</strong><p>{{ databaseStep == 'table' ? 'As tabelas são carregadas diretamente do banco configurado.' : 'Cada campo do formulário United Ati apontará para uma coluna da tabela escolhida.' }}</p></div></div>
                     <div class="kflow-form-catalog"><i class="bi bi-ui-checks-grid"></i><div><strong>Novo formulário</strong><small>Crie quantos vínculos forem necessários para esta integração.</small></div><select class="form-select" name="template" form="erp-form-create">{% for key, definition in databaseForms %}<option value="{{ key }}">Modelo: {{ definition.label }}</option>{% endfor %}</select><input class="form-control" name="label" form="erp-form-create" placeholder="Nome do formulário"><button class="btn btn-outline-primary" type="submit" form="erp-form-create"><i class="bi bi-plus-lg"></i>Adicionar</button></div>

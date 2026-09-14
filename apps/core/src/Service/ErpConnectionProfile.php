@@ -218,7 +218,7 @@ final class ErpConnectionProfile
                 'database' => $this->bounded($value('database'), 128),
                 'username' => $this->bounded($value('username'), 180),
                 'password_encrypted' => '' !== $value('password') ? $this->secretCipher->encrypt($value('password')) : (string) ($existing['password_encrypted'] ?? ''),
-                'table' => $this->identifier($value('table')),
+                'table' => array_key_exists('table', $input) ? $this->identifier($value('table')) : (string) ($existing['table'] ?? ''),
                 'credentials_configured' => '' !== $value('password') || '' !== (string) ($existing['password_encrypted'] ?? '') || (bool) ($existing['credentials_configured'] ?? false),
                 'bindings' => is_array($existing['bindings'] ?? null) ? $existing['bindings'] : [],
                 'custom_fields' => $existing['custom_fields'] ?? [],

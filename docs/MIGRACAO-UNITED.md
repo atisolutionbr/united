@@ -76,3 +76,9 @@ Chamadas API de processos têm limite total de 10 segundos; SOAP usa conexão de
 Na verificação de 14/09, o Windows estava com aproximadamente 500 MB de memória física disponível, o que também afeta o desempenho do Docker.
 A inicialização reutiliza a imagem local quando existente. Ao alterar dependências PHP ou o Dockerfile, reconstruir explicitamente com docker compose -p united-ati -f docker-compose.yml -f compose.local.yaml build php antes de iniciar novamente.
 Para mudanças exclusivamente PHP, com assets já compilados, sync-local.ps1 -SkipAssets evita recompilar Sass. Em 14/09 foi aplicado limite de 1,5 CPU ao container de relatórios plataforma360-metabase, que chegou a consumir quase três núcleos; ele permaneceu ativo. Esse ajuste é do container atual e não altera o projeto KFlow.
+
+## Revisão 69 — salvar conexão indisponível
+
+A configuração de banco passa a ser persistida mesmo quando a validação falha, com senha protegida e status de falha visível. Uma conexão nova com falha não é ativada; o método anteriormente ativo não é trocado. Campos, relacionamentos e tabela legada são preservados ao editar o endpoint. Erros distinguem indisponibilidade, autenticação e falta de permissão.
+
+Em 14/09, tentativas TCP da VPS e do container para 187.125.70.46:1433 expiraram. A saída da VPS é permitida, com origem 143.95.167.97. A validação SQL depende da conectividade até esse endpoint; resposta a ping não valida TCP ou credenciais.
