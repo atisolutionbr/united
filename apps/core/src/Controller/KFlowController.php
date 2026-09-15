@@ -507,6 +507,16 @@ final class KFlowController extends AbstractController
             }
         }
         $userAccess = is_array($settings['user_access'] ?? null) ? $settings['user_access'] : [];
+        $userFieldDefinitions = [
+            'identifier' => ['label' => 'Campo de usuário', 'hint' => 'Identificador usado para login.'],
+            'name' => ['label' => 'Campo de nome', 'hint' => 'Nome exibido no United Ati.'],
+            'email' => ['label' => 'Campo de e-mail', 'hint' => 'E-mail do usuário.'],
+        ];
+        foreach ($userAccess['custom_fields'] ?? [] as $key => $field) {
+            if (preg_match('/^extra_[a-f0-9]{12}$/D', (string) $key) && is_array($field)) $userFieldDefinitions[$key] = ['label' => (string) ($field['label'] ?? 'Campo adicional'), 'hint' => 'Campo adicional de usuário.'];
+        }
+        $allUserFields = $userFieldDefinitions;
+        foreach ($userAccess['hidden_fields'] ?? [] as $field) unset($userFieldDefinitions[$field]);
         $userTable = (string) $request->query->get('user_table', $userAccess['table'] ?? '');
         $userAccess['table'] = $userTable;
         $userColumns = ['columns' => [], 'error' => null];
@@ -563,6 +573,8 @@ final class KFlowController extends AbstractController
                 ? $this->entityManager->getRepository(ErpConnectionLog::class)->findBy(['connection' => $connection], ['createdAt' => 'DESC'], 6)
                 : [],
             'userAccess' => $userAccess,
+            'userFields' => $userFieldDefinitions,
+            'allUserFields' => $allUserFields,
             'userTables' => ErpConnection::METHOD_DATABASE === $method && $databaseStep === 'table' ? $tables['tables'] : [],
             'userColumns' => $userColumns['columns'],
             'userColumnsError' => $userColumns['error'],
@@ -804,13 +816,20 @@ final class KFlowController extends AbstractController
         $settings = $connection->getSettingsForMethod($method);
         $accessInput = $request->request->all('user_access');
         $accessInput = is_array($accessInput) ? $accessInput : [];
+        $customFields = is_array($settings['user_access']['custom_fields'] ?? null) ? $settings['user_access']['custom_fields'] : [];
+        $newField = mb_substr(trim((string) ($accessInput['new_field_label'] ?? '')), 0, 80);
+        if ('' !== $newField && count($customFields) < 50) $customFields['extra_'.bin2hex(random_bytes(6))] = ['label' => $newField];
+        foreach ((array) ($accessInput['remove_fields'] ?? []) as $field) if (preg_match('/^extra_[a-f0-9]{12}$/D', (string) $field)) unset($customFields[$field]);
+        $hiddenFields = array_values(array_unique(array_filter(array_map('strval', (array) ($accessInput['hidden_fields'] ?? [])), static fn (string $field): bool => in_array($field, array_merge(['identifier', 'name', 'email'], array_keys($customFields)), true))));
         $mapping = [];
-        foreach (['identifier', 'name', 'email'] as $field) $mapping[$field] = preg_match('/^[A-Za-z_][A-Za-z0-9_.$\[\]-]{0,159}$/', (string) ($accessInput['mapping'][$field] ?? '')) ? (string) $accessInput['mapping'][$field] : '';
+        foreach (array_merge(['identifier', 'name', 'email'], array_keys($customFields)) as $field) $mapping[$field] = preg_match('/^[A-Za-z_][A-Za-z0-9_.$\[\]-]{0,159}$/', (string) ($accessInput['mapping'][$field] ?? '')) ? (string) ($accessInput['mapping'][$field] ?? '') : '';
         $settings['user_access'] = [
             'table' => preg_match('/^[A-Za-z_][A-Za-z0-9_.]*$/', (string) ($accessInput['table'] ?? '')) ? (string) $accessInput['table'] : '',
             'endpoint' => mb_substr(trim((string) ($accessInput['endpoint'] ?? '')), 0, 240),
             'items_path' => mb_substr(trim((string) ($accessInput['items_path'] ?? '')), 0, 160),
             'mapping' => $mapping,
+            'custom_fields' => $customFields,
+            'hidden_fields' => $hiddenFields,
         ];
         $connection->setSettingsForMethod($method, $settings);
         $selected = array_values(array_filter(array_map('strval', is_array($request->request->all('erp_users')) ? $request->request->all('erp_users') : [])));
