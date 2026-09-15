@@ -13,7 +13,7 @@
                 {% if definition.id starts with 'form-' %}<small>Adicional · {{ definition.id }}</small>{% endif %}
             </a>
             {% if table or count or definition.id starts with 'form-' %}
-                {% if table and method == 'database' and definition.id starts with 'form-' %}<a href="{{ path('united_integration_form', {form: definition.id}) }}">Abrir formulário</a>{% endif %}
+                {% if table and method == 'database' %}<a href="{{ path('united_integration_form', {form: definition.id}) }}">Abrir formulário</a>{% endif %}
                 <button class="btn btn-sm btn-outline-danger" type="button" data-form-delete data-form-id="{{ definition.id }}" data-method="{{ method }}" data-token="{{ csrf_token('delete-integration-form-'~erp~'-'~method~'-'~definition.id) }}" data-url="{{ path('kflow_erp_forms_delete', {erp: erp, form: definition.id}) }}" aria-label="Excluir vínculo do formulário {{ definition.label }}"><i class="bi bi-trash3"></i> Excluir vínculo</button>
             {% endif %}
         </div>

@@ -474,11 +474,14 @@ final class KFlowController extends AbstractController
         if ('products' === $selectedForm && !isset($bindings['products']) && '' !== $selectedTable) $bindings['products'] = ['table' => $selectedTable, 'mapping' => $mapping];
         $tables = ['tables' => [], 'error' => null];
         $columns = ['columns' => [], 'error' => null];
-        if (ErpConnection::METHOD_DATABASE === $method && in_array($databaseStep, ['table', 'mapping'], true)) {
+        // Listing every ERP table is expensive and is only required while choosing
+        // a table. Never let that discovery block the De/Para of an already bound
+        // form: there we query the one selected table directly.
+        if (ErpConnection::METHOD_DATABASE === $method && 'table' === $databaseStep) {
             $tables = $this->databaseSchemaInspector->tables($settings);
-            if ($databaseStep === 'mapping' && '' !== $selectedTable) {
-                $columns = $this->databaseSchemaInspector->columns($settings, $selectedTable);
-            }
+        }
+        if (ErpConnection::METHOD_DATABASE === $method && 'mapping' === $databaseStep && '' !== $selectedTable) {
+            $columns = $this->databaseSchemaInspector->columns($settings, $selectedTable);
         }
         // A form must remain configurable even if the ERP is temporarily offline.
         // Persist the discovered schema beside the binding and use that catalogue as
