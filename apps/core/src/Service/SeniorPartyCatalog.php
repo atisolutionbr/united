@@ -54,16 +54,17 @@ final class SeniorPartyCatalog
                 $this->select($profile['updated'], 'UpdatedAt', $columns),
             ];
             $selects = array_merge(array_values(array_filter($selects)), IntegrationFields::selectedColumns($mapping, $columns));
-            $recordCount = (int) $pdo->query(sprintf('SELECT COUNT(*) FROM %s', $this->quoteTable($table)))->fetchColumn();
             $perPage = max(1, min(50, $perPage));
-            $pageCount = max(1, (int) ceil($recordCount / $perPage));
-            $page = max(1, min($page, $pageCount));
+            $page = max(1, $page);
             $order = $this->column($mapping[$type === 'suppliers' ? 'supplier_code' : 'carrier_code'] ?? $profile['code'], $columns) ?? array_values($columns)[0];
             $statement = $pdo->query(sprintf(
-                'SELECT %s FROM %s ORDER BY [%s] OFFSET %d ROWS FETCH NEXT %d ROWS ONLY',
-                implode(', ', $selects), $this->quoteTable($table), $order, ($page - 1) * $perPage, $perPage,
+                'SELECT TOP %d %s FROM %s ORDER BY [%s]',
+                $perPage, implode(', ', $selects), $this->quoteTable($table), $order,
             ));
             $parties = $statement->fetchAll(\PDO::FETCH_ASSOC);
+            $page = 1;
+            $recordCount = count($parties);
+            $pageCount = 1;
             foreach ($parties as &$party) {
                 foreach (['Code', 'Name', 'Document', 'StateRegistration', 'Email', 'Address', 'City', 'State', 'Phone', 'UpdatedAt'] as $field) {
                     $party[$field] ??= '';
@@ -72,7 +73,7 @@ final class SeniorPartyCatalog
             unset($party);
 
             $address = $this->column($profile['address'], $columns);
-            $missingAddressCount = null === $address ? 0 : (int) $pdo->query(sprintf("SELECT COUNT(*) FROM %s WHERE NULLIF(LTRIM(RTRIM([%s])), '') IS NULL", $this->quoteTable($table), $address))->fetchColumn();
+            $missingAddressCount = 0;
 
             return compact('parties', 'recordCount', 'page', 'perPage', 'pageCount', 'missingAddressCount') + [
                 'configured' => true,

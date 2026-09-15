@@ -39,16 +39,17 @@ final class SeniorCustomerCatalog
                 $this->selectFirst(['DatAlt', 'DatAtu', 'DatCad'], 'DatAlt', $columns),
             ];
             $selects = array_merge(array_values(array_filter($selects)), IntegrationFields::selectedColumns($mapping, $columns));
-            $recordCount = (int) $pdo->query(sprintf('SELECT COUNT(*) FROM %s', $this->quoteTable($table)))->fetchColumn();
             $perPage = max(1, min(50, $perPage));
-            $pageCount = max(1, (int) ceil($recordCount / $perPage));
-            $page = max(1, min($page, $pageCount));
+            $page = max(1, $page);
             $order = $this->column($mapping['customer_code'] ?? 'CodCli', $columns) ?? array_values($columns)[0];
             $statement = $pdo->query(sprintf(
-                'SELECT %s FROM %s ORDER BY [%s] OFFSET %d ROWS FETCH NEXT %d ROWS ONLY',
-                implode(', ', $selects), $this->quoteTable($table), $order, ($page - 1) * $perPage, $perPage,
+                'SELECT TOP %d %s FROM %s ORDER BY [%s]',
+                $perPage, implode(', ', $selects), $this->quoteTable($table), $order,
             ));
             $customers = $statement->fetchAll(\PDO::FETCH_ASSOC);
+            $page = 1;
+            $recordCount = count($customers);
+            $pageCount = 1;
             foreach ($customers as &$customer) {
                 foreach (['CodEmp', 'CodCli', 'NomCli', 'CgcCpf', 'InsEst', 'EmlCli', 'EndCli', 'CidCli', 'SigUfs', 'DatAlt'] as $field) {
                     $customer[$field] ??= '';
@@ -57,7 +58,7 @@ final class SeniorCustomerCatalog
             unset($customer);
 
             $addressColumn = $this->column('EndCli', $columns);
-            $missingAddressCount = null === $addressColumn ? 0 : (int) $pdo->query(sprintf("SELECT COUNT(*) FROM %s WHERE NULLIF(LTRIM(RTRIM([%s])), '') IS NULL", $this->quoteTable($table), $addressColumn))->fetchColumn();
+            $missingAddressCount = 0;
 
             return compact('customers', 'recordCount', 'page', 'perPage', 'pageCount', 'missingAddressCount') + [
                 'configured' => true,

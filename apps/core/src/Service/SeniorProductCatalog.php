@@ -68,19 +68,18 @@ final class SeniorProductCatalog
             $selects = array_values(array_unique(array_filter($selects)));
             $connection = $this->database->open($settings);
             $quotedTable = $this->quoteTable($table);
-            $recordCount = (int) $connection->query(sprintf('SELECT COUNT(*) FROM %s', $quotedTable))->fetchColumn();
             $perPage = max(1, min(50, $perPage));
-            $pageCount = max(1, (int) ceil($recordCount / $perPage));
-            $page = max(1, min($page, $pageCount));
+            $page = max(1, $page);
             $selects = array_merge($selects, IntegrationFields::selectedColumns($mapping, $columns));
-            $offset = ($page - 1) * $perPage;
             $statement = $connection->query(sprintf(
-                'SELECT %s FROM %s ORDER BY %s OFFSET %d ROWS FETCH NEXT %d ROWS ONLY',
-                implode(', ', $selects), $quotedTable, '['.str_replace(']', ']]', $columns[strtolower($mapping['product_code'] ?? 'CodPro')] ?? 'CodPro').']',
-                $offset,
+                'SELECT TOP %d %s FROM %s ORDER BY %s',
                 $perPage,
+                implode(', ', $selects), $quotedTable, '['.str_replace(']', ']]', $columns[strtolower($mapping['product_code'] ?? 'CodPro')] ?? 'CodPro').']',
             ));
             $products = $statement->fetchAll(\PDO::FETCH_ASSOC);
+            $page = 1;
+            $recordCount = count($products);
+            $pageCount = 1;
 
             foreach ($products as &$product) {
                 foreach (['Ncm', 'CstPis', 'CstCofins', 'CstIcms'] as $field) {
