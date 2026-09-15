@@ -480,6 +480,29 @@ final class KFlowController extends AbstractController
                 $columns = $this->databaseSchemaInspector->columns($settings, $selectedTable);
             }
         }
+        // A form must remain configurable even if the ERP is temporarily offline.
+        // Persist the discovered schema beside the binding and use that catalogue as
+        // a fallback; it contains metadata only, never ERP records or credentials.
+        $databaseColumnsCached = false;
+        if (ErpConnection::METHOD_DATABASE === $method && 'mapping' === $databaseStep && '' !== $selectedTable) {
+            $cachedColumns = array_values(array_filter(
+                is_array($binding['schema_columns'] ?? null) ? $binding['schema_columns'] : [],
+                static fn (mixed $column): bool => is_string($column) && preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/D', $column) === 1,
+            ));
+            if ([] !== $columns['columns']) {
+                $discoveredColumns = array_values(array_unique(array_map('strval', $columns['columns'])));
+                if ($connection instanceof ErpConnection && $cachedColumns !== $discoveredColumns) {
+                    $settings['bindings'][$selectedForm]['schema_columns'] = $discoveredColumns;
+                    $connection->setSettingsForMethod($method, $settings);
+                    $this->entityManager->flush();
+                    $bindings = $settings['bindings'];
+                    $binding = $bindings[$selectedForm];
+                }
+            } elseif ([] !== $cachedColumns) {
+                $columns['columns'] = $cachedColumns;
+                $databaseColumnsCached = true;
+            }
+        }
         $userAccess = is_array($settings['user_access'] ?? null) ? $settings['user_access'] : [];
         $userTable = (string) $request->query->get('user_table', $userAccess['table'] ?? '');
         $userAccess['table'] = $userTable;
@@ -525,6 +548,7 @@ final class KFlowController extends AbstractController
             'databaseTablesError' => $tables['error'],
             'databaseColumns' => $columns['columns'],
             'databaseColumnsError' => $columns['error'],
+            'databaseColumnsCached' => $databaseColumnsCached,
             'integrationStep' => $integrationStep,
             'payloadMapping' => is_array(($settings['form_mappings'][$selectedForm] ?? null)) ? $settings['form_mappings'][$selectedForm] : [],
             'webServices' => $webServices,
@@ -673,7 +697,17 @@ final class KFlowController extends AbstractController
         $mapping = $request->request->has('mapping')
             ? $this->connectionProfile->mappingForFields(array_keys($fields), $mappingInput, $columns)
             : $previous;
-        $bindings[$form] = ['table' => $table, 'mapping' => $mapping, 'validation' => $inspection['error'] ? 'pending' : 'validated'];
+        $previousSchema = is_array($bindings[$form]['schema_columns'] ?? null) ? $bindings[$form]['schema_columns'] : [];
+        $bindings[$form] = [
+            'table' => $table,
+            'mapping' => $mapping,
+            'validation' => $inspection['error'] ? 'pending' : 'validated',
+            // Keep the most recently confirmed structure. This lets an operator
+            // edit mappings while an ERP server, VPN or service is restarting.
+            'schema_columns' => [] !== $inspection['columns']
+                ? array_values(array_unique(array_map('strval', $inspection['columns'])))
+                : $previousSchema,
+        ];
         $settings['bindings'] = $bindings;
         $settings['table'] = 'products' === $form ? $table : (string) ($settings['table'] ?? '');
         $connection->setSettingsForMethod(ErpConnection::METHOD_DATABASE, $settings);
