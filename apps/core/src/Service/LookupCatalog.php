@@ -24,9 +24,15 @@ final class LookupCatalog
                 return array_replace($source, ['method' => $method]);
             }
         }
-        if ('product' === $field) {
+        if ('product' === $field && $connection->getConnectionMethod() === 'database') {
             $binding = FormBindingRegistry::resolve($connection->getSettingsForMethod('database'), 'products', $connection->getProductMapping());
             if (!empty($binding['table'])) return ['method' => 'database', 'table' => $binding['table'], 'value' => $binding['mapping']['product_code'] ?? '', 'label' => $binding['mapping']['product_name'] ?? '', 'barcode' => $binding['mapping']['barcode'] ?? '', 'company_column' => $binding['mapping']['company'] ?? ''];
+        }
+        if ($field === 'product' && in_array($connection->getConnectionMethod(), ['api','webservice'], true)) {
+            $method=$connection->getConnectionMethod();$binding=RemoteFormCatalog::binding($connection,'products');$query=$binding['query']??[];$mapping=$binding['mapping']??[];
+            if (!empty($query['operation']) && !empty($query['items_path']) && !empty($mapping['product_code']) && !empty($mapping['product_name'])) {
+                return $query + ['method'=>$method,'value'=>$mapping['product_code'],'label'=>$mapping['product_name'],'barcode'=>$mapping['barcode']??'','service_id'=>$connection->getSettingsForMethod($method)['form_services'][$binding['form']]??''];
+            }
         }
         throw new \InvalidArgumentException('Configure a origem da lista deste campo em Vínculos de listas.');
     }

@@ -127,7 +127,7 @@ document.addEventListener('click', async (event) => {
     const link = event.target.closest('.kflow-binding-steps a:not(.is-disabled)');
     if (!(link instanceof HTMLAnchorElement)) return;
     event.preventDefault();
-    const response = await fetch(link.href, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+    const response = await fetch(link.href, {signal: AbortSignal.timeout(15000), headers: {'X-Requested-With': 'XMLHttpRequest'}});
     if (!response.ok) return location.assign(link.href);
     const next = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('.kflow-connection-panel');
     const current = document.querySelector('.kflow-connection-panel');
@@ -265,6 +265,97 @@ document.querySelectorAll('[data-party-select]').forEach((button) => {
     });
 });
 
+const registrationText = (value) => String(value ?? '').trim();
+const normalizedRegistrationText = (value) => registrationText(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]/g, '')
+    .toUpperCase();
+const registrationMatches = (erpValue, registryValue) => {
+    const erp = normalizedRegistrationText(erpValue);
+    const registry = normalizedRegistrationText(registryValue);
+    return '' !== erp && '' !== registry && erp === registry;
+};
+
+const renderRegistrationComparison = (review, record, registry) => {
+    const results = review.querySelector('[data-registration-results]');
+    if (!(results instanceof HTMLElement)) return;
+    const registrations = Array.isArray(registry.stateRegistrations) ? registry.stateRegistrations : [];
+    const activeRegistration = registrations.find((item) => item?.active && item?.state === (record.SigUfs || record.State)) || registrations.find((item) => item?.active) || registrations[0];
+    const fields = [
+        ['Razão social', record.NomCli || record.Name, registry.legalName],
+        ['E-mail', record.EmlCli || record.Email, registry.email],
+        ['Endereço', record.EndCli || record.Address, registry.address],
+        ['Cidade', record.CidCli || record.City, registry.city],
+        ['UF', record.SigUfs || record.State, registry.state],
+        ['Inscrição estadual', record.InsEst || record.StateRegistration, activeRegistration?.number || 'Não encontrada'],
+    ];
+    const fragment = document.createDocumentFragment();
+    const heading = document.createElement('strong');
+    heading.textContent = `Base cadastral: ${registry.legalName || 'CNPJ consultado'}`;
+    fragment.append(heading);
+    fields.forEach(([label, erpValue, registryValue]) => {
+        const row = document.createElement('div');
+        row.className = `kflow-registration-result${registrationMatches(erpValue, registryValue) ? ' is-match' : ' is-different'}`;
+        const field = document.createElement('small');
+        field.textContent = label;
+        const values = document.createElement('span');
+        values.textContent = `ERP: ${registrationText(erpValue) || 'Não informado'} | Base: ${registrationText(registryValue) || 'Não informado'}`;
+        row.append(field, values);
+        fragment.append(row);
+    });
+    if (registrations.length > 1) {
+        const note = document.createElement('small');
+        note.textContent = `Foram encontradas ${registrations.length} inscrições estaduais para este CNPJ.`;
+        fragment.append(note);
+    }
+    results.replaceChildren(fragment);
+    results.hidden = false;
+};
+
+document.addEventListener('click', async (event) => {
+    if (!(event.target instanceof Element)) return;
+    const selected = event.target.closest('[data-customer-select], [data-party-select]');
+    if (selected instanceof HTMLElement) {
+        const record = JSON.parse(selected.dataset.customer || selected.dataset.party || '{}');
+        document.querySelectorAll('[data-registration-compare]').forEach((button) => {
+            if (!(button instanceof HTMLElement)) return;
+            button.dataset.registrationDocument = record.CgcCpf || record.Document || '';
+            button.dataset.registrationRecord = JSON.stringify(record);
+        });
+        document.querySelectorAll('[data-registration-results]').forEach((result) => { result.hidden = true; result.replaceChildren(); });
+        document.querySelectorAll('[data-registration-status]').forEach((status) => status.textContent = 'Consulte o CNPJ selecionado para comparar o cadastro do ERP com a base pública.');
+        return;
+    }
+
+    const button = event.target.closest('[data-registration-compare]');
+    if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+    const review = button.closest('[data-registration-review]');
+    const status = review?.querySelector('[data-registration-status]');
+    const documentNumber = (button.dataset.registrationDocument || '').replace(/\D/g, '');
+    if (!(review instanceof HTMLElement) || !(status instanceof HTMLElement)) return;
+    if (documentNumber.length !== 14) {
+        status.textContent = documentNumber.length === 11 ? 'A comparação externa está disponível somente para CNPJ.' : 'Informe um CNPJ válido no cadastro do ERP para fazer a comparação.';
+        return;
+    }
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Consultando';
+    status.textContent = 'Consultando base cadastral...';
+    try {
+        const response = await fetch((review.dataset.registrationUrl || '').replace('__DOCUMENT__', documentNumber), {signal: AbortSignal.timeout(15000), headers: {'Accept': 'application/json'}});
+        const data = await response.json();
+        if (!response.ok || !data.ok || !data.registry) throw new Error(data.message || 'Não foi possível consultar o CNPJ.');
+        renderRegistrationComparison(review, JSON.parse(button.dataset.registrationRecord || '{}'), data.registry);
+        status.textContent = `Comparação concluída com dados do ${data.source || 'cadastro público'}.`;
+    } catch (error) {
+        status.textContent = error instanceof Error ? error.message : 'Não foi possível consultar o CNPJ.';
+    } finally {
+        button.disabled = false;
+        button.innerHTML = original;
+    }
+});
+
 // Saved form navigation always reloads its persisted mapping.
 document.querySelectorAll('[data-switch-integration-form]').forEach(select => select.addEventListener('change', () => {
     const url = new URL(location.href); url.searchParams.set('form', select.value); url.searchParams.set('step', 'mapping'); location.assign(url);
@@ -313,4 +404,38 @@ if (pendingDashboard && refreshDashboard) refreshDashboard.addEventListener('cli
         pendingDashboard.textContent = 'Indicadores atualizados.';
     } catch { pendingDashboard.textContent = 'ERP indisponível. Os valores anteriores foram mantidos; você pode continuar navegando.'; }
     finally { refreshDashboard.disabled = false; }
+});
+
+document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-remove-form-field]');
+    if (!(button instanceof HTMLButtonElement) || !confirm('Excluir este campo do formulário? O campo e seus vínculos serão removidos.')) return;
+    button.disabled = true;
+    try {
+        const data = new FormData();
+        data.set('_token', button.dataset.token || '');
+        data.set('method', button.dataset.method || '');
+        data.set('form', button.dataset.form || '');
+        const response = await fetch(button.dataset.url || '', {method: 'POST', body: data, headers: {'X-Requested-With': 'XMLHttpRequest'}, signal: AbortSignal.timeout(15000)});
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.message || 'Não foi possível excluir o campo.');
+        location.reload();
+    } catch (error) {
+        alert(error.message || 'Não foi possível excluir o campo.');
+        button.disabled = false;
+    }
+});
+
+document.addEventListener('change', async (event) => {
+    const input = event.target.closest('[data-field-visibility]');
+    if (!(input instanceof HTMLInputElement)) return;
+    input.disabled = true;
+    try {
+        const data = new FormData();
+        data.set('_token', input.dataset.token || ''); data.set('method', input.dataset.method || '');
+        data.set('form', input.dataset.form || ''); data.set('visible', input.checked ? '1' : '0');
+        const response = await fetch(input.dataset.url || '', {method: 'POST', body: data, headers: {'X-Requested-With': 'XMLHttpRequest'}, signal: AbortSignal.timeout(15000)});
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.message || 'Não foi possível alterar o campo.');
+        location.reload();
+    } catch (error) { alert(error.message || 'Não foi possível alterar o campo.'); input.checked = !input.checked; input.disabled = false; }
 });

@@ -107,3 +107,7 @@ document.querySelectorAll('[data-lookup]').forEach(root => {
         }
     });
 });
+
+document.querySelector('[data-user-table]')?.addEventListener('change', event => {
+    const url = new URL(location.href); url.searchParams.set('user_table', event.target.value); location.assign(url);
+});

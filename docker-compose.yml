@@ -48,6 +48,7 @@ services:
       - ./data:/var/data
       - ./storage:/var/storage
       - ./infra/php/performance.ini:/usr/local/etc/php/conf.d/zz-performance.ini:ro
+      - ./infra/php/united-pool.conf:/usr/local/etc/php-fpm.d/zz-united.conf:ro
       - core_vendor:/var/www/html/vendor
       - core_var:/var/www/html/var
       - composer_cache:/tmp/composer-cache

@@ -62,7 +62,7 @@ final class PurchasingController extends AbstractController
         $c = $this->connection('connections');
         $id = $request->query->getInt('id');
         $existing = $id ? $this->binding($c, $process, $id) : null;
-        $config = $existing['config'] ?? ['method' => 'database', 'purpose' => in_array($process, ['requests', 'requisitions'], true) ? 'create' : 'approval', 'mapping' => []];
+        $config = $existing['config'] ?? ['method' => $c->getConnectionMethod() ?? 'database', 'purpose' => in_array($process, ['requests', 'requisitions'], true) ? 'create' : 'approval', 'mapping' => []];
         $label = $existing['label'] ?? '';
         $error = null;
         if ($request->isMethod('POST')) {
@@ -75,7 +75,7 @@ final class PurchasingController extends AbstractController
                 $data = ['label' => $label, 'config' => json_encode($config, JSON_THROW_ON_ERROR)];
                 if ($id) $this->db->update('united_process_binding', $data, ['id' => $id, 'connection_id' => $c->getId()]);
                 else $this->db->insert('united_process_binding', $data + ['connection_id' => $c->getId(), 'process' => $process]);
-                $this->audit($c, 'binding.saved', ['process' => $process, 'label' => $label]);
+                $this->audit($c, 'binding.saved', ['process' => $process, 'label' => $label, 'config' => $config]);
                 $this->addFlash('success', 'Vínculo salvo. A configuração não envia dados ao ERP.');
                 return $this->redirectToRoute('united_process_bindings', ['process' => $process]);
             } catch (\InvalidArgumentException $e) { $error = $e->getMessage(); }

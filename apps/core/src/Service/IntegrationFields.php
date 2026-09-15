@@ -6,6 +6,7 @@ final class IntegrationFields
 {
     public static function forForm(array $settings, string $form, array $base): array
     {
+        foreach ($settings['hidden_fields'][$form] ?? [] as $key) unset($base[$key]);
         foreach ($settings['custom_fields'][$form] ?? [] as $key => $field) {
             if (preg_match('/^extra_[a-z0-9_]{1,50}$/', (string) $key) && is_array($field)) {
                 $base[$key] = ['label' => (string) $field['label'], 'hint' => 'Campo adicional do formulário.', 'type' => $field['type'] ?? 'text', 'required' => (bool) ($field['required'] ?? false)];

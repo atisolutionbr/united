@@ -40,7 +40,7 @@ final class FormBindingRegistry
     {
         $settings['form_catalog'] = array_values(array_filter($settings['form_catalog'] ?? [], static fn ($item) => ($item['id'] ?? '') !== $form));
         $settings['deleted_forms'] = array_values(array_unique([...($settings['deleted_forms'] ?? []), $form]));
-        foreach (['bindings', 'form_mappings', 'form_services', 'custom_fields', 'lookup_sources'] as $key) unset($settings[$key][$form]);
+        foreach (['bindings', 'form_mappings', 'form_queries', 'form_services', 'custom_fields', 'hidden_fields', 'lookup_sources', 'write_bindings'] as $key) unset($settings[$key][$form]);
         foreach ($settings['primary_forms'] ?? [] as $template => $selected) if ($selected === $form) unset($settings['primary_forms'][$template]);
         if ('products' === $form) $settings['table'] = '';
         return $settings;

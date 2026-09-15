@@ -1,0 +1,19 @@
+{% set query = settings.form_queries[selectedForm]|default({}) %}
+
+<section class="kflow-binding-context"><div><strong>Consulta de leitura deste formulário</strong><p>Defina a operação que lista registros. Os campos abaixo são relativos a cada registro da coleção. A consulta usa o método {{ method == 'api' ? 'API (GET)' : 'WebService (SOAP)' }} e não consulta o banco.</p></div></section>
+
+<div class="kflow-form-grid">
+
+{% for key, label in {'operation': 'Rota API / operação SOAP de leitura', 'items_path': 'Caminho da coleção de registros', 'total_path': 'Caminho do total de registros', 'page_param': 'Parâmetro da página (inicia em 1)', 'size_param': 'Parâmetro do tamanho da página', 'search_param': 'Parâmetro da pesquisa de produtos (padrão q)'} %}
+
+<div><label class="form-label" for="read-{{ key }}">{{ label }}</label><input class="form-control" id="read-{{ key }}" name="form_query[{{ key }}]" value="{{ query[key]|default(key == 'page_param' ? 'page' : (key == 'size_param' ? 'page_size' : '')) }}">
+
+</div>
+
+{% endfor %}
+{% if method == 'webservice' %}<label>Caminho do usuário no corpo SOAP (opcional)<input class="form-control" name="form_query[soap_user_path]" value="{{ query.soap_user_path|default('') }}"></label><label>Caminho da senha no corpo SOAP (opcional)<input class="form-control" name="form_query[soap_password_path]" value="{{ query.soap_password_path|default('') }}"></label>{% endif %}
+
+<div class="kflow-form-grid__wide"><label class="form-label" for="read-parameters">Parâmetros fixos da consulta (objeto JSON, sem senhas)</label><textarea class="form-control" id="read-parameters" name="form_query[parameters]">{{ query.parameters|default('{}') }}</textarea></div>
+
+</div>
+

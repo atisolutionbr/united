@@ -127,7 +127,7 @@ document.addEventListener('click', async (event) => {
     const link = event.target.closest('.kflow-binding-steps a:not(.is-disabled)');
     if (!(link instanceof HTMLAnchorElement)) return;
     event.preventDefault();
-    const response = await fetch(link.href, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+    const response = await fetch(link.href, {signal: AbortSignal.timeout(15000), headers: {'X-Requested-With': 'XMLHttpRequest'}});
     if (!response.ok) return location.assign(link.href);
     const next = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('.kflow-connection-panel');
     const current = document.querySelector('.kflow-connection-panel');
@@ -343,7 +343,7 @@ document.addEventListener('click', async (event) => {
     button.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Consultando';
     status.textContent = 'Consultando base cadastral...';
     try {
-        const response = await fetch((review.dataset.registrationUrl || '').replace('__DOCUMENT__', documentNumber), {headers: {'Accept': 'application/json'}});
+        const response = await fetch((review.dataset.registrationUrl || '').replace('__DOCUMENT__', documentNumber), {signal: AbortSignal.timeout(15000), headers: {'Accept': 'application/json'}});
         const data = await response.json();
         if (!response.ok || !data.ok || !data.registry) throw new Error(data.message || 'Não foi possível consultar o CNPJ.');
         renderRegistrationComparison(review, JSON.parse(button.dataset.registrationRecord || '{}'), data.registry);
@@ -404,4 +404,38 @@ if (pendingDashboard && refreshDashboard) refreshDashboard.addEventListener('cli
         pendingDashboard.textContent = 'Indicadores atualizados.';
     } catch { pendingDashboard.textContent = 'ERP indisponível. Os valores anteriores foram mantidos; você pode continuar navegando.'; }
     finally { refreshDashboard.disabled = false; }
+});
+
+document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-remove-form-field]');
+    if (!(button instanceof HTMLButtonElement) || !confirm('Excluir este campo do formulário? O campo e seus vínculos serão removidos.')) return;
+    button.disabled = true;
+    try {
+        const data = new FormData();
+        data.set('_token', button.dataset.token || '');
+        data.set('method', button.dataset.method || '');
+        data.set('form', button.dataset.form || '');
+        const response = await fetch(button.dataset.url || '', {method: 'POST', body: data, headers: {'X-Requested-With': 'XMLHttpRequest'}, signal: AbortSignal.timeout(15000)});
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.message || 'Não foi possível excluir o campo.');
+        location.reload();
+    } catch (error) {
+        alert(error.message || 'Não foi possível excluir o campo.');
+        button.disabled = false;
+    }
+});
+
+document.addEventListener('change', async (event) => {
+    const input = event.target.closest('[data-field-visibility]');
+    if (!(input instanceof HTMLInputElement)) return;
+    input.disabled = true;
+    try {
+        const data = new FormData();
+        data.set('_token', input.dataset.token || ''); data.set('method', input.dataset.method || '');
+        data.set('form', input.dataset.form || ''); data.set('visible', input.checked ? '1' : '0');
+        const response = await fetch(input.dataset.url || '', {method: 'POST', body: data, headers: {'X-Requested-With': 'XMLHttpRequest'}, signal: AbortSignal.timeout(15000)});
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.message || 'Não foi possível alterar o campo.');
+        location.reload();
+    } catch (error) { alert(error.message || 'Não foi possível alterar o campo.'); input.checked = !input.checked; input.disabled = false; }
 });

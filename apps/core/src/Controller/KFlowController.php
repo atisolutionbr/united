@@ -68,6 +68,8 @@ final class KFlowController extends AbstractController
         private readonly SeniorProductCatalog $seniorProductCatalog,
         private readonly SeniorCustomerCatalog $seniorCustomerCatalog,
         private readonly SeniorPartyCatalog $seniorPartyCatalog,
+        private readonly \App\Service\RemoteFormCatalog $remoteFormCatalog,
+        private readonly \App\Service\ProcessGateway $processGateway,
         private readonly SeniorWebServiceCatalog $seniorWebServiceCatalog,
         private readonly SeniorWebServiceManager $seniorWebServiceManager,
         private readonly ProductFiscalIntelligence $fiscalIntelligence,
@@ -94,7 +96,7 @@ final class KFlowController extends AbstractController
         $products = ['recordCount' => 0, 'products' => []];
         $customers = ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0];
         $suppliers = ['recordCount' => 0, 'missingAddressCount' => 0, 'staleCount' => 0];
-        if ('Senior' === $activeErp) {
+        if ($connection instanceof ErpConnection) {
             $products = $this->cachedResult('products', 1, $connection, $request->query->getBoolean('refresh'));
             $customers = $this->cachedResult('customers', 1, $connection, $request->query->getBoolean('refresh'));
             $suppliers = $this->cachedResult('suppliers', 1, $connection, $request->query->getBoolean('refresh'));
@@ -105,6 +107,7 @@ final class KFlowController extends AbstractController
 
         return $this->render('kflow/dashboard.html.twig', [
             'activeErp' => $activeErp,
+            'connectionMethod' => $connection?->getConnectionMethod() ?? 'database',
             'metricsError' => !empty($products['error']) || !empty($customers['error']) || !empty($suppliers['error']),
             'pendingMetrics' => ['products' => $products['pending'] ?? false, 'customers' => $customers['pending'] ?? false, 'suppliers' => $suppliers['pending'] ?? false],
             'erpCount' => count($this->erpCatalog->all()),
@@ -166,8 +169,8 @@ final class KFlowController extends AbstractController
         ];
         $mapping = [];
 
-        if ('Senior' === $activeErp) {
-            $mapping = $this->effectiveMapping($connection);
+        if ($connection instanceof ErpConnection) {
+            $mapping = $connection->getConnectionMethod() === 'database' ? $this->effectiveMapping($connection) : ($this->partyBinding($connection, 'products')['mapping'] ?? []);
             $productData = $this->cachedResult('products', max(1, $request->query->getInt('page', 1)), $connection);
         }
 
@@ -176,6 +179,7 @@ final class KFlowController extends AbstractController
 
         return $this->render('kflow/products.html.twig', [
             'activeErp' => $activeErp,
+            'connectionMethod' => $connection?->getConnectionMethod() ?? 'database',
             'productData' => $productData,
             'fiscalReview' => $this->fiscalIntelligence->review($firstProduct['Ncm'] ?? null),
             'sanitization' => $this->sanitizationService->analyze($products),
@@ -199,9 +203,9 @@ final class KFlowController extends AbstractController
                 ['key' => 'X_cclass_trib', 'label' => 'cClassTrib', 'fiscal' => true],
                 ['key' => 'X_tax_selective', 'label' => 'Imposto Seletivo', 'fiscal' => true],
             ],
-            'extraFields' => \App\Service\IntegrationFields::forForm($connection?->getSettingsForMethod('database') ?? [], $this->partyBinding($connection, 'products')['form'] ?? 'products', []),
+            'extraFields' => \App\Service\IntegrationFields::forForm($connection?->getSettingsForMethod($connection->getConnectionMethod() ?? '') ?? [], $this->partyBinding($connection, 'products')['form'] ?? 'products', []),
             'mapping' => $mapping,
-            'fiscalWriteAvailable' => $connection instanceof ErpConnection && $this->seniorWebServiceManager->isProductUpdateAvailable($connection),
+            'fiscalWriteAvailable' => $activeErp === 'Senior' && $connection instanceof ErpConnection && $this->seniorWebServiceManager->isProductUpdateAvailable($connection),
         ]);
     }
 
@@ -223,14 +227,15 @@ final class KFlowController extends AbstractController
             'missingAddressCount' => 0,
             'staleCount' => 0,
         ];
-        if ('Senior' === $activeErp) {
+        if ($connection instanceof ErpConnection) {
             $customerData = $this->cachedResult('customers', max(1, $request->query->getInt('page', 1)), $connection);
         }
 
         return $this->render('kflow/clients.html.twig', [
             'activeErp' => $activeErp,
+            'connectionMethod' => $connection?->getConnectionMethod() ?? 'database',
             'customerData' => $customerData,
-            'extraFields' => \App\Service\IntegrationFields::forForm($connection?->getSettingsForMethod('database') ?? [], $this->partyBinding($connection, 'customers')['form'] ?? 'customers', []),
+            'extraFields' => \App\Service\IntegrationFields::forForm($connection?->getSettingsForMethod($connection->getConnectionMethod() ?? '') ?? [], $this->partyBinding($connection, 'customers')['form'] ?? 'customers', []),
         ]);
     }
 
@@ -397,7 +402,7 @@ final class KFlowController extends AbstractController
         if (null === $connection->getConnectionMethod()) {
             $connection
                 ->setConnectionMethod(ErpConnection::METHOD_DATABASE)
-                ->setSettingsForMethod(ErpConnection::METHOD_DATABASE, $this->connectionProfile->defaultSettings($erp, ErpConnection::METHOD_DATABASE))
+                ->setSettingsForMethod(ErpConnection::METHOD_DATABASE, array_replace($this->connectionProfile->defaultSettings($erp, ErpConnection::METHOD_DATABASE), $connection->getSettingsForMethod(ErpConnection::METHOD_DATABASE)))
                 ->setProductMapping($this->connectionProfile->defaultProductMapping($erp));
         }
 
@@ -460,6 +465,7 @@ final class KFlowController extends AbstractController
         $selectedFormConfig = $this->formConfig($configuredForms, $selectedForm) ?? $defaultForm;
         $selectedForm = $selectedFormConfig['id'];
         $selectedFormDefinition = $databaseForms[$selectedFormConfig['template']];
+        $allFormFields = \App\Service\IntegrationFields::forForm(array_replace($settings, ['hidden_fields' => array_diff_key($settings['hidden_fields'] ?? [], [$selectedForm => true])]), $selectedForm, $selectedFormDefinition['fields']);
         $selectedFormDefinition['fields'] = \App\Service\IntegrationFields::forForm($settings, $selectedForm, $selectedFormDefinition['fields']);
         $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
         $webServices = $this->webServices($settings);
@@ -468,22 +474,33 @@ final class KFlowController extends AbstractController
         if ('products' === $selectedForm && !isset($bindings['products']) && '' !== $selectedTable) $bindings['products'] = ['table' => $selectedTable, 'mapping' => $mapping];
         $tables = ['tables' => [], 'error' => null];
         $columns = ['columns' => [], 'error' => null];
-        if (ErpConnection::METHOD_DATABASE === $method && 'connection' !== $databaseStep) {
+        if (ErpConnection::METHOD_DATABASE === $method && in_array($databaseStep, ['table', 'mapping'], true)) {
             $tables = $this->databaseSchemaInspector->tables($settings);
-            if (in_array($databaseStep, ['mapping', 'users'], true) && '' !== $selectedTable) {
+            if ($databaseStep === 'mapping' && '' !== $selectedTable) {
                 $columns = $this->databaseSchemaInspector->columns($settings, $selectedTable);
             }
         }
         $userAccess = is_array($settings['user_access'] ?? null) ? $settings['user_access'] : [];
-        $userTable = (string) ($userAccess['table'] ?? '');
+        $userTable = (string) $request->query->get('user_table', $userAccess['table'] ?? '');
+        $userAccess['table'] = $userTable;
         $userColumns = ['columns' => [], 'error' => null];
         $userRows = ['rows' => [], 'error' => null];
         if (ErpConnection::METHOD_DATABASE === $method && 'users' === $databaseStep && '' !== $userTable) {
             $userColumns = $this->databaseSchemaInspector->columns($settings, $userTable);
             $configuredUserColumns = array_values(array_filter(array_map('strval', $userAccess['mapping'] ?? [])));
-            if ([] !== $configuredUserColumns) $userRows = $this->databaseSchemaInspector->rows($settings, $userTable, $configuredUserColumns);
+            if ($userTable === ($settings['user_access']['table'] ?? '') && [] !== $configuredUserColumns) $userRows = $this->databaseSchemaInspector->rows($settings, $userTable, $configuredUserColumns);
         }
 
+        if ($method !== 'database' && $integrationStep === 'users' && $connection && !empty($userAccess['endpoint'])) {
+            try { $userRows['rows'] = $this->processGateway->readUsers($connection, $method, $userAccess); }
+            catch (\InvalidArgumentException $e) { $userRows['error'] = $e->getMessage(); }
+            catch (\Throwable $e) { $userRows['error'] = 'Não foi possível consultar usuários via '.($method === 'api' ? 'API' : 'WebService').'. Verifique a operação, a coleção e as credenciais.'; }
+        }
+        foreach ($bindings as $saved) if (!empty($saved['table'])) $tables['tables'][] = $saved['table'];
+        if ($userTable !== '') $tables['tables'][] = $userTable;
+        $tables['tables'] = array_values(array_unique($tables['tables']));
+        if ($columns['error']) $columns['columns'] = array_values(array_unique([...$columns['columns'], ...array_filter($binding['mapping'] ?? [])]));
+        if ($userColumns['error']) $userColumns['columns'] = array_values(array_unique([...$userColumns['columns'], ...array_filter($userAccess['mapping'] ?? [])]));
         return $this->render('kflow/erp/connect.html.twig', [
             'erp' => $erp,
             'method' => $method,
@@ -499,6 +516,8 @@ final class KFlowController extends AbstractController
             'bindings' => $bindings,
             'selectedForm' => $selectedForm,
             'selectedFormDefinition' => $selectedFormDefinition,
+            'allFormFields' => $allFormFields,
+            'hiddenFields' => array_flip($settings['hidden_fields'][$selectedForm] ?? []),
             'selectedFormLabel' => $selectedFormConfig['label'],
             'selectedTable' => $selectedTable,
             'bindingMapping' => is_array($binding['mapping'] ?? null) ? $binding['mapping'] : ('products' === $selectedForm ? $mapping : []),
@@ -517,7 +536,7 @@ final class KFlowController extends AbstractController
                 ? $this->entityManager->getRepository(ErpConnectionLog::class)->findBy(['connection' => $connection], ['createdAt' => 'DESC'], 6)
                 : [],
             'userAccess' => $userAccess,
-            'userTables' => ErpConnection::METHOD_DATABASE === $method ? $tables['tables'] : [],
+            'userTables' => ErpConnection::METHOD_DATABASE === $method && $databaseStep === 'table' ? $tables['tables'] : [],
             'userColumns' => $userColumns['columns'],
             'userColumnsError' => $userColumns['error'],
             'erpUsers' => $this->normalizeErpUsers($userRows['rows'], $userAccess),
@@ -638,20 +657,23 @@ final class KFlowController extends AbstractController
         $settings = $connection->getSettingsForMethod(ErpConnection::METHOD_DATABASE);
         $bindings = is_array($settings['bindings'] ?? null) ? $settings['bindings'] : [];
         $table = trim((string) $request->request->get('table'));
-        $columns = preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/D', $table) ? $this->databaseSchemaInspector->columns($settings, $table) : ['columns' => [], 'error' => 'Tabela inválida.'];
-        if (!$columns['columns'] || $columns['error']) {
-            $this->addFlash('warning', 'Não foi possível validar os campos da tabela. O vínculo anterior foi preservado; confira a conexão e tente novamente.');
-            return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => 'database', 'step' => 'table', 'form' => $form]);
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/D', $table)) {
+            $this->addFlash('warning','Selecione uma tabela válida. O vínculo anterior foi preservado.');
+            return $this->redirectToRoute('kflow_erp_connect',['erp'=>$erp,'method'=>'database','step'=>'table','form'=>$form]);
         }
-        $columns = $columns['columns'];
+        $inspection = $this->databaseSchemaInspector->columns($settings,$table);
         $mappingInput = $request->request->all('mapping');
+        $columns = $inspection['columns'];
+        // Stored selections remain editable while the ERP is temporarily offline.
+        foreach ($mappingInput as $source) if (is_string($source) && preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/D',$source)) $columns[]=$source;
+        $columns=array_values(array_unique($columns));
         $fields = \App\Service\IntegrationFields::forForm($settings, $form, $forms[$configuredForm['template']]['fields']);
         $previous = ($bindings[$form]['table'] ?? '') === $table ? ($bindings[$form]['mapping'] ?? []) : [];
         if ('products' === $form && !isset($bindings[$form]) && ($settings['table'] ?? '') === $table) $previous = $connection->getProductMapping();
         $mapping = $request->request->has('mapping')
             ? $this->connectionProfile->mappingForFields(array_keys($fields), $mappingInput, $columns)
             : $previous;
-        $bindings[$form] = ['table' => $table, 'mapping' => $mapping];
+        $bindings[$form] = ['table' => $table, 'mapping' => $mapping, 'validation' => $inspection['error'] ? 'pending' : 'validated'];
         $settings['bindings'] = $bindings;
         $settings['table'] = 'products' === $form ? $table : (string) ($settings['table'] ?? '');
         $connection->setSettingsForMethod(ErpConnection::METHOD_DATABASE, $settings);
@@ -659,7 +681,7 @@ final class KFlowController extends AbstractController
             $connection->setProductMapping($mapping);
         }
         $this->entityManager->flush();
-        $this->addFlash('success', sprintf('Vínculo de %s salvo para a tabela %s.', $configuredForm['label'], $table));
+        $this->addFlash($inspection['error'] ? 'warning' : 'success', sprintf('Vínculo de %s salvo para a tabela %s.', $configuredForm['label'], $table).($inspection['error'] ? ' A origem não respondeu; validação pendente, sem apagar o mapeamento.' : ''));
 
         return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => ErpConnection::METHOD_DATABASE, 'step' => 'mapping', 'form' => $form]);
     }
@@ -701,6 +723,26 @@ final class KFlowController extends AbstractController
                 return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'mapping', 'form' => $form]);
             }
         }
+        if ($request->request->has('form_query')) {
+            $query = $request->request->all('form_query');
+            $query = array_map(static fn ($value) => trim((string) $value), array_intersect_key($query, array_flip(['operation', 'items_path', 'total_path', 'page_param', 'size_param', 'parameters', 'search_param', 'soap_user_path', 'soap_password_path'])));
+            try {
+                if (!empty($query['operation'])) {
+                    if ($method === 'api' && (!str_starts_with($query['operation'], '/') || str_starts_with($query['operation'], '//') || str_contains($query['operation'], '://'))) throw new \InvalidArgumentException('A rota de consulta API deve iniciar com /.');
+                    if ($method === 'webservice' && !preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/D', $query['operation'])) throw new \InvalidArgumentException('Informe o nome da operação de leitura SOAP.');
+                    foreach (['items_path', 'total_path', 'page_param', 'size_param'] as $key) {
+                        if (empty($query[$key])) throw new \InvalidArgumentException('Preencha coleção, total e parâmetros de paginação da consulta.');
+                        \App\Service\ProcessGateway::readPath([], $query[$key]);
+                    }
+                    $parameters = json_decode($query['parameters'] ?: '{}', true, 32, JSON_THROW_ON_ERROR);
+                    if (!is_array($parameters) || ($parameters && array_is_list($parameters))) throw new \InvalidArgumentException('Parâmetros fixos devem ser um objeto JSON.');
+                }
+                $settings['form_queries'][$form] = $query;
+            } catch (\InvalidArgumentException|\JsonException $e) {
+                $this->addFlash('warning', $e instanceof \JsonException ? 'Parâmetros fixos: JSON inválido.' : $e->getMessage());
+                return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'mapping', 'form' => $form]);
+            }
+        }
         $formMappings = is_array($settings['form_mappings'] ?? null) ? $settings['form_mappings'] : [];
         $formMappings[$form] = $mapping;
         $settings['form_mappings'] = $formMappings;
@@ -730,12 +772,13 @@ final class KFlowController extends AbstractController
         $settings['user_access'] = [
             'table' => preg_match('/^[A-Za-z_][A-Za-z0-9_.]*$/', (string) ($accessInput['table'] ?? '')) ? (string) $accessInput['table'] : '',
             'endpoint' => mb_substr(trim((string) ($accessInput['endpoint'] ?? '')), 0, 240),
+            'items_path' => mb_substr(trim((string) ($accessInput['items_path'] ?? '')), 0, 160),
             'mapping' => $mapping,
         ];
         $connection->setSettingsForMethod($method, $settings);
         $selected = array_values(array_filter(array_map('strval', is_array($request->request->all('erp_users')) ? $request->request->all('erp_users') : [])));
         $permissions = array_values(array_intersect(array_keys($this->access->menuOptions()), array_map('strval', is_array($request->request->all('permissions')) ? $request->request->all('permissions') : [])));
-        $directory = $this->erpUserDirectory($erp, $method, $settings);
+        $directory = $selected ? $this->erpUserDirectory($erp, $method, $settings) : [];
         $selectedUsers = array_filter($directory, static fn (array $user): bool => in_array($user['identifier'], $selected, true));
         $initialPassword = (string) $request->request->get('initial_password');
         $company = $this->currentCompany();
@@ -759,6 +802,46 @@ final class KFlowController extends AbstractController
         $this->entityManager->flush();
         $this->addFlash('success', sprintf('Acesso atualizado para %d usuário(s). %d conta(s) KFlow criada(s).', count($selectedUsers), $created));
         return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'users']);
+    }
+
+    #[Route('/erp/{erp}/fields/{field}/visibility', name: 'kflow_erp_fields_visibility', methods: ['POST'])]
+    public function setIntegrationFieldVisibility(string $erp, string $field, Request $request): JsonResponse
+    {
+        $this->requireMenu('connections');
+        $method = (string) $request->request->get('method');
+        $form = (string) $request->request->get('form');
+        if (!$this->erpCatalog->supports($erp) || !isset($this->connectionProfile->connectionMethods()[$method]) || !$this->isCsrfTokenValid('field-visibility-'.$erp.'-'.$method.'-'.$form.'-'.$field, (string) $request->request->get('_token'))) return $this->json(['ok' => false, 'message' => 'Não foi possível alterar o campo.'], Response::HTTP_FORBIDDEN);
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) return $this->json(['ok' => false, 'message' => 'Conexão do ERP não encontrada.'], Response::HTTP_NOT_FOUND);
+        $settings = $connection->getSettingsForMethod($method);
+        $formConfig = $this->formConfig($this->configuredForms($settings, $this->connectionProfile->databaseForms()), $form);
+        if (!$formConfig) return $this->json(['ok' => false, 'message' => 'Formulário não encontrado.'], Response::HTTP_NOT_FOUND);
+        $available = \App\Service\IntegrationFields::forForm(array_replace($settings, ['hidden_fields' => array_diff_key($settings['hidden_fields'] ?? [], [$form => true])]), $form, $this->connectionProfile->databaseForms()[$formConfig['template']]['fields']);
+        if (!isset($available[$field])) return $this->json(['ok' => false, 'message' => 'Campo não encontrado.'], Response::HTTP_NOT_FOUND);
+        $hidden = array_values(array_unique(array_filter($settings['hidden_fields'][$form] ?? [], static fn ($key) => $key !== $field)));
+        if (!$request->request->getBoolean('visible')) $hidden[] = $field;
+        $settings['hidden_fields'][$form] = array_values(array_unique($hidden));
+        $connection->setSettingsForMethod($method, $settings);
+        $this->entityManager->flush();
+        return $this->json(['ok' => true, 'message' => $request->request->getBoolean('visible') ? 'Campo incluído no formulário.' : 'Campo removido da tela. O vínculo foi preservado para poder restaurar depois.']);
+    }
+
+    #[Route('/erp/{erp}/fields/{field}', name: 'kflow_erp_fields_delete', methods: ['POST'])]
+    public function deleteIntegrationField(string $erp, string $field, Request $request): JsonResponse
+    {
+        $this->requireMenu('connections');
+        $method = (string) $request->request->get('method');
+        $form = (string) $request->request->get('form');
+        if (!$this->erpCatalog->supports($erp) || !isset($this->connectionProfile->connectionMethods()[$method]) || !preg_match('/^extra_[a-f0-9]{12}$/D', $field) || !$this->isCsrfTokenValid('delete-integration-field-'.$erp.'-'.$method.'-'.$form.'-'.$field, (string) $request->request->get('_token'))) return $this->json(['ok' => false, 'message' => 'Não foi possível excluir o campo.'], Response::HTTP_FORBIDDEN);
+        $connection = $this->connectionFor($erp);
+        if (!$connection instanceof ErpConnection) return $this->json(['ok' => false, 'message' => 'Conexão do ERP não encontrada.'], Response::HTTP_NOT_FOUND);
+        $settings = $connection->getSettingsForMethod($method);
+        if (!isset($settings['custom_fields'][$form][$field])) return $this->json(['ok' => false, 'message' => 'Campo adicional não encontrado.'], Response::HTTP_NOT_FOUND);
+        unset($settings['custom_fields'][$form][$field], $settings['bindings'][$form]['mapping'][$field], $settings['form_mappings'][$form][$field]);
+        foreach ($settings['write_bindings'][$form] ?? [] as $action => $binding) if (is_array($binding)) unset($settings['write_bindings'][$form][$action]['mapping'][$field]);
+        $connection->setSettingsForMethod($method, $settings);
+        $this->entityManager->flush();
+        return $this->json(['ok' => true, 'message' => 'Campo removido do formulário e de seus vínculos.']);
     }
 
     #[Route('/erp/{erp}/fields', name: 'kflow_erp_fields_create', methods: ['POST'])]
@@ -966,14 +1049,15 @@ final class KFlowController extends AbstractController
             'missingAddressCount' => 0,
             'staleCount' => 0,
         ];
-        if ('Senior' === $activeErp) {
+        if ($connection instanceof ErpConnection) {
             $partyData = $this->cachedResult($type, max(1, $request->query->getInt('page', 1)), $connection);
         }
 
         return $this->render('kflow/parties.html.twig', [
             'activeErp' => $activeErp,
+            'connectionMethod' => $connection?->getConnectionMethod() ?? 'database',
             'partyData' => $partyData,
-            'extraFields' => \App\Service\IntegrationFields::forForm($connection?->getSettingsForMethod('database') ?? [], $this->partyBinding($connection, $type)['form'] ?? $type, []),
+            'extraFields' => \App\Service\IntegrationFields::forForm($connection?->getSettingsForMethod($connection->getConnectionMethod() ?? '') ?? [], $this->partyBinding($connection, $type)['form'] ?? $type, []),
             'partyType' => $type,
             'title' => $title,
             'singular' => $singular,
@@ -1060,9 +1144,9 @@ final class KFlowController extends AbstractController
         $mapping = is_array($access['mapping'] ?? null) ? $access['mapping'] : [];
         $users = [];
         foreach ($rows as $row) {
-            $identifier = trim((string) ($row[$mapping['identifier'] ?? ''] ?? ''));
+            $identifier = trim((string) ($row[$mapping['identifier'] ?? ''] ?? (!empty($mapping['identifier']) ? \App\Service\ProcessGateway::readPath($row, $mapping['identifier']) : '')));
             if ('' === $identifier) continue;
-            $users[] = ['identifier' => $identifier, 'name' => trim((string) ($row[$mapping['name'] ?? ''] ?? '')), 'email' => trim((string) ($row[$mapping['email'] ?? ''] ?? ''))];
+            $users[] = ['identifier' => $identifier, 'name' => trim((string) ($row[$mapping['name'] ?? ''] ?? (!empty($mapping['name']) ? \App\Service\ProcessGateway::readPath($row, $mapping['name']) : ''))), 'email' => trim((string) ($row[$mapping['email'] ?? ''] ?? (!empty($mapping['email']) ? \App\Service\ProcessGateway::readPath($row, $mapping['email']) : '')))];
         }
         return $users;
     }
@@ -1070,7 +1154,11 @@ final class KFlowController extends AbstractController
     /** @return list<array{identifier: string, name: string, email: string}> */
     private function erpUserDirectory(string $erp, string $method, array $settings): array
     {
-        if (ErpConnection::METHOD_DATABASE !== $method) return [];
+        if (ErpConnection::METHOD_DATABASE !== $method) {
+            $connection = $this->connectionFor($erp);
+            if (!$connection) return [];
+            return $this->normalizeErpUsers($this->processGateway->readUsers($connection, $method, $settings['user_access'] ?? []), $settings['user_access'] ?? []);
+        }
         $access = is_array($settings['user_access'] ?? null) ? $settings['user_access'] : [];
         $table = (string) ($access['table'] ?? '');
         $columns = array_values(array_filter(array_map('strval', $access['mapping'] ?? [])));
@@ -1103,7 +1191,7 @@ final class KFlowController extends AbstractController
         if ('' !== $port && !str_contains(parse_url($endpoint, PHP_URL_HOST) ?: '', ':') && !preg_match('#:\d+(?:/|$)#', $endpoint)) $endpoint = preg_replace('#^(https?://[^/]+)#', '$1:'.$port, $endpoint) ?: $endpoint;
         $started = hrtime(true);
         try {
-            $options = ['timeout' => max(1, min(120, (int) ($settings['timeout_seconds'] ?? 20))), 'max_duration' => max(1, min(120, (int) ($settings['timeout_seconds'] ?? 20)))];
+            $options = ['timeout' => max(1, min(8, (int) ($settings['timeout_seconds'] ?? 20))), 'max_duration' => max(1, min(8, (int) ($settings['timeout_seconds'] ?? 20)))];
             $username = trim((string) ($settings['username'] ?? '')); $encrypted = (string) ($settings['password_encrypted'] ?? '');
             if ('' !== $username && '' !== $encrypted) $options['auth_basic'] = [$username, $this->secretCipher->decrypt($encrypted)];
             $status = $this->httpClient->request('GET', $endpoint, $options)->getStatusCode();
@@ -1119,12 +1207,18 @@ final class KFlowController extends AbstractController
         $companyId = $this->currentCompany()->getId() ?? 0;
         $erp = strtolower($connection?->getErpName() ?? 'none');
         $revision = $connection?->getUpdatedAt()?->getTimestamp() ?? $connection?->getConfiguredAt()?->getTimestamp() ?? 0;
-        $key = sprintf('united.v4.%s.%d.%s.%d.%d', $type, $companyId, $erp, $revision, $page);
+        $profileKey = substr(hash('sha256', json_encode([$connection?->getConnectionMethod(), $connection?->getSettingsForMethod($connection->getConnectionMethod() ?? '')])), 0, 20);
+        $key = sprintf('united.v5.%s.%d.%s.%s.%d.%d', $type, $companyId, $erp, $profileKey, $revision, $page);
         if (null === $connection || !$load) {
             $item = $this->cache->getItem($key);
             return $item->isHit() ? (array) $item->get() : $this->emptyCachedResult($type) + ['pending' => true];
         }
         return $this->cache->get($key, function (ItemInterface $item) use ($type, $page, $connection): array {
+            if ($connection->getConnectionMethod() !== ErpConnection::METHOD_DATABASE) {
+                $result = $this->remoteFormCatalog->list($connection, $type, $page);
+                $item->expiresAfter(empty($result['error']) ? 300 : 20);
+                return $this->withWriteLinks($result, $type, $connection);
+            }
             $settings = $this->settingsForConnection($connection->getErpName(), ErpConnection::METHOD_DATABASE, $connection);
 
             if ('products' === $type) {
@@ -1134,6 +1228,7 @@ final class KFlowController extends AbstractController
             } else {
                 $result = $this->seniorPartyCatalog->list($type, $this->partyBinding($connection, $type), $settings, $page);
             }
+            $result = $this->withWriteLinks($result, $type, $connection);
             $item->expiresAfter(null === ($result['error'] ?? null) ? 300 : 20);
 
             return $result;
@@ -1141,6 +1236,30 @@ final class KFlowController extends AbstractController
     }
 
     /** @return array<string, mixed> */
+    private function withWriteLinks(array $result, string $type, ErpConnection $connection): array
+    {
+        $aliases = match ($type) {
+            'products' => ['company'=>'CodEmp','product_code'=>'CodPro','product_name'=>'DesPro','unit'=>'UniMed','ncm'=>'Ncm','origin_code'=>'CodOri','family'=>'CodFam','cst_pis'=>'CstPis','cst_cofins'=>'CstCofins','cst_icms'=>'CstIcms'],
+            'customers' => ['company'=>'CodEmp','customer_code'=>'CodCli','name'=>'NomCli','document'=>'CgcCpf','state_registration'=>'InsEst','email'=>'EmlCli'],
+            default => [($type==='suppliers'?'supplier_code':'carrier_code')=>'Code','name'=>'Name','document'=>'Document','state_registration'=>'StateRegistration','email'=>'Email','phone'=>'Phone'],
+        };
+        $key = match($type) {'products'=>'products','customers'=>'customers',default=>'parties'};
+        $binding = $this->partyBinding($connection,$type);
+        $settings = $connection->getSettingsForMethod($connection->getConnectionMethod() ?? '');
+        $write = $settings['write_bindings'][$type]['update'] ?? [];
+        foreach ($result[$key] ?? [] as $i=>$record) {
+            $data=[];$keys=[];
+            foreach ($aliases as $field=>$alias) if (array_key_exists($alias,$record)) $data[$field]=$record[$alias];
+            foreach ($record as $alias=>$value) if (str_starts_with($alias,'X_')) $data[substr($alias,2)]=$value;
+            foreach (explode(',',$write['key_columns']??'') as $destination) {
+                $destination=trim($destination);if($destination==='')continue;
+                foreach ($binding['mapping']??[] as $field=>$source) if (strcasecmp($destination,$source)===0 && isset($data[$field])) $keys[$destination]=$data[$field];
+            }
+            $result[$key][$i]['_writeUrl']=$this->generateUrl('united_write',['form'=>$type,'method'=>$connection->getConnectionMethod()??'database','data'=>$data,'keys'=>$keys]);
+        }
+        return $result;
+    }
+
     private function emptyCachedResult(string $type): array
     {
         if ('products' === $type) {
@@ -1174,6 +1293,7 @@ final class KFlowController extends AbstractController
     /** @return array<string, mixed> */
     private function partyBinding(?ErpConnection $connection, string $form): array
     {
+        if ($connection && $connection->getConnectionMethod() !== ErpConnection::METHOD_DATABASE) return \App\Service\RemoteFormCatalog::binding($connection, $form);
         $settings = $connection?->getSettingsForMethod(ErpConnection::METHOD_DATABASE) ?? [];
         return \App\Service\FormBindingRegistry::resolve($settings, $form, $connection?->getProductMapping() ?? []);
     }

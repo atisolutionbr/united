@@ -36,10 +36,14 @@ final class ProductQualityReview
         [$pdo, $quote, $table, $mapping] = $this->source($settings, $binding);
         $selects = [];
         foreach ($mapping as $key => $column) $selects[] = $quote($column).' AS '.$quote($key);
-        $statement = $pdo->query('SELECT '.implode(', ', $selects).' FROM '.$table.' ORDER BY '.$quote($mapping['product_code']));
+        $driver = $settings['driver'] ?? 'sqlserver';
+        $sql = 'SELECT '.($driver === 'sqlserver' ? 'TOP 501 ' : '').implode(', ', $selects).' FROM '.$table.' ORDER BY '.$quote($mapping['product_code']);
+        if ($driver !== 'sqlserver') $sql .= ' LIMIT 501';
+        $statement = $pdo->query($sql);
         $seen = []; $issues = []; $count = 0; $duplicates = 0; $caseCount = 0; $fiscalCount = 0;
         // Stream the source; keep at most 2,000 detailed findings in a single review.
         while ($row = $statement->fetch(\PDO::FETCH_ASSOC)) {
+            if ($count >= 500) break;
             ++$count;
             $description = (string) ($row['product_name'] ?? '');
             $suggestion = self::normalizeDescription($description, $case);
@@ -51,7 +55,7 @@ final class ProductQualityReview
             else $seen[$duplicateKey] = ($row['company'] ?? '').'/'.$row['product_code'];
             if ($messages && count($issues) < 2000) $issues[] = ['row' => $row, 'suggestion' => $suggestion, 'messages' => $messages, 'canNormalize' => $description !== $suggestion && isset($mapping['company'])];
         }
-        return ['count' => $count, 'duplicates' => $duplicates, 'caseCount' => $caseCount, 'fiscalCount' => $fiscalCount, 'issues' => $issues, 'truncated' => count($issues) === 2000, 'mapping' => $mapping, 'table' => $binding['table']];
+        return ['count' => $count, 'duplicates' => $duplicates, 'caseCount' => $caseCount, 'fiscalCount' => $fiscalCount, 'issues' => $issues, 'truncated' => $count >= 500, 'mapping' => $mapping, 'table' => $binding['table']];
     }
 
     public function normalize(array $settings, array $binding, array $row, string $case): void

@@ -150,7 +150,8 @@ final class SeniorWebServiceManager
                 'exceptions' => true,
                 'trace' => true,
                 'cache_wsdl' => WSDL_CACHE_NONE,
-                'connection_timeout' => $this->timeout($settings),
+                'connection_timeout' => 3,
+                'stream_context' => stream_context_create(['http'=>['timeout'=>8]]),
             ]);
             $response = $client->__soapCall($service['method'], [[
                 'usuario' => (string) $settings['username'],
@@ -196,7 +197,7 @@ final class SeniorWebServiceManager
     /** @param array<string, mixed> $settings */
     private function timeout(array $settings): int
     {
-        return max(1, min(120, (int) ($settings['timeout_seconds'] ?? 20)));
+        return max(1, min(8, (int) ($settings['timeout_seconds'] ?? 20)));
     }
 
     /** @param array<string, mixed> $payload

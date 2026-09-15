@@ -26,12 +26,9 @@ final class ProcessGateway
         $settings = $connection->getSettingsForMethod($config['method']);
         if ('database' === $config['method']) {
             self::identifier($config['table'] ?? '');
-            $tables = $this->schema->tables($settings);
-            if (!in_array($config['table'], $tables['tables'], true)) throw new \InvalidArgumentException('Selecione uma tabela existente no banco configurado.');
-            $columns = $this->schema->columns($settings, $config['table'])['columns'];
             $check = array_values($config['mapping']);
             if ('approval' === $config['purpose']) $check = [...$check, ...self::keys($config), $config['status_column'] ?? ''];
-            foreach ($check as $column) if (!in_array(self::identifier($column), $columns, true)) throw new \InvalidArgumentException('Coluna não encontrada: '.$column);
+            foreach ($check as $column) self::identifier($column);
         } else {
             if (!filter_var($settings['endpoint'] ?? '', FILTER_VALIDATE_URL) || !in_array(parse_url($settings['endpoint'], PHP_URL_SCHEME), ['http', 'https'], true)) throw new \InvalidArgumentException('Salve primeiro o endereço HTTP(S) da conexão.');
             foreach ($config['mapping'] as $path) self::pathParts($path);
@@ -156,7 +153,12 @@ final class ProcessGateway
     public function lookup(ErpConnection $connection, array $source, string $term, int $page): array
     {
         $config = $source + ['list_operation' => $source['operation'] ?? ''];
-        $response = $this->remote($connection, $config, 'list_operation', [($source['search_param'] ?? '') ?: 'q' => $term, 'page' => max(1, $page), 'page_size' => 25]);
+        $payload = json_decode(($source['parameters'] ?? '') ?: '{}', true, 32, JSON_THROW_ON_ERROR);
+        if (!is_array($payload)) throw new \InvalidArgumentException('Parâmetros da lista inválidos.');
+        self::putPath($payload,($source['search_param']??'')?:'q',$term);
+        self::putPath($payload,($source['page_param']??'')?:'page',max(1,$page));
+        self::putPath($payload,($source['size_param']??'')?:'page_size',25);
+        $response = $this->remote($connection, $config, 'list_operation', $payload);
         $rows = self::readPath($response, $source['items_path'] ?? 'data.items');
         if (!is_array($rows) || count($rows) > 25) throw new \RuntimeException('A origem deve devolver uma coleção paginada de até 25 itens.');
         $items = [];
@@ -168,11 +170,88 @@ final class ProcessGateway
         return ['items' => $items, 'more' => count($rows) === 25];
     }
 
+    public function validateWrite(array $config): array
+    {
+        if (!in_array($config['method'] ?? '', ['database','api','webservice'], true) || !in_array($config['action'] ?? '', ['insert','update','delete'], true)) throw new \InvalidArgumentException('Método ou ação inválidos.');
+        $config['mapping'] = array_filter($config['mapping'] ?? [], static fn ($v) => is_string($v) && trim($v) !== '');
+        if ($config['action'] !== 'delete' && !$config['mapping']) throw new \InvalidArgumentException('Vincule os campos que poderão ser gravados.');
+        if (count(array_unique($config['mapping'])) !== count($config['mapping'])) throw new \InvalidArgumentException('Cada destino deve receber apenas um campo.');
+        $keys = $config['action'] === 'insert' ? [] : self::keys($config);
+        foreach ([...array_values($config['mapping']), ...$keys] as $path) $config['method'] === 'database' ? self::identifier($path) : self::pathParts($path);
+        if ($config['method'] === 'database') self::identifier($config['table'] ?? '');
+        else {
+            if (empty($config['write_operation']) || empty($config['success_path']) || trim($config['success_value'] ?? '') === '') throw new \InvalidArgumentException('Configure a operação e a confirmação de sucesso do ERP.');
+            self::pathParts($config['success_path']);
+            if (!in_array($config['http_method'] ?? 'POST', ['POST','PUT','PATCH','DELETE'], true)) throw new \InvalidArgumentException('Método HTTP de gravação inválido.');
+        }
+        return $config;
+    }
+
+    public function write(ErpConnection $connection, array $config, array $data, array $keys, string $requestKey): string
+    {
+        $config = $this->validateWrite($config);
+        $expectedKeys = $config['action'] === 'insert' ? [] : self::keys($config);
+        if (array_diff($expectedKeys, array_keys($keys)) || array_diff(array_keys($keys), $expectedKeys)) throw new \InvalidArgumentException('Informe a chave completa do registro.');
+        foreach ($keys as $value) if (!is_scalar($value) || trim((string) $value) === '') throw new \InvalidArgumentException('Chave vazia ou inválida.');
+        $payload = [];
+        foreach ($data as $field => $value) {
+            if (!isset($config['mapping'][$field]) || !is_scalar($value)) throw new \InvalidArgumentException('Campo não autorizado no vínculo.');
+            $payload[$config['mapping'][$field]] = $value;
+        }
+        if ($config['action'] !== 'delete' && !$payload) throw new \InvalidArgumentException('Selecione ao menos um campo para gravar.');
+        if ($config['action'] === 'delete' && $payload) throw new \InvalidArgumentException('Exclusão recebe somente a chave.');
+        if ($config['method'] !== 'database') {
+            $body = [];
+            foreach ($keys + $payload as $path => $value) self::putPath($body, $path, $value);
+            return $this->confirmed($this->remote($connection, $config, 'write_operation', $body, $requestKey), $config);
+        }
+        [$pdo, $quote, $table] = $this->database($connection, $config);
+        $where = implode(' AND ', array_map(static fn ($key) => $quote($key).' = ?', array_keys($keys)));
+        $pdo->beginTransaction();
+        try {
+            if ($config['action'] === 'insert') {
+                $sql = 'INSERT INTO '.$table.' ('.implode(', ',array_map($quote,array_keys($payload))).') VALUES ('.implode(', ',array_fill(0,count($payload),'?')).')'; $params=array_values($payload);
+            } else {
+                $sql = $config['action'] === 'delete' ? 'DELETE FROM '.$table.' WHERE '.$where : 'UPDATE '.$table.' SET '.implode(', ',array_map(static fn ($field) => $quote($field).' = ?',array_keys($payload))).' WHERE '.$where;
+                $params = $config['action'] === 'delete' ? array_values($keys) : [...array_values($payload), ...array_values($keys)];
+            }
+            $statement=$pdo->prepare($sql);$statement->execute($params);
+            if ($statement->rowCount() !== 1) throw new \RuntimeException('A chave não identificou exatamente um registro; operação desfeita.');
+            $pdo->commit();return 'ERP confirmou a operação em um registro.';
+        } catch (\Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
+    }
+
+    public function readUsers(ErpConnection $connection, string $method, array $access): array
+    {
+        if (empty($access['endpoint']) || empty($access['items_path'])) throw new \InvalidArgumentException('Configure a operação e o caminho da coleção de usuários.');
+        $response = $this->remote($connection, ['method'=>$method,'list_operation'=>$access['endpoint']], 'list_operation', ['page'=>1,'page_size'=>100]);
+        $rows = self::readPath($response,$access['items_path']);
+        if (!is_array($rows) || !array_is_list($rows) || count($rows)>100) throw new \InvalidArgumentException('A origem deve retornar uma coleção de até 100 usuários por consulta.');
+        return $rows;
+    }
+
+    public function readForm(ErpConnection $connection, array $query, int $page): array
+    {
+        $payload = json_decode($query['parameters'] ?? '{}', true, 32, JSON_THROW_ON_ERROR);
+        if (!is_array($payload)) throw new \InvalidArgumentException('Parâmetros de consulta devem ser um objeto JSON.');
+        self::putPath($payload, ($query['page_param'] ?? '') ?: 'page', max(1, $page));
+        self::putPath($payload, ($query['size_param'] ?? '') ?: 'page_size', 10);
+        return $this->remote($connection, $query + ['list_operation' => $query['operation']], 'list_operation', $payload);
+    }
+
     private function remote(ErpConnection $connection, array $config, string $operation, array $payload, string $requestKey = ''): array
     {
         $this->schema->releaseSession();
         $settings = $connection->getSettingsForMethod($config['method']);
         $endpoint = $settings['endpoint'] ?? '';
+        if (!empty($config['service_id'])) {
+            $selected = null;
+            foreach ($settings['webservices'] ?? [] as $service) if (($service['id'] ?? '') === $config['service_id'] && ($service['active'] ?? true)) $selected=$service;
+            if (!$selected) throw new \InvalidArgumentException('WebService vinculado não está ativo.');
+            $endpoint = trim($selected['endpoint'] ?? '');
+            if (!preg_match('#^https?://#i',$endpoint)) $endpoint='http://'.$endpoint;
+            if (!empty($selected['port']) && !parse_url($endpoint,PHP_URL_PORT)) $endpoint=preg_replace('#^(https?://[^/]+)#','$1:'.$selected['port'],$endpoint);
+        }
         if (!in_array(parse_url($endpoint, PHP_URL_SCHEME), ['http', 'https'], true)) throw new \InvalidArgumentException('Endpoint HTTP(S) obrigatório.');
         if ('webservice' === $config['method']) {
             if (!class_exists(\SoapClient::class)) throw new \RuntimeException('Extensão SOAP indisponível.');
@@ -194,7 +273,7 @@ final class ProcessGateway
         if ($requestKey) $headers['Idempotency-Key'] = $requestKey;
         $options = ['headers' => $headers, 'timeout' => 8, 'max_duration' => 10, 'max_redirects' => 0];
         $options['list_operation' === $operation ? 'query' : 'json'] = $payload;
-        $response = $this->http->request('list_operation' === $operation ? 'GET' : 'POST', rtrim($endpoint, '/').$path, $options);
+        $response = $this->http->request('list_operation' === $operation ? 'GET' : ($config['http_method'] ?? 'POST'), rtrim($endpoint, '/').$path, $options);
         if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) throw new \RuntimeException('O ERP respondeu HTTP '.$response->getStatusCode().'.');
         return $response->toArray(false);
     }

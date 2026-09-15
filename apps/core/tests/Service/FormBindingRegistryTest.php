@@ -3,6 +3,7 @@
 namespace App\Tests\Service;
 
 use App\Service\{FormBindingRegistry, ErpConnectionProfile, ConnectionSecretCipher};
+use App\Service\IntegrationFields;
 use PHPUnit\Framework\TestCase;
 
 final class FormBindingRegistryTest extends TestCase
@@ -29,5 +30,25 @@ final class FormBindingRegistryTest extends TestCase
             self::assertSame($settings['deleted_forms'], $updated['deleted_forms']);
             self::assertSame($settings['lookup_sources'], $updated['lookup_sources']);
         }
+    }
+
+    public function testHiddenFieldIsRemovedFromLayoutWithoutDeletingItsMapping(): void
+    {
+        $settings = [
+            'hidden_fields' => ['products' => ['ncm']],
+            'bindings' => ['products' => ['mapping' => ['ncm' => 'codncm', 'product_code' => 'codpro']]],
+        ];
+        $fields = IntegrationFields::forForm($settings, 'products', ['product_code' => ['label' => 'Código'], 'ncm' => ['label' => 'NCM']]);
+        self::assertArrayHasKey('product_code', $fields);
+        self::assertArrayNotHasKey('ncm', $fields);
+        self::assertSame('codncm', $settings['bindings']['products']['mapping']['ncm']);
+    }
+
+    public function testRemovingFormCleansVisibilityAndWriteBinding(): void
+    {
+        $settings = ['hidden_fields' => ['products' => ['ncm']], 'write_bindings' => ['products' => ['update' => ['mapping' => ['ncm' => 'codncm']]]]];
+        $settings = FormBindingRegistry::remove($settings, 'products');
+        self::assertArrayNotHasKey('products', $settings['hidden_fields']);
+        self::assertArrayNotHasKey('products', $settings['write_bindings']);
     }
 }

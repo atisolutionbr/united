@@ -19,6 +19,10 @@ class ErpConnection
     #[ORM\Column(type: Types::INTEGER)]
     private ?int $id = null;
 
+    #[ORM\Version]
+    #[ORM\Column(type: Types::INTEGER)]
+    private int $version = 1;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(name: 'company_id', nullable: false, onDelete: 'CASCADE')]
     private Company $company;
@@ -96,6 +100,9 @@ class ErpConnection
 
     public function setConnectionMethod(?string $connectionMethod): static
     {
+        if ($this->connectionMethod !== null && $this->connectionMethod !== $connectionMethod && !isset($this->connectionSettings['profiles']) && $this->connectionSettings !== []) {
+            $this->connectionSettings = ['profiles' => [$this->connectionMethod => $this->connectionSettings]];
+        }
         $this->connectionMethod = $connectionMethod;
 
         return $this;

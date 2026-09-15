@@ -36,7 +36,7 @@ final class MetabaseAutoLoginSubscriber implements EventSubscriberInterface
 
     public function onKernelResponse(ResponseEvent $event): void
     {
-        if (!$event->isMainRequest() || null === $this->security->getUser()) {
+        if (!$event->isMainRequest() || $event->getRequest()->attributes->get('_route') !== 'kflow_metabase' || null === $this->security->getUser()) {
             return;
         }
 

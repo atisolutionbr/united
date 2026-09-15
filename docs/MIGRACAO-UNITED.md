@@ -88,3 +88,11 @@ Em 14/09, tentativas TCP da VPS e do container para 187.125.70.46:1433 expiraram
 Campos vinculados de Requisições e Solicitações abrem um painel ao clicar no seletor, com busca no topo, código/nome/código de barras conforme o vínculo, paginação de 25 opções, navegação por teclado e limpeza da seleção. A abertura é imediata; carregamento, lista vazia e falha de consulta são exibidos dentro do painel, com nova tentativa. Tokens de seleção e validação no servidor foram preservados. O script do seletor usa o arquivo público com a versão da release para evitar dependência de uma compilação antiga dos assets.
 
 O SQLEXPRESS do PC foi iniciado com autorização explícita e está escutando TCP 1433. Foi criada uma regra de firewall do Windows restrita à origem 143.95.167.97. A consulta local ao Senior retornou colunas e produtos. O endpoint 187.125.70.46:1433 foi salvo na VPS, mas o TCP externo continua expirando. Conferir no roteador 192.168.1.1 o encaminhamento TCP 1433 para 192.168.1.2:1433; não foi alterada a configuração do roteador.
+
+## Revisão 71 — persistência, desempenho e operações ERP
+
+Cada perfil de conexão mantém seus vínculos por método (BD, API e WebService), com histórico de configurações e controle de concorrência no banco do United. A indisponibilidade da origem deixa a validação pendente, sem remover tabela, campos, listas ou credenciais já salvas.
+
+Os campos de cada formulário podem ser incluídos, ocultados, restaurados e, para campos adicionais, excluídos com seus vínculos. A etapa de usuários deixou de carregar todas as tabelas do ERP: consulta apenas a tabela informada. Requisições, solicitações e cadastros contam com revisão explícita antes de enviar inclusão, atualização ou exclusão ao ERP, usando chave completa, confirmação de retorno e proteção contra repetição automática.
+
+Foi removida a autenticação no Metabase das telas comuns; ela ocorre somente ao abrir relatórios. Consultas externas receberam limites de tempo e a sanitização de produtos analisa uma amostra limitada para manter a interface responsiva.
