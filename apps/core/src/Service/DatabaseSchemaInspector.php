@@ -123,7 +123,7 @@ final class DatabaseSchemaInspector
         $failure = $this->cache?->getItem('united.database.failure.'.$key);
         if ($failure?->isHit()) throw new \PDOException('ERP temporariamente indisponível; nova tentativa em até 20 segundos.', 20009);
         $driver = $this->driver($settings);
-        $host = trim((string) ($settings['host'] ?? ''));
+        $host = ErpConnectionProfile::databaseHost((string) ($settings['host'] ?? ''));
         $port = trim((string) ($settings['port'] ?? ''));
         $database = trim((string) ($settings['database'] ?? ''));
         $username = (string) ($settings['username'] ?? '');

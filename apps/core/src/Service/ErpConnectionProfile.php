@@ -179,7 +179,7 @@ final class ErpConnectionProfile
                 'connection_name' => $this->bounded($value('connection_name'), 120),
                 'environment' => in_array($value('environment'), ['PRODUCAO', 'HOMOLOGACAO', 'TESTE', 'DESENVOLVIMENTO', 'AVULSO'], true) ? $value('environment') : 'HOMOLOGACAO',
                 'endpoint' => $value('endpoint'),
-                'host' => $this->databaseHost($value('host')),
+                'host' => $this->bounded($value('host'), 255),
                 'port' => preg_match('/^\d{1,5}$/', $value('port')) ? $value('port') : '',
                 'service_key' => $this->identifier($value('service_key')) ?: 'product',
                 'operation' => $this->bounded($value('operation'), 120),
@@ -268,13 +268,13 @@ final class ErpConnectionProfile
         return mb_substr($value, 0, $length);
     }
 
-    private function databaseHost(string $host): string
+    public static function databaseHost(string $host): string
     {
-        $host = $this->bounded(trim($host), 255);
+        $host = mb_substr(trim($host), 0, 255);
         // The PHP application runs in Docker locally: localhost would point to
         // that container, never to SQL Server installed on Windows.
         if (in_array(strtolower($host), ['localhost', '127.0.0.1', 'localhost\\sqlexpress'], true)
-            && in_array(strtolower((string) (getenv('APP_ENV') ?: $_ENV['APP_ENV'] ?? '')), ['dev', 'local'], true)) {
+            && strtolower((string) (getenv('APP_DEPLOYMENT_ENV') ?: $_SERVER['APP_DEPLOYMENT_ENV'] ?? $_ENV['APP_DEPLOYMENT_ENV'] ?? '')) === 'local') {
             return 'host.docker.internal';
         }
         return $host;
