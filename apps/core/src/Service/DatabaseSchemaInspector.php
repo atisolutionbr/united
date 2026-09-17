@@ -120,11 +120,19 @@ final class DatabaseSchemaInspector
         $this->releaseSession();
         $key = $this->connectionKey($settings);
         if (isset($this->connections[$key])) return $this->connections[$key];
-        $failure = $this->cache?->getItem('united.database.failure.'.$key);
-        if ($failure?->isHit()) throw new \PDOException('ERP temporariamente indisponível; nova tentativa em até 20 segundos.', 20009);
         $driver = $this->driver($settings);
         $host = ErpConnectionProfile::databaseHost((string) ($settings['host'] ?? ''));
         $port = trim((string) ($settings['port'] ?? ''));
+        $failure = $this->cache?->getItem('united.database.failure.'.$key);
+        if ($failure?->isHit()) {
+            // A short circuit protects unavailable ERPs, but must never keep an
+            // old failure alive after the service has recovered.
+            $probePort = '' !== $port ? (int) $port : ('sqlserver' === $driver ? 1433 : 0);
+            if (!$this->isTcpReachable($host, $probePort)) {
+                throw new \PDOException('ERP temporariamente indisponível; nova tentativa em até 20 segundos.', 20009);
+            }
+            $this->cache?->deleteItem('united.database.failure.'.$key);
+        }
         $database = trim((string) ($settings['database'] ?? ''));
         $username = (string) ($settings['username'] ?? '');
         $password = $this->secretCipher->decrypt((string) ($settings['password_encrypted'] ?? ''));
@@ -151,6 +159,16 @@ final class DatabaseSchemaInspector
             if ($failure) { $failure->set(true)->expiresAfter(20); $this->cache->save($failure); }
             throw $e;
         }
+    }
+
+    private function isTcpReachable(string $host, int $port): bool
+    {
+        if ('' === $host || $port < 1 || $port > 65535) return false;
+        $address = filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ? sprintf('tcp://[%s]:%d', $host, $port) : sprintf('tcp://%s:%d', $host, $port);
+        $socket = @stream_socket_client($address, $errorNumber, $errorMessage, 1.0, STREAM_CLIENT_CONNECT);
+        if (!is_resource($socket)) return false;
+        fclose($socket);
+        return true;
     }
 
     /** @param array<string, mixed> $settings */
