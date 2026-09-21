@@ -213,7 +213,7 @@ final class ErpConnectionProfile
             ],
             default => [
                 'driver' => array_key_exists($value('driver'), $this->databaseDrivers()) ? $value('driver') : 'sqlserver',
-                'host' => $this->databaseHost($value('host')),
+                'host' => $this->bounded($value('host'), 255),
                 'port' => preg_match('/^\d{1,5}$/', $value('port')) ? $value('port') : '',
                 'database' => $this->bounded($value('database'), 128),
                 'username' => $this->bounded($value('username'), 180),

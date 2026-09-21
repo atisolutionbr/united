@@ -623,19 +623,9 @@ final class KFlowController extends AbstractController
                 );
             }
 
-            $validation = $this->databaseSchemaInspector->test($settings);
-            $settings['connection_validation'] = [
-                'connected' => $validation['connected'],
-                'message' => $validation['message'],
-                'checked_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
-            ];
-            if (!$validation['connected']) {
-                $connection->setSettingsForMethod($method, $settings);
-                $this->entityManager->flush();
-                $this->addFlash('warning', 'Configuração salva. A conexão ainda não foi validada. '.$validation['message']);
-
-                return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'connection']);
-            }
+            // Saving configuration must not wait for, or depend on, the ERP.
+            // A previous endpoint's validation is not valid for these settings.
+            unset($settings['connection_validation']);
         }
 
         $connection
@@ -647,9 +637,9 @@ final class KFlowController extends AbstractController
         $this->entityManager->flush();
         if ($connection->isActive()) $request->getSession()->set('kflow_selected_erp', $erp);
 
-        $this->addFlash('success', sprintf('%s vinculado pelo modo %s.', $erp, $this->connectionProfile->connectionMethods()[$method]));
+        $this->addFlash('success', sprintf('Configuração de %s salva. Use Testar conexão para verificar o acesso ao ERP.', $erp));
 
-        $nextStep = ErpConnection::METHOD_DATABASE === $method ? 'table' : (ErpConnection::METHOD_WEBSERVICE === $method ? 'services' : 'mapping');
+        $nextStep = 'connection';
         return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => $nextStep]);
     }
 
