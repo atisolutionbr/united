@@ -14,7 +14,7 @@ final class ProcessGatewaySoapTest extends TestCase
         if ('1' !== getenv('UNITED_LOCAL_SOAP_TEST')) self::markTestSkipped('Run the local SOAP fixture first.');
         $cipher = new ConnectionSecretCipher('test');
         $c = new ErpConnection(new Company('Fixture'), 'Fixture');
-        $c->setSettingsForMethod('webservice', ['endpoint' => 'http://127.0.0.1:18083/service.wsdl']);
+        $c->setSettingsForMethod('webservice', ['endpoint' => 'http://127.0.0.1/service.wsdl', 'port'=>'18083']);
         $gateway = new ProcessGateway(new DatabaseSchemaInspector($cipher), $cipher, new MockHttpClient());
         $config = ['method' => 'webservice', 'purpose' => 'create', 'mapping' => ['product' => 'product'], 'create_operation' => 'Create', 'success_path' => 'success', 'success_value' => 'true'];
         self::assertSame('ERP confirmou o resultado configurado.', $gateway->create($c, $config, ['product' => 'P1'], 'fixture-id'));

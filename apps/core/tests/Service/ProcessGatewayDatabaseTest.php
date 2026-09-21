@@ -44,6 +44,9 @@ final class ProcessGatewayDatabaseTest extends TestCase
             $gateway->create($connection, $create, ['company' => 2, 'id' => 99, 'description' => "Produto d'água", 'status' => 'P'], 'fixture-create');
             self::assertSame("Produto d'água", $pdo->query('SELECT description FROM '.$table.' WHERE id = 99')->fetchColumn());
             $connection->setSettingsForMethod('database', $settings + ['bindings' => ['products' => ['table' => $table, 'mapping' => ['product_code' => 'id', 'product_name' => 'description', 'barcode' => 'status']]]]);
+            $connection->setConnectionMethod('database');
+            $gateway->write($connection, ['method'=>'database', 'action'=>'update', 'table'=>$table, 'mapping'=>['name'=>'description'], 'key_columns'=>'company,id'], ['name'=>"Produto d'água"], ['company'=>2,'id'=>99], 'fixture-update');
+            self::assertSame("Produto d'água", $pdo->query('SELECT description FROM '.$table.' WHERE id = 99')->fetchColumn());
             $lookups = new \App\Service\LookupCatalog($inspector, $gateway);
             self::assertCount(25, $lookups->search($connection, 'requisitions', 'product', '', 1)['items']);
             self::assertTrue($lookups->search($connection, 'requisitions', 'product', '', 1)['more']);

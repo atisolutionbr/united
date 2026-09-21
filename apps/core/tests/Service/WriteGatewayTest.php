@@ -6,6 +6,16 @@ use Symfony\Component\HttpClient\{MockHttpClient,Response\MockResponse};
 use PHPUnit\Framework\TestCase;
 final class WriteGatewayTest extends TestCase
 {
+ public function testCreationUsesPostAndCompanySpecificPort(): void
+ {
+  $seen=[];$http=new MockHttpClient(function($method,$url,$options)use(&$seen){$seen[]=[$method,$url,json_decode($options['body'],true)];return new MockResponse('{"ok":true}');});
+  $gateway=$this->gateway($http);
+  foreach(['Alpha'=>8443,'Beta'=>9443] as $name=>$port){
+   $c=new ErpConnection(new Company($name),'Senior');$c->setSettingsForMethod('api',['endpoint'=>'https://erp.example','port'=>(string)$port]);
+   $gateway->create($c,['purpose'=>'create','method'=>'api','mapping'=>['product'=>'item'],'create_operation'=>'/requests','success_path'=>'ok','success_value'=>'true'],['product'=>$name],'request-'.$name);
+  }
+  self::assertSame([['POST','https://erp.example:8443/requests',['item'=>'Alpha']],['POST','https://erp.example:9443/requests',['item'=>'Beta']]],$seen);
+ }
  private function gateway(MockHttpClient $http): ProcessGateway { $cipher=new ConnectionSecretCipher('test');return new ProcessGateway(new DatabaseSchemaInspector($cipher),$cipher,$http); }
  public function testMappedUpdateUsesConfiguredMethodKeysAndConfirmation(): void
  {

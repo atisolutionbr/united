@@ -508,6 +508,7 @@ final class KFlowController extends AbstractController
         }
         $userAccess = is_array($settings['user_access'] ?? null) ? $settings['user_access'] : [];
         $userFieldDefinitions = [
+            'password' => ['label' => 'Campo de senha', 'hint' => 'Senha da origem; nunca exibida na lista. Se indisponível, informe uma senha manual.'],
             'identifier' => ['label' => 'Campo de usuário', 'hint' => 'Identificador usado para login.'],
             'name' => ['label' => 'Campo de nome', 'hint' => 'Nome exibido no United Ati.'],
             'email' => ['label' => 'Campo de e-mail', 'hint' => 'E-mail do usuário.'],
@@ -607,6 +608,7 @@ final class KFlowController extends AbstractController
         }
 
         $settingsInput = $request->request->all('settings');
+        if ((string) $request->request->get('company_id') !== (string) $company->getId()) throw $this->createAccessDeniedException('A empresa mudou. Reabra a conexão da empresa desejada antes de salvar.');
         $existingSettings = $this->settingsForConnection($erp, $method, $connection);
         $settings = $this->connectionProfile->settingsFromInput(
             $method,
@@ -799,6 +801,7 @@ final class KFlowController extends AbstractController
     public function saveErpUsers(string $erp, Request $request): Response
     {
         $this->requireMenu('connections');
+        if ((string) $request->request->get('company_id') !== (string) $this->currentCompany()->getId()) throw $this->createAccessDeniedException('A empresa mudou. Reabra a tela de usuários antes de salvar.');
         $method = (string) $request->request->get('method');
         if (!$this->erpCatalog->supports($erp) || !array_key_exists($method, $this->connectionProfile->connectionMethods()) || !$this->isCsrfTokenValid('erp-users-'.$erp.'-'.$method, (string) $request->request->get('_token'))) throw $this->createAccessDeniedException();
         $connection = $this->connectionFor($erp);
@@ -812,8 +815,12 @@ final class KFlowController extends AbstractController
         foreach ((array) ($accessInput['remove_fields'] ?? []) as $field) if (preg_match('/^extra_[a-f0-9]{12}$/D', (string) $field)) unset($customFields[$field]);
         $hiddenFields = array_values(array_unique(array_filter(array_map('strval', (array) ($accessInput['hidden_fields'] ?? [])), static fn (string $field): bool => in_array($field, array_merge(['identifier', 'name', 'email'], array_keys($customFields)), true))));
         $mapping = [];
-        foreach (array_merge(['identifier', 'name', 'email'], array_keys($customFields)) as $field) $mapping[$field] = preg_match('/^[A-Za-z_][A-Za-z0-9_.$\[\]-]{0,159}$/', (string) ($accessInput['mapping'][$field] ?? '')) ? (string) ($accessInput['mapping'][$field] ?? '') : '';
+        foreach (array_merge(['identifier', 'name', 'email', 'password'], array_keys($customFields)) as $field) {
+            $source = (string) ($accessInput['mapping'][$field] ?? $settings['user_access']['mapping'][$field] ?? '');
+            $mapping[$field] = preg_match('/^[A-Za-z_][A-Za-z0-9_.$\[\]-]{0,159}$/', $source) ? $source : '';
+        }
         $settings['user_access'] = [
+            'password_format' => in_array($accessInput['password_format'] ?? '', ['manual', 'plain', 'php_hash'], true) ? $accessInput['password_format'] : ($settings['user_access']['password_format'] ?? 'manual'),
             'table' => preg_match('/^[A-Za-z_][A-Za-z0-9_.]*$/', (string) ($accessInput['table'] ?? '')) ? (string) $accessInput['table'] : '',
             'endpoint' => mb_substr(trim((string) ($accessInput['endpoint'] ?? '')), 0, 240),
             'items_path' => mb_substr(trim((string) ($accessInput['items_path'] ?? '')), 0, 160),
@@ -823,30 +830,43 @@ final class KFlowController extends AbstractController
         ];
         $connection->setSettingsForMethod($method, $settings);
         $selected = array_values(array_filter(array_map('strval', is_array($request->request->all('erp_users')) ? $request->request->all('erp_users') : [])));
+        $this->entityManager->flush();
         $permissions = array_values(array_intersect(array_keys($this->access->menuOptions()), array_map('strval', is_array($request->request->all('permissions')) ? $request->request->all('permissions') : [])));
-        $directory = $selected ? $this->erpUserDirectory($erp, $method, $settings) : [];
+        try { $directory = $selected ? $this->erpUserDirectory($erp, $method, $settings) : []; }
+        catch (\Throwable) {
+            $this->addFlash('warning', 'Vínculo de usuários salvo nesta empresa. Não foi possível consultar o ERP para importar as contas.');
+            return $this->redirectToRoute('kflow_erp_connect', ['erp'=>$erp, 'method'=>$method, 'step'=>'users']);
+        }
         $selectedUsers = array_filter($directory, static fn (array $user): bool => in_array($user['identifier'], $selected, true));
         $initialPassword = (string) $request->request->get('initial_password');
         $company = $this->currentCompany();
         $created = 0;
+        $linked = 0;
+        $missingPassword = 0;
+        $manualPasswords = $request->request->all('user_passwords');
         foreach ($selectedUsers as $erpUser) {
             $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $erpUser['identifier']]);
             if (!$user instanceof User) {
-                if (mb_strlen($initialPassword) < 8) continue;
+                try {
+                    $hash = \App\Service\ErpUserPassword::hash($erpUser['_password'] ?? '', $settings['user_access']['password_format'], (string) (($manualPasswords[$erpUser['identifier']] ?? '') ?: $initialPassword));
+                } catch (\InvalidArgumentException) { ++$missingPassword; continue; }
                 $user = new User();
                 $user->setUsername($erpUser['identifier']);
                 $user->setFullName($erpUser['name'] ?: $erpUser['identifier']);
                 $user->setEmail($erpUser['email'] ?: sprintf('%s@kflow.local', strtolower(preg_replace('/[^a-z0-9]+/i', '.', $erpUser['identifier']) ?: 'usuario')));
-                $user->setPassword($this->passwordHasher->hashPassword($user, $initialPassword));
+                $user->setPassword($hash);
                 $this->entityManager->persist($user);
                 ++$created;
             }
             $membership = $this->entityManager->getRepository(CompanyMembership::class)->findOneBy(['company' => $company, 'user' => $user]);
             if (!$membership instanceof CompanyMembership) { $membership = new CompanyMembership($company, $user); $this->entityManager->persist($membership); }
             $membership->setErpIdentity($erpUser['identifier'], $erpUser['name'], $erpUser['email'])->setAccessOrigin('erp')->setMenuPermissions($permissions)->setIsActive(true);
+            ++$linked;
         }
         $this->entityManager->flush();
-        $this->addFlash('success', sprintf('Acesso atualizado para %d usuário(s). %d conta(s) KFlow criada(s).', count($selectedUsers), $created));
+        $this->addFlash('success', sprintf('Vínculo salvo nesta empresa. Acesso atualizado para %d usuário(s); %d conta(s) criada(s).', $linked, $created));
+        if ($missingPassword) $this->addFlash('warning', sprintf('%d usuário(s) não importados: informe uma senha manual ou um campo de senha compatível.', $missingPassword));
+        if ($selected && !$selectedUsers) $this->addFlash('warning', 'Não foi possível obter os usuários selecionados na origem. O vínculo foi salvo; confira a consulta ao ERP.');
         return $this->redirectToRoute('kflow_erp_connect', ['erp' => $erp, 'method' => $method, 'step' => 'users']);
     }
 
@@ -1185,7 +1205,7 @@ final class KFlowController extends AbstractController
      *  @param array<string, mixed> $access
      *  @return list<array{identifier: string, name: string, email: string}>
      */
-    private function normalizeErpUsers(array $rows, array $access): array
+    private function normalizeErpUsers(array $rows, array $access, bool $includePassword = false): array
     {
         $mapping = is_array($access['mapping'] ?? null) ? $access['mapping'] : [];
         $users = [];
@@ -1193,6 +1213,7 @@ final class KFlowController extends AbstractController
             $identifier = trim((string) ($row[$mapping['identifier'] ?? ''] ?? (!empty($mapping['identifier']) ? \App\Service\ProcessGateway::readPath($row, $mapping['identifier']) : '')));
             if ('' === $identifier) continue;
             $users[] = ['identifier' => $identifier, 'name' => trim((string) ($row[$mapping['name'] ?? ''] ?? (!empty($mapping['name']) ? \App\Service\ProcessGateway::readPath($row, $mapping['name']) : ''))), 'email' => trim((string) ($row[$mapping['email'] ?? ''] ?? (!empty($mapping['email']) ? \App\Service\ProcessGateway::readPath($row, $mapping['email']) : '')))];
+            if ($includePassword) $users[array_key_last($users)]['_password'] = (string) (!empty($mapping['password']) ? ($row[$mapping['password']] ?? \App\Service\ProcessGateway::readPath($row, $mapping['password'])) : '');
         }
         return $users;
     }
@@ -1203,14 +1224,14 @@ final class KFlowController extends AbstractController
         if (ErpConnection::METHOD_DATABASE !== $method) {
             $connection = $this->connectionFor($erp);
             if (!$connection) return [];
-            return $this->normalizeErpUsers($this->processGateway->readUsers($connection, $method, $settings['user_access'] ?? []), $settings['user_access'] ?? []);
+            return $this->normalizeErpUsers($this->processGateway->readUsers($connection, $method, $settings['user_access'] ?? []), $settings['user_access'] ?? [], true);
         }
         $access = is_array($settings['user_access'] ?? null) ? $settings['user_access'] : [];
         $table = (string) ($access['table'] ?? '');
         $columns = array_values(array_filter(array_map('strval', $access['mapping'] ?? [])));
         if ('' === $table || [] === $columns) return [];
         $rows = $this->databaseSchemaInspector->rows($settings, $table, $columns)['rows'];
-        return $this->normalizeErpUsers($rows, $access);
+        return $this->normalizeErpUsers($rows, $access, true);
     }
 
     /** @return array<string, mixed> */

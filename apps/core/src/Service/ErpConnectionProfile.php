@@ -201,6 +201,7 @@ final class ErpConnectionProfile
             ],
             ErpConnection::METHOD_API => [
                 'endpoint' => $value('endpoint'),
+                'port' => preg_match('/^\d{1,5}$/', $value('port')) ? $value('port') : '',
                 'authentication' => in_array($value('authentication'), ['bearer', 'api_key', 'oauth_client'], true) ? $value('authentication') : 'bearer',
                 'api_key_name' => $this->bounded($value('api_key_name'), 120),
                 'client_id' => $this->bounded($value('client_id'), 180),

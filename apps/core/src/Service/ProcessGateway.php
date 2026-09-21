@@ -244,6 +244,11 @@ final class ProcessGateway
         $this->schema->releaseSession();
         $settings = $connection->getSettingsForMethod($config['method']);
         $endpoint = $settings['endpoint'] ?? '';
+        $port = ($config['port'] ?? '') ?: ($settings['port'] ?? '');
+        if ($port !== '') {
+            if (!ctype_digit((string) $port) || (int) $port < 1 || (int) $port > 65535) throw new \InvalidArgumentException('Porta inválida. Use um número entre 1 e 65535.');
+            $endpoint = preg_replace('#^(https?://(?:\[[^\]]+\]|[^/:]+))(?::[0-9]+)?#', '${1}:'.$port, $endpoint);
+        }
         if (!empty($config['service_id'])) {
             $selected = null;
             foreach ($settings['webservices'] ?? [] as $service) if (($service['id'] ?? '') === $config['service_id'] && ($service['active'] ?? true)) $selected=$service;
