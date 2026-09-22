@@ -2,6 +2,7 @@
 {% block title %}United Ati · {{ title }}{% endblock %}
 {% block page_title %}Aprovações · {{ title }}{% endblock %}
 {% block main %}
+{% if error %}{{ include('kflow/_recovery.html.twig') }}{% endif %}
 <section class="kflow-page-heading"><div><h1>{{ title }}</h1><p>Selecione um objeto para aprovar ou reprovar. Cada decisão será enviada à origem vinculada.</p></div><a class="btn btn-outline-primary" href="{{ path('united_approvals') }}">Todas as aprovações</a></section>
 <section class="kflow-surface">
 <form method="get" class="kflow-form-grid"><label>Origem vinculada<select class="form-select" name="source" onchange="this.form.submit()">{% for binding in bindings %}<option value="{{ binding.id }}" {{ selected == binding.id ? 'selected' }}>{{ binding.label }} · {{ binding.config.table|default(binding.config.method) }}</option>{% endfor %}</select></label></form>

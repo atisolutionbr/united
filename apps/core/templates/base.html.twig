@@ -56,7 +56,7 @@
             {% endif %}
 
             {% block body %}
-                <main class="kflow-main">
+                <main class="kflow-main" data-company-id="{{ app.user ? kflow_active_company().id|default('') : '' }}">
                     {% for label, messages in app.flashes %}
                         {% for message in messages %}
                             <div class="alert alert-{{ label }} kflow-alert" role="alert">{{ message }}</div>

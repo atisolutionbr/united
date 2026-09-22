@@ -23,7 +23,7 @@ final class DatabaseSchemaInspector
         $item = $this->cache?->getItem('united.schema.'.hash('sha256', $kind.$this->connectionKey($settings)));
         if ($item?->isHit()) return $item->get();
         $result = $load();
-        if ($item) { $item->set($result)->expiresAfter(empty($result['error']) ? 300 : 10); $this->cache->save($item); }
+        if ($item) { $item->set($result)->expiresAfter(empty($result['error']) ? 300 : 2); $this->cache->save($item); }
         return $result;
     }
 
@@ -123,16 +123,6 @@ final class DatabaseSchemaInspector
         $driver = $this->driver($settings);
         $host = ErpConnectionProfile::databaseHost((string) ($settings['host'] ?? ''));
         $port = trim((string) ($settings['port'] ?? ''));
-        $failure = $this->cache?->getItem('united.database.failure.'.$key);
-        if ($failure?->isHit()) {
-            // A short circuit protects unavailable ERPs, but must never keep an
-            // old failure alive after the service has recovered.
-            $probePort = '' !== $port ? (int) $port : ('sqlserver' === $driver ? 1433 : 0);
-            if (!$this->isTcpReachable($host, $probePort)) {
-                throw new \PDOException('ERP temporariamente indisponível; nova tentativa em até 20 segundos.', 20009);
-            }
-            $this->cache?->deleteItem('united.database.failure.'.$key);
-        }
         $database = trim((string) ($settings['database'] ?? ''));
         $username = (string) ($settings['username'] ?? '');
         $password = $this->secretCipher->decrypt((string) ($settings['password_encrypted'] ?? ''));
@@ -151,24 +141,9 @@ final class DatabaseSchemaInspector
             $options[\PDO::DBLIB_ATTR_CONNECTION_TIMEOUT] = 3;
             $options[\PDO::DBLIB_ATTR_QUERY_TIMEOUT] = 8;
         }
-        try {
-            $pdo = new \PDO($dsn, $username, $password, $options);
-            if ('pgsql' === $pdoDriver) $pdo->exec('SET statement_timeout = 8000');
-            return $this->connections[$key] = $pdo;
-        } catch (\PDOException $e) {
-            if ($failure) { $failure->set(true)->expiresAfter(20); $this->cache->save($failure); }
-            throw $e;
-        }
-    }
-
-    private function isTcpReachable(string $host, int $port): bool
-    {
-        if ('' === $host || $port < 1 || $port > 65535) return false;
-        $address = filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ? sprintf('tcp://[%s]:%d', $host, $port) : sprintf('tcp://%s:%d', $host, $port);
-        $socket = @stream_socket_client($address, $errorNumber, $errorMessage, 1.0, STREAM_CLIENT_CONNECT);
-        if (!is_resource($socket)) return false;
-        fclose($socket);
-        return true;
+        $pdo = new \PDO($dsn, $username, $password, $options);
+        if ('pgsql' === $pdoDriver) $pdo->exec('SET statement_timeout = 8000');
+        return $this->connections[$key] = $pdo;
     }
 
     /** @param array<string, mixed> $settings */

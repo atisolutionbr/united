@@ -6,6 +6,14 @@ use Symfony\Component\HttpClient\{MockHttpClient,Response\MockResponse};
 use PHPUnit\Framework\TestCase;
 final class WriteGatewayTest extends TestCase
 {
+ public function testReadRecoversWithoutChangingCompanySettings(): void
+ {
+  $calls=0;$http=new MockHttpClient(function()use(&$calls){return ++$calls===1?new MockResponse('{}',['http_code'=>503]):new MockResponse('{"items":[{"id":1}]}');});
+  $gateway=$this->gateway($http);$c=new ErpConnection(new Company('Recovery'),'Senior');$c->setSettingsForMethod('api',['endpoint'=>'https://erp.example','port'=>'8443']);
+  $saved=$c->getConnectionSettings();$query=['method'=>'api','operation'=>'/items'];
+  try {$gateway->readForm($c,$query,1);self::fail('First request should fail');}catch(\RuntimeException $e){self::assertStringContainsString('503',$e->getMessage());}
+  self::assertSame(['items'=>[['id'=>1]]],$gateway->readForm($c,$query,1));self::assertSame($saved,$c->getConnectionSettings());
+ }
  public function testCreationUsesPostAndCompanySpecificPort(): void
  {
   $seen=[];$http=new MockHttpClient(function($method,$url,$options)use(&$seen){$seen[]=[$method,$url,json_decode($options['body'],true)];return new MockResponse('{"ok":true}');});

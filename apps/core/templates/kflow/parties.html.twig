@@ -4,6 +4,7 @@
 {% block page_title %}{{ title }}{% endblock %}
 
 {% block main %}
+    {% if partyData.error and partyData.configured %}{{ include('kflow/_recovery.html.twig') }}{% endif %}
     <section class="kflow-page-heading">
         <div><span class="kflow-eyebrow">United</span><h1>{{ title }}</h1><p>{% if activeErp %}Consulta orientada conforme o ERP selecionado: {{ activeErp }}.{% else %}Selecione um ERP para iniciar a consulta de {{ title|lower }}.{% endif %}</p></div>
         <div class="kflow-page-actions"><a class="btn btn-outline-primary" href="{{ path('united_write',{form:partyType}) }}">Enviar ajustes ao ERP</a><button class="btn btn-outline-primary" type="button" data-layout-customize="{{ partyType }}"><i class="bi bi-sliders"></i>Personalizar</button><button class="btn btn-outline-secondary" type="button" data-layout-cancel="{{ partyType }}" hidden><i class="bi bi-x-lg"></i>Cancelar</button><a class="btn btn-outline-primary" href="{{ activeErp ? path('kflow_erp_connect', {erp: activeErp}) : path('kflow_erp_index') }}"><i class="bi bi-hdd-network"></i>{{ activeErp ?: 'Selecionar ERP' }}</a></div>

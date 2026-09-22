@@ -1283,7 +1283,7 @@ final class KFlowController extends AbstractController
         return $this->cache->get($key, function (ItemInterface $item) use ($type, $page, $connection): array {
             if ($connection->getConnectionMethod() !== ErpConnection::METHOD_DATABASE) {
                 $result = $this->remoteFormCatalog->list($connection, $type, $page);
-                $item->expiresAfter(empty($result['error']) ? 300 : 20);
+                $item->expiresAfter(empty($result['error']) ? 300 : 2);
                 return $this->withWriteLinks($result, $type, $connection);
             }
             $settings = $this->settingsForConnection($connection->getErpName(), ErpConnection::METHOD_DATABASE, $connection);
@@ -1296,7 +1296,7 @@ final class KFlowController extends AbstractController
                 $result = $this->seniorPartyCatalog->list($type, $this->partyBinding($connection, $type), $settings, $page);
             }
             $result = $this->withWriteLinks($result, $type, $connection);
-            $item->expiresAfter(null === ($result['error'] ?? null) ? 300 : 20);
+            $item->expiresAfter(null === ($result['error'] ?? null) ? 300 : 2);
 
             return $result;
         });
