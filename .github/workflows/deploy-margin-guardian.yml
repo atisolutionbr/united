@@ -1,0 +1,104 @@
+name: Deploy Takeat Margin Guardian
+
+on:
+  push:
+    branches: [codex/margin-guardian-deploy]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: takeat-margin-guardian-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy isolado na VPS United
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Obter pacote versionado
+        uses: actions/checkout@v4
+
+      - name: Enviar Margin Guardian para a VPS
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ vars.DEPLOY_PORT }}
+          source: "margin-guardian"
+          target: "${{ vars.DEPLOY_PATH }}/takeat-margin-guardian-deploy"
+          overwrite: true
+
+      - name: Construir, publicar e validar
+        uses: appleboy/ssh-action@v1.2.1
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ vars.DEPLOY_PORT }}
+          script_stop: true
+          script: |
+            set -eu
+            app_dir="${{ vars.DEPLOY_PATH }}/takeat-margin-guardian-deploy/margin-guardian"
+            cd "$app_dir"
+            test -f Dockerfile
+            test -f docker-compose.vps.yml
+            test -f deploy/install_nginx_route.py
+            docker version >/dev/null
+            docker compose version >/dev/null
+            curl -fsS https://united.atisolution.com.br/ >/dev/null
+
+            if [ ! -f .env.production ]; then
+              umask 077
+              postgres_password="$(openssl rand -hex 32)"
+              token_key="$(openssl rand -base64 32 | tr -d '\n')"
+              {
+                printf '%s\n' 'NODE_ENV=production'
+                printf '%s\n' 'HOST=0.0.0.0'
+                printf '%s\n' 'PORT=3000'
+                printf '%s\n' 'BASE_PATH=/margin-guardian'
+                printf '%s\n' 'PUBLIC_BASE_URL=https://united.atisolution.com.br/margin-guardian'
+                printf '%s\n' 'TAKEAT_CLIENT_ID=tk_app_DISABLED'
+                printf '%s\n' 'TAKEAT_OAUTH_PORTAL_URL=https://disabled.invalid/authorize'
+                printf '%s\n' 'TAKEAT_API_URL=https://public-api.takeat.app'
+                printf '%s\n' 'TAKEAT_REDIRECT_URI=https://united.atisolution.com.br/margin-guardian/auth/takeat/callback'
+                printf '%s\n' 'TAKEAT_SCOPES=table-sessions:read financial:read inputs:read intermediaries:read'
+                printf 'POSTGRES_PASSWORD=%s\n' "$postgres_password"
+                printf 'TOKEN_ENCRYPTION_KEY_BASE64=%s\n' "$token_key"
+                printf '%s\n' 'OAUTH_STATE_TTL_SECONDS=600'
+                printf '%s\n' 'APP_SESSION_TTL_SECONDS=28800'
+                printf '%s\n' 'TAKEAT_TIMEOUT_MS=10000'
+                printf '%s\n' 'TAKEAT_MAX_GET_RETRIES=3'
+                printf '%s\n' 'SYNC_LOOKBACK_DAYS=30'
+                printf '%s\n' 'WORKER_POLL_MS=5000'
+                printf '%s\n' 'SYNC_INTERVAL_MINUTES=30'
+                printf '%s\n' 'DEMO_MODE=true'
+                printf '%s\n' 'ALLOW_PUBLIC_DEMO=true'
+                printf '%s\n' 'OAUTH_ENABLED=false'
+                printf '%s\n' 'LLM_PROVIDER=disabled'
+              } > .env.production
+            fi
+            chmod 600 .env.production
+
+            docker compose --env-file .env.production -f docker-compose.vps.yml config >/dev/null
+            docker compose --env-file .env.production -f docker-compose.vps.yml up -d --build
+
+            ready=0
+            for attempt in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:18100/margin-guardian/health/ready >/dev/null; then
+                ready=1
+                break
+              fi
+              sleep 2
+            done
+            test "$ready" -eq 1
+
+            sudo -n python3 deploy/install_nginx_route.py
+            curl -fsS https://united.atisolution.com.br/ >/dev/null
+            curl -fsS https://united.atisolution.com.br/margin-guardian/health/live | grep -q '"status":"ok"'
+            curl -fsS https://united.atisolution.com.br/margin-guardian/health/ready | grep -q '"status":"ready"'
+            curl -fsS https://united.atisolution.com.br/margin-guardian/demo | grep -q 'Restaurante Demonstracao'
+            docker compose --env-file .env.production -f docker-compose.vps.yml ps
